@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نموذج دي ماد في</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Open+Sans:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «DMADV»: كل مرحلة بلون ثابت (رمادي مزرق، أزرق، برتقالي، أخضر، رمادي) بثلاث درجات: الأساس والداكن (شريط الاسم وخلية الحرف) والفاتح (علامة النقاط). الشريحة الأولى أعمدة والثانية صفوف؛ كل الأيقونات SVG خطية بيضاء. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #FFFFFF; --accent: #2172B1; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame { color: #fff; }
+  /* 1 — الأعمدة */
+  .s1 .col { position: absolute; top: 55px; width: 228px; height: 610px; }
+  .s1 .col .lt { position: absolute; top: 0; inset-inline-start: 0; width: 100%; height: 169px; display: grid; place-items: center; margin: 0; font-size: 112px; line-height: 1; font-weight: 700; padding-top: 4px; }
+  .s1 .col .nm { position: absolute; top: 169px; inset-inline-start: 0; width: 100%; height: 84px; display: grid; place-items: center; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+  .s1 .col .ic { position: absolute; top: 285px; inset-inline-start: 76px; width: 76px; height: 76px; }
+  .s1 .col ul { position: absolute; top: 382px; inset-inline-start: 24px; width: 196px; margin: 0; padding: 0; list-style: none; }
+  .s1 .col li { position: relative; padding-inline-start: 34px; height: 69.5px; font-size: 18.5px; line-height: 24px; }
+  .s1 .col .lt, .s2 .row .cell { font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif; }
+  .chk { position: absolute; top: 4px; inset-inline-start: 2px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; }
+  .chk svg { width: 10px; height: 10px; }
+  .ic svg { width: 100%; height: 100%; display: block; }
+  /* 2 — الصفوف */
+  .s2 .row { position: absolute; inset-inline-start: 113px; width: 1107px; height: 121px; }
+  .s2 .row .bg { position: absolute; top: 0; inset-inline-start: 0; width: 339px; height: 100%; }
+  .s2 .row .cell { position: absolute; top: 0; inset-inline-start: 343px; width: 157px; height: 100%; display: grid; place-items: center; font-size: 62px; font-weight: 700; padding-top: 2px; }
+  .s2 .row .rt { position: absolute; top: 0; inset-inline-start: 500px; width: 607px; height: 100%; }
+  .s2 .row .cir { position: absolute; top: -2px; inset-inline-start: -62px; width: 125px; height: 125px; border-radius: 50%; display: grid; place-items: center; }
+  .s2 .row .cir .ic { width: 62px; height: 62px; }
+  .s2 .row .nm { position: absolute; top: 45px; inset-inline-start: 85px; margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; letter-spacing: 0.2px; }
+  .s2 .row .pt { position: absolute; top: 37px; width: 186px; padding-inline-start: 34px; margin: 0; font-size: 18.5px; line-height: 24px; }
+  .s2 .row .pa { inset-inline-start: 550px; } .s2 .row .pb { inset-inline-start: 784px; }
+  html[lang="ar"] .s1 .col .nm, html[lang="ar"] .s2 .row .nm { letter-spacing: 0; font-size: 23px; }
+  html[lang="ar"] .s1 .col li, html[lang="ar"] .s2 .row .pt { font-size: 19px; line-height: 26px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="col" style="inset-inline-start:63px; background:#44546B"><p class="lt" lang="en">D</p><p class="nm" style="background:#364354">التعريف</p><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="40" cy="40" r="37"/><path d="M31 32a9 9 0 1 1 13.5 7.8c-3 1.8-4.5 3.6-4.5 7.2"/></g><circle cx="40" cy="56" r="2" fill="currentColor"/></svg></span><ul><li><span class="chk" style="background:#92A1B4; color:#44546B"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#92A1B4; color:#44546B"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#92A1B4; color:#44546B"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li></ul></div>
+    <div class="col" style="inset-inline-start:294px; background:#2172B1"><p class="lt" lang="en">M</p><p class="nm" style="background:#175E8C">القياس</p><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2V78H78Z"/><path d="M17 37V65H45Z"/><path d="M4 18h6M4 30h6M4 42h6M4 54h6M4 66h6M18 78v-6M30 78v-6M42 78v-6M54 78v-6M66 78v-6"/></g></svg></span><ul><li><span class="chk" style="background:#AAD7F6; color:#2172B1"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#AAD7F6; color:#2172B1"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#AAD7F6; color:#2172B1"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li></ul></div>
+    <div class="col" style="inset-inline-start:526px; background:#ED7D31"><p class="lt" lang="en">A</p><p class="nm" style="background:#BE6426">التحليل</p><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="31" cy="30" r="27"/><path d="M50 51l17 18a5 5 0 0 0 7-7L56 45"/></g></svg></span><ul><li><span class="chk" style="background:#E9BB9A; color:#ED7D31"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#E9BB9A; color:#ED7D31"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#E9BB9A; color:#ED7D31"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li></ul></div>
+    <div class="col" style="inset-inline-start:757px; background:#72AC46"><p class="lt" lang="en">D</p><p class="nm" style="background:#5A893B">التصميم</p><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="76" height="52" rx="2"/><rect x="8" y="12" width="64" height="40"/><path d="M33 58v9M47 58v9M24 68h32"/><path d="M24 22c14-3 22 5 18 24"/><path d="M24 22h18"/><path d="M47 20l8 13-6-1-3 6z"/></g><g fill="currentColor"><rect x="20" y="18" width="7" height="7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="39" y="43" width="7" height="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="42" cy="22" r="2.5"/></g></svg></span><ul><li><span class="chk" style="background:#C0DEAC; color:#72AC46"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#C0DEAC; color:#72AC46"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#C0DEAC; color:#72AC46"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li></ul></div>
+    <div class="col" style="inset-inline-start:989px; background:#A5A5A5"><p class="lt" lang="en">V</p><p class="nm" style="background:#848484">التحقق</p><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="56" cy="18" r="16"/><path d="M49 18l5 5 9-10"/><path d="M38 32H16L4 50v26h72V50L64 32h-2"/><path d="M4 50h20a16 9 0 0 0 32 0h20"/></g></svg></span><ul><li><span class="chk" style="background:#CDCDCD; color:#A5A5A5"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#CDCDCD; color:#A5A5A5"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li><li><span class="chk" style="background:#CDCDCD; color:#A5A5A5"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</li></ul></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="row" style="top:55px"><div class="bg" style="background:#44546B"></div><div class="cell" lang="en" style="background:#364354">D</div><div class="rt" style="background:#44546B"></div><span class="cir" style="background:#313E4E"><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="40" cy="40" r="37"/><path d="M31 32a9 9 0 1 1 13.5 7.8c-3 1.8-4.5 3.6-4.5 7.2"/></g><circle cx="40" cy="56" r="2" fill="currentColor"/></svg></span></span><p class="nm">التعريف</p><p class="pt pa"><span class="chk" style="background:#92A1B4; color:#44546B"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p><p class="pt pb"><span class="chk" style="background:#92A1B4; color:#44546B"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p></div>
+    <div class="row" style="top:177px"><div class="bg" style="background:#2172B1"></div><div class="cell" lang="en" style="background:#175E8C">M</div><div class="rt" style="background:#2172B1"></div><span class="cir" style="background:#134D73"><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2V78H78Z"/><path d="M17 37V65H45Z"/><path d="M4 18h6M4 30h6M4 42h6M4 54h6M4 66h6M18 78v-6M30 78v-6M42 78v-6M54 78v-6M66 78v-6"/></g></svg></span></span><p class="nm">القياس</p><p class="pt pa"><span class="chk" style="background:#AAD7F6; color:#2172B1"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p><p class="pt pb"><span class="chk" style="background:#AAD7F6; color:#2172B1"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p></div>
+    <div class="row" style="top:300px"><div class="bg" style="background:#ED7D31"></div><div class="cell" lang="en" style="background:#BE6426">A</div><div class="rt" style="background:#ED7D31"></div><span class="cir" style="background:#C35B12"><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="31" cy="30" r="27"/><path d="M50 51l17 18a5 5 0 0 0 7-7L56 45"/></g></svg></span></span><p class="nm">التحليل</p><p class="pt pa"><span class="chk" style="background:#E9BB9A; color:#ED7D31"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p><p class="pt pb"><span class="chk" style="background:#E9BB9A; color:#ED7D31"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p></div>
+    <div class="row" style="top:422px"><div class="bg" style="background:#72AC46"></div><div class="cell" lang="en" style="background:#5A893B">D</div><div class="rt" style="background:#72AC46"></div><span class="cir" style="background:#558132"><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="76" height="52" rx="2"/><rect x="8" y="12" width="64" height="40"/><path d="M33 58v9M47 58v9M24 68h32"/><path d="M24 22c14-3 22 5 18 24"/><path d="M24 22h18"/><path d="M47 20l8 13-6-1-3 6z"/></g><g fill="currentColor"><rect x="20" y="18" width="7" height="7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="39" y="43" width="7" height="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="42" cy="22" r="2.5"/></g></svg></span></span><p class="nm">التصميم</p><p class="pt pa"><span class="chk" style="background:#C0DEAC; color:#72AC46"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p><p class="pt pb"><span class="chk" style="background:#C0DEAC; color:#72AC46"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p></div>
+    <div class="row" style="top:545px"><div class="bg" style="background:#A5A5A5"></div><div class="cell" lang="en" style="background:#848484">V</div><div class="rt" style="background:#A5A5A5"></div><span class="cir" style="background:#7C7C7C"><span class="ic"><svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="56" cy="18" r="16"/><path d="M49 18l5 5 9-10"/><path d="M38 32H16L4 50v26h72V50L64 32h-2"/><path d="M4 50h20a16 9 0 0 0 32 0h20"/></g></svg></span></span><p class="nm">التحقق</p><p class="pt pa"><span class="chk" style="background:#CDCDCD; color:#A5A5A5"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p><p class="pt pb"><span class="chk" style="background:#CDCDCD; color:#A5A5A5"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5.2l2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>أدخل النص المطلوب هنا.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

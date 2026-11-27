@@ -1,0 +1,17 @@
+{
+  "key": "sl-enterprise-business-architecture",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🏛️",
+  "name": "هندسة أعمال المؤسسة",
+  "nameEn": "Enterprise Business Architecture",
+  "description": "شريحة لطبقات هندسة المؤسسة: التطبيقات وأساس البيانات ومدخلات المصادر، مع أدوار الفرق الثلاثة",
+  "descriptionEn": "One slide of enterprise architecture layers (application, data foundation, source input) with three team roles",
+  "sections": [
+    {
+      "title": "طبقات هندسة أعمال المؤسسة",
+      "titleEn": "Enterprise Architecture Layers"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والطبقات والأيقونات والألوان، وغيّر النصوص فقط."
+}

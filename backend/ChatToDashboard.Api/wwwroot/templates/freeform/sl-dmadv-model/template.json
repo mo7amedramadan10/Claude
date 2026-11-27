@@ -1,0 +1,21 @@
+{
+  "key": "sl-dmadv-model",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🧭",
+  "name": "نموذج دي ماد في",
+  "nameEn": "DMADV Model",
+  "description": "شريحتان لمراحل نموذج دي ماد في الخمس: التعريف والقياس والتحليل والتصميم والتحقق، بأعمدة ثم بصفوف",
+  "descriptionEn": "Two slides of the five DMADV phases (Define, Measure, Analyze, Design, Verify) as columns and rows",
+  "sections": [
+    {
+      "title": "المراحل الخمس بأعمدة",
+      "titleEn": "DMADV Columns"
+    },
+    {
+      "title": "المراحل الخمس بصفوف",
+      "titleEn": "DMADV Rows"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والألوان والأيقونات، وغيّر النصوص فقط؛ حروف المراحل D/M/A/D/V ثابتة."
+}

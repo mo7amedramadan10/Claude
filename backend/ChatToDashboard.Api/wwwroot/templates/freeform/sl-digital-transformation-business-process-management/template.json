@@ -1,0 +1,68 @@
+{
+  "key": "sl-digital-transformation-business-process-management",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🔄",
+  "name": "التحول الرقمي وإدارة الإجراءات",
+  "nameEn": "Digital Transformation BPM",
+  "description": "ثلاث عشرة شريحة للتحول الرقمي: الوضع الراهن، الرؤية، الإطار، دورة الحياة، الممكّنات، الخارطة، المؤشرات والمخاطر",
+  "descriptionEn": "13 digital transformation slides: current state, vision, framework, BPM lifecycle, roadmap, KPIs, risks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "تقييم الوضع الراهن",
+      "titleEn": "Current State Assessment",
+      "needsData": true
+    },
+    {
+      "title": "الرؤية والأهداف",
+      "titleEn": "Vision & Goals"
+    },
+    {
+      "title": "إطار التحول الرقمي",
+      "titleEn": "Digital Transformation Framework"
+    },
+    {
+      "title": "دورة حياة إدارة الإجراءات",
+      "titleEn": "BPM Lifecycle"
+    },
+    {
+      "title": "الممكّنات التقنية",
+      "titleEn": "Technology Enablers"
+    },
+    {
+      "title": "خارطة طريق تحسين الإجراءات",
+      "titleEn": "Process Improvement Roadmap"
+    },
+    {
+      "title": "المقاييس ومؤشرات الأداء",
+      "titleEn": "Key Metrics & KPIs",
+      "needsData": true
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study",
+      "needsData": true
+    },
+    {
+      "title": "خطة المخاطر والتخفيف",
+      "titleEn": "Risk & Mitigation Plan"
+    },
+    {
+      "title": "الخطوات التالية والدعوة إلى العمل",
+      "titleEn": "Next Steps & Call to Action"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال السداسية، وغيّر النصوص والأرقام فقط؛ رسما الحلقة والأعمدة في شريحة المقاييس يُرسمان من كتلة chart-data فعدّل قيمها هناك."
+}
