@@ -1,0 +1,79 @@
+{
+  "key": "sl-intellectual-property-protection-strategy",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🛡️",
+  "name": "استراتيجية حماية الملكية الفكرية",
+  "nameEn": "IP Protection Strategy",
+  "description": "ست عشرة شريحة لاستراتيجية الملكية الفكرية: المحفظة والبراءات والعلامات والأسرار والإنفاذ وخارطة الطريق",
+  "descriptionEn": "16 slides on IP strategy: portfolio, patents, trademarks, trade secrets, enforcement and roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل الموضوع",
+      "titleEn": "Topic Divider"
+    },
+    {
+      "title": "الملخص التنفيذي والأهداف",
+      "titleEn": "Executive Summary & Objectives"
+    },
+    {
+      "title": "خريطة محفظة الملكية الفكرية",
+      "titleEn": "Enterprise IP Portfolio Mapping",
+      "needsData": true
+    },
+    {
+      "title": "استراتيجية براءات الاختراع",
+      "titleEn": "Patent Strategy"
+    },
+    {
+      "title": "العلامات التجارية",
+      "titleEn": "Brand Equity & Trademark Architecture"
+    },
+    {
+      "title": "صون الأسرار التجارية",
+      "titleEn": "Safeguarding Trade Secrets"
+    },
+    {
+      "title": "امتثال الموظفين والأطراف الثالثة",
+      "titleEn": "Employee & Third-Party Compliance"
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape",
+      "needsData": true
+    },
+    {
+      "title": "الإنفاذ والجاهزية للتقاضي",
+      "titleEn": "Enforcement & Litigation Preparedness"
+    },
+    {
+      "title": "مسارات التسييل",
+      "titleEn": "Monetization Pathways"
+    },
+    {
+      "title": "خارطة الطريق لثلاث سنوات",
+      "titleEn": "3-Year Strategic Roadmap"
+    },
+    {
+      "title": "الملخص وبنود العمل",
+      "titleEn": "Summary & Action Items"
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والخلفيات المنحنية، وغيّر النصوص والأرقام فقط (نسبة الحلقة في شريحة المحفظة تُعدَّل في النص وفي stroke-dasharray معًا، وعلامات الصح والخطأ في المشهد التنافسي تُبدَّل بين الرمزين)."
+}

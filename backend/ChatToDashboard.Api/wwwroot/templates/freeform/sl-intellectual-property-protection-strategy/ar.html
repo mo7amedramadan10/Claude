@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>استراتيجية حماية الملكية الفكرية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «استراتيجية حماية الملكية الفكرية»: غلاف وفهرس وفاصل موضوع بخلفيات منحنية متدرّجة، ثم شرائح الملخص التنفيذي، خريطة المحفظة بحلقة نسبة، براءات الاختراع، العلامات التجارية، الأسرار التجارية، الامتثال، المشهد التنافسي، الإنفاذ، مسارات التسييل، خارطة الطريق لثلاث سنوات، الملخص وبنود العمل، أسئلة وأجوبة، والختام. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #1A1A1A; --gray: #404040; --accent: #20B4F0; --bg: #FFFFFF; --sky: #20B4F0; --light: #61CBF3; --mid: #0D8CBF; --pale: #E3F6FD; --royal: #0060E2; --dark: #0A3548; --co: #1A85B8; --navy: #08587A; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame p, .frame h1, .frame h2, .frame h3 { margin: 0; }
+  /* خلفيات SVG بملء الإطار؛ تُعكس أفقيًا في العربية */
+  .bg { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .bg { transform: scaleX(-1); }
+  /* الزخرفتان الصغيرتان في الزاوية العليا والسفلى */
+  .dtr { position: absolute; top: 0; inset-inline-end: 0; width: 222px; height: 57px; display: flex; }
+  .dtr i { display: block; height: 100%; } .dtr i:first-child { width: 122px; background: var(--light); border-end-start-radius: 36px; } .dtr i:last-child { width: 100px; background: var(--sky); }
+  .dbl { position: absolute; bottom: 0; inset-inline-start: 0; width: 222px; height: 57px; display: flex; }
+  .dbl i { display: block; height: 100%; } .dbl i:first-child { width: 100px; background: var(--sky); } .dbl i:last-child { width: 122px; background: var(--light); border-start-end-radius: 38px; }
+  /* الشعار العام */
+  .logo { position: absolute; display: flex; align-items: center; gap: 24px; color: #fff; }
+  .logo svg { width: 54px; height: 58px; flex: none; color: var(--light); }
+  .logo p { font-size: 17px; line-height: 23px; letter-spacing: 2.6px; }
+  html[lang="ar"] .logo p { letter-spacing: 0; font-size: 19px; line-height: 25px; font-weight: 500; }
+  /* رأس شرائح المحتوى */
+  .co { position: absolute; top: 72px; inset-inline-start: 42px; font-size: 16.5px; letter-spacing: 3.6px; color: var(--co); white-space: nowrap; }
+  html[lang="ar"] .co { letter-spacing: 0; font-size: 19px; font-weight: 500; top: 69px; }
+  .ttl { position: absolute; top: 107px; inset-inline-start: 35px; font-size: 41px; line-height: 51px; font-weight: 400; color: var(--gray); white-space: nowrap; letter-spacing: -.4px; }
+  .ttl b { font-weight: 700; }
+  html[lang="ar"] .ttl { letter-spacing: 0; font-size: 42px; line-height: 53px; }
+  html[lang="ar"] .ttl b { font-weight: 800; }
+  .stm { position: absolute; font-size: 24px; line-height: 32px; font-weight: 700; color: var(--sky); }
+  html[lang="ar"] .stm { font-size: 25px; line-height: 35px; }
+  .bd { position: absolute; font-size: 18.5px; line-height: 26px; color: var(--ink); }
+  html[lang="ar"] .bd { font-size: 19px; line-height: 28px; }
+  .num { font-weight: 300; color: var(--sky); font-size: 29px; line-height: 1; }
+  .h { font-weight: 700; color: var(--ink); font-size: 20.5px; line-height: 25px; }
+  .t { font-size: 17px; line-height: 25px; color: var(--ink); }
+  html[lang="ar"] .t { font-size: 17.5px; line-height: 27px; }
+  html[lang="ar"] .h { font-size: 21px; line-height: 28px; font-weight: 800; }
+  .arr { flex: none; width: 19px; height: 19px; color: var(--sky); }
+  html[dir="rtl"] .arr { transform: scaleX(-1); }
+  .bl { display: flex; gap: 14px; align-items: flex-start; } .bl .arr { margin-top: 3px; }
+
+  /* 1 — الغلاف */
+  .s1 .logo { top: 58px; inset-inline-start: 980px; }
+  .s1 .cvt { position: absolute; top: 222px; inset-inline-start: 70px; font-size: 64px; line-height: 77px; font-weight: 700; color: var(--gray); letter-spacing: -.6px; white-space: nowrap; }
+  html[lang="ar"] .s1 .cvt { font-size: 66px; line-height: 80px; font-weight: 800; letter-spacing: 0; top: 212px; }
+  .s1 .sub { position: absolute; top: 465px; inset-inline-start: 71px; font-size: 29px; letter-spacing: 4.2px; color: var(--co); white-space: nowrap; }
+  html[lang="ar"] .s1 .sub { letter-spacing: 0; font-size: 31px; font-weight: 500; }
+  .s1 .bd { top: 588px; inset-inline-start: 70px; font-size: 17.5px; }
+
+  /* 2 — الفهرس */
+  .s2 .co, html[lang="ar"] .s2 .co { top: 141px; inset-inline-start: 63px; }
+  .s2 .cvt { position: absolute; top: 184px; inset-inline-start: 57px; font-size: 64px; line-height: 77px; font-weight: 700; color: var(--gray); letter-spacing: -.5px; }
+  html[lang="ar"] .s2 .cvt { font-size: 62px; line-height: 80px; font-weight: 800; letter-spacing: 0; }
+  .s2 .bd { top: 360px; inset-inline-start: 67px; width: 380px; font-size: 25px; line-height: 32px; }
+  html[lang="ar"] .s2 .bd { font-size: 25px; line-height: 36px; }
+  .s2 .toc { position: absolute; inset-inline-start: 776px; display: flex; align-items: center; gap: 0; color: #fff; }
+  .s2 .toc .num { width: 96px; color: var(--light); font-size: 38px; }
+  .s2 .toc .h { color: #fff; font-size: 24px; }
+  html[lang="ar"] .s2 .toc .h { font-size: 23px; }
+
+  /* 3 و16 — الفاصل والختام */
+  .s3 .logo { top: 58px; inset-inline-start: 980px; }
+  .s3 .cvt { position: absolute; top: 92px; inset-inline-start: 70px; font-size: 40px; line-height: 51px; font-weight: 700; color: var(--gray); letter-spacing: -.3px; }
+  html[lang="ar"] .s3 .cvt { font-size: 42px; line-height: 54px; font-weight: 800; letter-spacing: 0; }
+  .s3 .stm { top: 245px; inset-inline-start: 71px; color: #0F86B6; font-size: 25px; line-height: 32px; }
+  .s3 .bd { top: 341px; inset-inline-start: 70px; font-size: 17.5px; }
+  .big01 { position: absolute; top: 377px; inset-inline-start: 913px; font-family: Arial, 'Liberation Sans', 'Arimo', sans-serif; font-size: 316px; line-height: 1; font-weight: 400; color: transparent; -webkit-text-stroke: 1.2px var(--light); letter-spacing: -14px; }
+
+  /* 4 — الملخص التنفيذي */
+  .s4 .stm { top: 212px; inset-inline-start: 35px; width: 370px; }
+  .s4 .bd { top: 345px; inset-inline-start: 34px; width: 350px; }
+  .s4 .box { position: absolute; top: 189px; width: 242px; height: 255px; border: 3px solid var(--light); border-radius: 26px; padding: 92px 20px 0 18px; }
+  .s4 .box .h { margin-bottom: 18px; } .s4 .box .t { padding-inline-start: 4px; }
+  .s4 .b1 { inset-inline-start: 420px; border-color: var(--dark); } .s4 .b2 { inset-inline-start: 711px; } .s4 .b3 { inset-inline-start: 997px; }
+  .s4 .b2 .h { color: var(--sky); }
+  .s4 .band { position: absolute; top: 541px; inset-inline-start: 0; width: 1280px; height: 179px; background: linear-gradient(#E3F5FD, #FFFFFF); border-top: 4px solid var(--mid); }
+  .s4 .dot { position: absolute; top: 530px; width: 23px; height: 23px; border-radius: 50%; background: var(--sky); }
+  .s4 .tl { position: absolute; top: 478px; width: 330px; }
+  .s4 .tl .num { margin-bottom: 62px; } .s4 .tl .h { margin-bottom: 11px; }
+  .s4 .k1 { inset-inline-start: 36px; } .s4 .k2 { inset-inline-start: 417px; } .s4 .k3 { inset-inline-start: 790px; }
+
+  /* 5 — خريطة المحفظة */
+  .s5 .donut { position: absolute; top: 202px; inset-inline-start: 32px; width: 316px; height: 316px; }
+  html[dir="rtl"] .s5 .donut { transform: scaleX(-1); }
+  .s5 .pct { position: absolute; top: 296px; inset-inline-start: 32px; width: 316px; text-align: center; font-size: 50px; font-weight: 300; color: var(--sky); line-height: 1; }
+  .s5 .dh { position: absolute; top: 374px; inset-inline-start: 90px; width: 200px; text-align: center; }
+  .s5 .dt { position: absolute; top: 546px; inset-inline-start: 40px; width: 300px; text-align: center; }
+  .s5 .line { position: absolute; top: 358px; inset-inline-start: 353px; width: 927px; height: 4px; background: var(--mid); }
+  .s5 .card { position: absolute; top: 360px; width: 272px; height: 262px; background: linear-gradient(#E3F5FD, rgb(255 255 255 / 0)); padding: 48px 20px 0 26px; }
+  .s5 .card .h { margin-bottom: 20px; font-size: 21.5px; }
+  .s5 .c1 { inset-inline-start: 390px; } .s5 .c2 { inset-inline-start: 679px; } .s5 .c3 { inset-inline-start: 969px; }
+  .s5 .ring { position: absolute; top: 335px; width: 50px; height: 50px; border-radius: 50%; border: 3px solid var(--dark); background: #fff; display: grid; place-items: center; }
+  .s5 .ring i { width: 24px; height: 24px; border-radius: 50%; background: var(--sky); }
+  .s5 .r1 { inset-inline-start: 405px; } .s5 .r2 { inset-inline-start: 694px; } .s5 .r3 { inset-inline-start: 983px; }
+  .s5 .n { position: absolute; top: 297px; } .s5 .n1 { inset-inline-start: 415px; } .s5 .n2 { inset-inline-start: 703px; } .s5 .n3 { inset-inline-start: 993px; }
+
+  /* 6 — براءات الاختراع */
+  .s6 .panel { position: absolute; top: 240px; inset-inline-start: 0; width: 387px; height: 480px; background: var(--sky); border-start-end-radius: 56px; }
+  .s6 .pi { position: absolute; inset-inline-start: 45px; display: flex; gap: 0; color: #fff; }
+  .s6 .pi .num { width: 68px; color: rgb(255 255 255 / .38); padding-top: 2px; }
+  .s6 .pi .h { color: #fff; font-size: 21.5px; margin-bottom: 18px; } .s6 .pi .t { color: #fff; }
+  .s6 .chev { position: absolute; top: 0; inset-inline-start: 0; width: 180px; height: 140px; color: var(--light); }
+  html[dir="rtl"] .s6 .chev { transform: scaleX(-1); }
+  .s6 .col { position: absolute; width: 190px; }
+  .s6 .col .ch { position: absolute; top: 56px; color: var(--sky); font-size: 19.5px; line-height: 24px; font-weight: 700; }
+  .s6 .col .lead { position: absolute; top: 152px; font-size: 18.5px; line-height: 25px; width: 190px; }
+  .s6 .col hr { position: absolute; top: 225px; margin: 0; width: 72px; border: 0; border-top: 1px solid var(--sky); }
+  .s6 .col .bl { position: absolute; width: 190px; } .s6 .col .bl .t { font-size: 14.5px; line-height: 19px; }
+  html[lang="ar"] .s6 .col .bl .t { font-size: 15px; line-height: 21px; }
+  .s6 .col .x1 { top: 254px; } .s6 .col .x2 { top: 330px; }
+
+  /* 7 — العلامات التجارية */
+  .s7 .top { position: absolute; top: 178px; inset-inline-start: 0; width: 1280px; height: 181px; background: var(--mid); border-radius: 34px 34px 0 0; }
+  .s7 .pill { position: absolute; top: 208px; width: 208px; height: 61px; background: #fff; border-radius: 8px; display: grid; place-items: center; font-size: 19.5px; font-weight: 700; color: #000; }
+  html[lang="ar"] .s7 .pill { font-size: 21px; font-weight: 800; }
+  .s7 .ar { position: absolute; top: 228px; width: 21px; height: 21px; color: #8ED8F7; }
+  html[dir="rtl"] .s7 .ar { transform: scaleX(-1); }
+  .s7 .pt { position: absolute; top: 287px; width: 208px; text-align: center; color: #fff; }
+  .s7 .colb { position: absolute; top: 359px; width: 320px; height: 361px; background: linear-gradient(#E3F5FD 0%, #FFFFFF 72%); }
+  .s7 .colb.alt { background: linear-gradient(#BFE8F9 0%, #FFFFFF 72%); }
+  .s7 .colb .h2 { position: absolute; top: 22px; inset-inline-start: 27px; width: 266px; text-align: center; color: var(--sky); font-size: 19.5px; line-height: 25px; font-weight: 700; padding-bottom: 6px; border-bottom: 3px solid var(--mid); height: 70px; }
+  html[lang="ar"] .s7 .colb .h2 { font-size: 21px; line-height: 28px; font-weight: 800; }
+  .s7 .colb .lead { position: absolute; top: 112px; inset-inline-start: 37px; width: 280px; font-size: 17.5px; }
+  .s7 .colb .bl { position: absolute; inset-inline-start: 37px; width: 270px; } .s7 .colb .bl .t { font-size: 17.5px; line-height: 23px; }
+  .s7 .colb .x1 { top: 167px; } .s7 .colb .x2 { top: 244px; }
+
+  /* 8 — الأسرار التجارية */
+  .s8 .stm { top: 292px; inset-inline-start: 35px; width: 500px; }
+  .s8 .bd { top: 393px; inset-inline-start: 34px; width: 500px; }
+  .s8 .rings { position: absolute; top: 193px; inset-inline-start: 536px; width: 744px; height: 380px; }
+  .s8 .rt { position: absolute; width: 220px; text-align: center; color: #fff; inset-inline-start: 800px; }
+  .s8 .band { position: absolute; top: 572px; inset-inline-start: 0; width: 1280px; height: 148px; background: linear-gradient(#E3F5FD, #FFFFFF); }
+  .s8 .lg { position: absolute; top: 594px; display: flex; gap: 22px; }
+  .s8 .lg i { flex: none; width: 23px; height: 23px; border-radius: 50%; margin-top: 1px; }
+  .s8 .lg .h { margin-bottom: 9px; }
+  .s8 .l1 { inset-inline-start: 38px; } .s8 .l2 { inset-inline-start: 477px; } .s8 .l3 { inset-inline-start: 916px; }
+
+  /* 9 — الامتثال */
+  .s9 .crd { position: absolute; top: 253px; width: 258px; height: 193px; border-radius: 24px; padding: 62px 20px 0 27px; color: #fff; }
+  .s9 .crd .t { color: inherit; font-size: 17.5px; line-height: 23px; }
+  .s9 .q1 { inset-inline-start: 35px; background: var(--mid); } .s9 .q2 { inset-inline-start: 341px; background: var(--sky); } .s9 .q3 { inset-inline-start: 645px; background: var(--light); } .s9 .q4 { inset-inline-start: 949px; background: var(--pale); color: var(--ink); }
+  .s9 .q4 .t { padding-inline-start: 5px; }
+  .s9 .cn { position: absolute; top: 236px; width: 190px; height: 414px; }
+  html[dir="rtl"] .s9 .cn { transform: scaleX(-1); }
+  .s9 .nm { position: absolute; top: 497px; } .s9 .hh { position: absolute; top: 498px; color: var(--sky); font-size: 19.5px; line-height: 25px; font-weight: 700; width: 160px; }
+  html[lang="ar"] .s9 .hh { font-size: 21px; line-height: 28px; font-weight: 800; }
+
+  /* 10 — المشهد التنافسي */
+  .s10 .rl { position: absolute; inset-inline-start: 34px; width: 236px; height: 91px; border: 2px solid var(--sky); border-inline-end: 0; border-radius: 10px 0 0 10px; padding: 21px 0 0 21px; font-size: 17px; line-height: 23px; font-weight: 700; color: #000;
+    -webkit-mask: linear-gradient(to right, #000 55%, transparent 100%); mask: linear-gradient(to right, #000 55%, transparent 100%); }
+  html[dir="rtl"] .s10 .rl { border-radius: 0 10px 10px 0; -webkit-mask: linear-gradient(to left, #000 55%, transparent 100%); mask: linear-gradient(to left, #000 55%, transparent 100%); }
+  html[lang="ar"] .s10 .rl { font-size: 18px; line-height: 26px; font-weight: 800; padding-top: 18px; }
+  .s10 .main { position: absolute; top: 178px; inset-inline-start: 269px; width: 185px; height: 542px; background: linear-gradient(#22B4F0, #61CBF3); border-radius: 16px 16px 0 0; }
+  .s10 .colc { position: absolute; top: 178px; width: 185px; height: 477px; border-radius: 16px 16px 0 0; background: linear-gradient(#C6EBFB 0, #C6EBFB 69px, #D4F0FC 69px, #F4FAFD 92%, rgb(255 255 255 / .6) 100%); }
+  .s10 .hd { position: absolute; top: 202px; width: 185px; text-align: center; font-size: 17.5px; font-weight: 700; color: var(--mid); line-height: 24px; }
+  html[lang="ar"] .s10 .hd { font-size: 18px; font-weight: 800; }
+  .s10 .hd.w { color: #fff; }
+  .s10 .gap { position: absolute; inset-inline-start: 454px; width: 791px; height: 8px; background: linear-gradient(to bottom, rgb(255 255 255 / 0), rgb(255 255 255 / .75), rgb(255 255 255 / 0)); }
+  .s10 .ic { position: absolute; width: 38px; height: 38px; }
+
+  /* 11 — الإنفاذ */
+  .s11 .cl { position: absolute; top: 315px; height: 405px; }
+  .s11 .ca { inset-inline-start: 0; width: 421px; background: linear-gradient(#BFE8F9, #FFFFFF); }
+  .s11 .cb { inset-inline-start: 421px; width: 438px; background: linear-gradient(#E3F5FD, #FFFFFF); }
+  .s11 .cc { inset-inline-start: 859px; width: 421px; background: linear-gradient(#BFE8F9, #FFFFFF); }
+  .s11 .hd { position: absolute; height: 91px; display: flex; align-items: center; color: #fff; font-size: 19.5px; font-weight: 700; letter-spacing: .1px; }
+  html[lang="ar"] .s11 .hd { font-size: 22px; font-weight: 800; }
+  .s11 .ha { top: 224px; inset-inline-start: 0; width: 421px; background: var(--mid); border-start-start-radius: 36px; padding-inline-start: 35px; }
+  .s11 .hb { top: 315px; inset-inline-start: 421px; width: 438px; height: 90px; background: var(--sky); border-radius: 0 0 22px 22px; padding-inline-start: 31px; }
+  .s11 .hc { top: 224px; inset-inline-start: 859px; width: 421px; background: var(--light); border-start-end-radius: 36px; padding-inline-start: 31px; }
+  .s11 .grp { position: absolute; width: 340px; }
+  .s11 .grp .lead { font-size: 19px; line-height: 25px; font-weight: 700; color: #000; }
+  html[lang="ar"] .s11 .grp .lead { font-size: 20px; line-height: 28px; font-weight: 800; }
+  .s11 .grp hr { margin: 20px 0 26px; width: 72px; border: 0; border-top: 3px solid var(--sky); }
+  .s11 .grp .bl { margin-bottom: 47px; } .s11 .grp .bl .t { font-size: 17.5px; line-height: 23px; }
+  .s11 .ga { top: 337px; inset-inline-start: 40px; } .s11 .gb { top: 423px; inset-inline-start: 452px; } .s11 .gc { top: 337px; inset-inline-start: 891px; }
+
+  /* 12 — مسارات التسييل */
+  .s12 .hex { position: absolute; top: 210px; inset-inline-start: 430px; width: 430px; height: 395px; }
+  html[dir="rtl"] .s12 .hex { transform: scaleX(-1); }
+  .s12 .hl { position: absolute; height: 3px; background: var(--mid); }
+  .s12 .cx { position: absolute; width: 90px; height: 90px; display: grid; place-items: center; font-size: 28px; font-weight: 400; line-height: 1; }
+  .s12 .ctr { position: absolute; top: 381px; inset-inline-start: 540px; width: 200px; text-align: center; font-size: 19px; line-height: 25px; font-weight: 700; color: #000; }
+  html[lang="ar"] .s12 .ctr { font-size: 20px; line-height: 28px; font-weight: 800; }
+  .s12 .it { position: absolute; width: 330px; }
+  .s12 .it .h { font-size: 18.5px; font-weight: 700; color: #000; margin-bottom: 19px; letter-spacing: .1px; }
+  .s12 .it .t { font-size: 17px; line-height: 23px; }
+  .s12 .it.e { text-align: end; }
+
+  /* 13 — خارطة الطريق */
+  .s13 .stm { top: 352px; inset-inline-start: 35px; width: 340px; font-size: 22.5px; line-height: 29px; }
+  html[lang="ar"] .s13 .stm { font-size: 23px; line-height: 33px; }
+  .s13 .bd { top: 476px; inset-inline-start: 34px; width: 310px; font-size: 17.5px; line-height: 22.5px; }
+  html[lang="ar"] .s13 .bd { font-size: 18px; line-height: 27px; }
+  .s13 .step { position: absolute; }
+  .s13 .step .sh { position: absolute; inset: 0; border-top: 3px solid var(--mid); border-inline-start: 3px solid var(--mid); border-start-start-radius: 72px; background: linear-gradient(#D3EFFC 0, rgb(255 255 255 / 0) 150px); }
+  .s13 .w3 .sh { border-color: var(--light); background: linear-gradient(#E2F6FD 0, rgb(255 255 255 / 0) 150px); }
+  .s13 .yr { position: absolute; top: -25px; width: 113px; height: 48px; border-radius: 24px; display: block; text-align: center; line-height: 48px; color: #fff; font-size: 16px; white-space: nowrap; }
+  html[lang="ar"] .s13 .yr { font-size: 17px; font-weight: 500; }
+  .s13 .w1 { top: 260px; inset-inline-start: 390px; width: 297px; height: 460px; } .s13 .w1 .yr { inset-inline-start: 159px; background: var(--mid); }
+  .s13 .w2 { top: 147px; inset-inline-start: 686px; width: 296px; height: 500px; } .s13 .w2 .yr { inset-inline-start: 162px; background: var(--sky); }
+  .s13 .w3 { top: 37px; inset-inline-start: 980px; width: 300px; height: 514px; } .s13 .w3 .yr { inset-inline-start: 159px; background: var(--light); }
+  .s13 .w2 .sh { height: 500px; }
+  .s13 .in { position: absolute; top: 74px; inset-inline-start: 25px; width: 240px; }
+  .s13 .w2 .in { top: 94px; } .s13 .w3 .in { top: 90px; }
+  .s13 .in .h { font-size: 19.5px; line-height: 25px; font-weight: 700; color: #000; }
+  html[lang="ar"] .s13 .in .h { font-size: 21px; line-height: 28px; font-weight: 800; }
+  .s13 .w2 .in .h { color: var(--sky); } .s13 .w3 .in .h { color: var(--light); }
+  .s13 .in .t { margin: 23px 0 31px; font-size: 17.5px; line-height: 23px; }
+  .s13 .in ul { list-style: none; margin: 0; padding: 0; }
+  .s13 .in li { font-size: 14.5px; line-height: 20px; padding: 11px 10px 14px; border-bottom: 1px solid #BFBFBF; }
+  html[lang="ar"] .s13 .in li { font-size: 15.5px; padding: 9px 10px 13px; }
+  .s13 .in li:first-child { padding-top: 0; }
+
+  /* 14 — الملخص وبنود العمل */
+  .s14 .stm { top: 258px; inset-inline-start: 35px; width: 520px; font-size: 22.5px; line-height: 29px; }
+  html[lang="ar"] .s14 .stm { font-size: 23px; line-height: 33px; }
+  .s14 .bd { top: 349px; inset-inline-start: 34px; width: 760px; font-size: 17.5px; }
+  .s14 .ck { position: absolute; top: 435px; width: 250px; }
+  .s14 .ck svg { width: 38px; height: 38px; display: block; margin-bottom: 25px; }
+  .s14 .ck .h { font-size: 19.5px; line-height: 25px; color: #000; } .s14 .ck .t { margin-top: 23px; font-size: 17.5px; line-height: 23px; }
+  html[lang="ar"] .s14 .ck .h { font-size: 21px; line-height: 28px; }
+  .s14 .k1 { inset-inline-start: 35px; } .s14 .k2 { inset-inline-start: 309px; } .s14 .k3 { inset-inline-start: 582px; }
+  .s14 .side { position: absolute; top: 0; inset-inline-end: 0; width: 447px; height: 720px; background: var(--mid); border-start-start-radius: 76px; }
+  .s14 .ai { position: absolute; top: 72px; inset-inline-start: 882px; font-size: 18.5px; font-weight: 700; color: var(--light); }
+  html[lang="ar"] .s14 .ai { font-size: 21px; font-weight: 800; }
+  .s14 .act { position: absolute; inset-inline-start: 882px; display: flex; color: #fff; width: 360px; }
+  .s14 .act .num { width: 72px; color: var(--light); font-size: 33px; padding-top: 2px; }
+  .s14 .act .h { color: #fff; font-size: 19.5px; line-height: 25px; } .s14 .act .t { color: #fff; margin-top: 23px; font-size: 17.5px; line-height: 23px; }
+  html[lang="ar"] .s14 .act .h { font-size: 21px; line-height: 28px; }
+
+  /* 15 — أسئلة وأجوبة */
+  .s15 .logo { top: 50px; inset-inline-start: 58px; gap: 30px; }
+  .s15 .qa { position: absolute; top: 172px; inset-inline-start: 60px; font-size: 160px; line-height: 1; font-weight: 800; color: #fff; letter-spacing: -3px; white-space: nowrap; }
+  html[lang="ar"] .s15 .qa { font-size: 150px; letter-spacing: 0; top: 160px; }
+  .s15 .q2 { position: absolute; top: 368px; inset-inline-start: 72px; font-size: 28.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+  html[lang="ar"] .s15 .q2 { font-size: 31px; font-weight: 800; top: 362px; }
+  .s15 .bd { top: 439px; inset-inline-start: 72px; color: #fff; font-size: 19px; line-height: 25px; }
+  html[lang="ar"] .s15 .bd { line-height: 30px; }
+  .s15 .qi { position: absolute; inset-inline-start: 778px; display: flex; color: #fff; }
+  .s15 .qi .num { width: 78px; color: var(--light); font-size: 27px; padding-top: 6px; }
+  .s15 .qi .h { color: #fff; font-size: 19.5px; } .s15 .qi .t { color: #fff; margin-top: 12px; font-size: 17.5px; line-height: 23px; }
+  html[lang="ar"] .s15 .qi .h { font-size: 21px; }
+  .s15 .sep { position: absolute; inset-inline-start: 856px; width: 140px; height: 1px; background: #3BA6D3; }
+  .s15 .dbr { position: absolute; bottom: 0; inset-inline-end: 0; width: 223px; height: 57px; display: flex; }
+  .s15 .dbr i { display: block; height: 100%; } .s15 .dbr i:first-child { width: 121px; background: var(--light); border-start-start-radius: 34px; } .s15 .dbr i:last-child { width: 102px; background: #fff; }
+
+  /* 16 — الختام */
+  .s16 .logo { top: 74px; inset-inline-start: 826px; gap: 38px; }
+  .s16 .cvt { position: absolute; top: 163px; inset-inline-start: 35px; font-size: 60px; line-height: 74px; font-weight: 700; color: var(--gray); letter-spacing: -.4px; white-space: nowrap; }
+  html[lang="ar"] .s16 .cvt { font-weight: 800; font-size: 60px; line-height: 78px; letter-spacing: 0; top: 155px; }
+  .s16 .bd { top: 335px; inset-inline-start: 46px; width: 440px; font-size: 18.5px; line-height: 25px; }
+  html[lang="ar"] .s16 .bd { line-height: 30px; }
+  .s16 .ci { position: absolute; inset-inline-start: 828px; display: flex; color: #fff; }
+  .s16 .ci svg { width: 34px; height: 34px; flex: none; margin-inline-end: 45px; color: var(--light); }
+  .s16 .ci .h { color: #fff; font-size: 19.5px; } .s16 .ci .t { color: #fff; margin-top: 8px; font-size: 17.5px; }
+  html[lang="ar"] .s16 .ci .h { font-size: 21px; }
+  .s16 .sep { position: absolute; width: 236px; height: 1px; background: #CDEFFB; }
+  .s16 .dbr { position: absolute; bottom: 0; inset-inline-end: 0; width: 223px; height: 57px; display: flex; }
+  .s16 .dbr i { display: block; height: 100%; } .s16 .dbr i:first-child { width: 121px; background: var(--light); border-start-start-radius: 34px; } .s16 .dbr i:last-child { width: 102px; background: #fff; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="ipNavy1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#095070"/><stop offset="1" stop-color="#0A6386"/></linearGradient><linearGradient id="ipBand1" gradientUnits="userSpaceOnUse" x1="430" y1="0" x2="880" y2="185"><stop offset="0" stop-color="#0A587A"/><stop offset=".45" stop-color="#2D86AB"/><stop offset="1" stop-color="#61CBF3"/></linearGradient><linearGradient id="ipFoot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F92C6"/><stop offset="1" stop-color="#0A6083"/></linearGradient><linearGradient id="ipNavy2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0E6385"/><stop offset="1" stop-color="#05465F"/></linearGradient><linearGradient id="ipBand2" gradientUnits="userSpaceOnUse" x1="760" y1="40" x2="560" y2="470"><stop offset="0" stop-color="#0D6084"/><stop offset=".4" stop-color="#2C88AE"/><stop offset="1" stop-color="#61CBF3"/></linearGradient><linearGradient id="ipNavy3" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#074A67"/><stop offset=".5" stop-color="#0A658A"/><stop offset="1" stop-color="#0C8CBE"/></linearGradient><linearGradient id="ipStrip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B6A92"/><stop offset=".75" stop-color="#0C8DC0"/><stop offset="1" stop-color="#0EA2DA"/></linearGradient><linearGradient id="ipBand3" gradientUnits="userSpaceOnUse" x1="200" y1="700" x2="560" y2="520"><stop offset="0" stop-color="#0A587A"/><stop offset=".45" stop-color="#2E87AC"/><stop offset="1" stop-color="#61CBF3"/></linearGradient><linearGradient id="ipNavy15" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#064862"/><stop offset=".5" stop-color="#0A6487"/><stop offset="1" stop-color="#0C88BA"/></linearGradient><linearGradient id="ipBandTR" gradientUnits="userSpaceOnUse" x1="860" y1="0" x2="1180" y2="140"><stop offset="0" stop-color="#0D5878"/><stop offset=".5" stop-color="#6FA9C2"/><stop offset="1" stop-color="#C4EBFB"/></linearGradient><linearGradient id="ipBandBL" gradientUnits="userSpaceOnUse" x1="120" y1="560" x2="470" y2="720"><stop offset="0" stop-color="#61CBF3"/><stop offset=".45" stop-color="#57B9E0"/><stop offset="1" stop-color="#0B5A7B"/></linearGradient><linearGradient id="ipGray" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C9C9C9"/><stop offset=".6" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient><linearGradient id="ipPale" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B6E6FA"/><stop offset=".6" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><rect width="1280" height="720" fill="url(#ipNavy1)"/><path fill="url(#ipBand1)" d="M222,0 L575,0 L1165,218 C1240,246 1280,300 1280,372 L1280,720 L1132,720 L1132,460 C1132,385 1090,322 1015,294 Z"/><rect x="1132" y="605" width="148" height="115" fill="url(#ipFoot)"/><path fill="#fff" d="M0,0 L222,0 L1015,294 C1090,322 1132,385 1132,460 L1132,720 L0,720 Z"/></svg>
+    <div class="dbl" aria-hidden="true"><i></i><i></i></div>
+    <div class="logo"><svg viewBox="0 0 54 58" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9,4 C22,-1 40,0 50,6 C54,18 54,40 50,52 C38,58 18,58 5,54 C0,42 0,18 9,4 Z M15,13 C24,10 36,10 43,14 C45,23 45,35 43,44 C34,48 22,48 12,45 C10,36 10,22 15,13 Z"/></svg><p>شعار شركتك<br>هنا</p></div>
+    <h1 class="cvt">استراتيجية<br>حماية الملكية<br>الفكرية</h1><p class="sub">قالب عرض تقديمي</p><p class="bd">أدخل النص المطلوب هنا. هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><rect width="1280" height="720" fill="url(#ipNavy2)"/><path fill="url(#ipBand2)" d="M690,0 L812,0 L600,585 C578,650 530,708 440,720 L203,720 L203,572 L330,572 C420,572 490,525 520,460 Z"/><path fill="#fff" d="M0,0 L645,0 L480,450 C455,520 400,572 300,572 L0,572 Z"/><rect x="0" y="572" width="203" height="148" fill="#20B4F0"/><rect x="202" y="572" width="2" height="148" fill="#0F6E95"/></svg>
+    <p class="co">اسم شركتك هنا</p><h1 class="cvt">جدول<br>المحتويات</h1><p class="bd">أدخل عبارتك الرئيسية<br>هنا. عبارة موجزة<br>عن موضوعك.</p>
+    <div class="toc" style="top:136px"><span class="num">01</span><p class="h">عنوان نائب</p></div>
+    <div class="toc" style="top:246px"><span class="num">02</span><p class="h">عنوان نائب</p></div>
+    <div class="toc" style="top:356px"><span class="num">03</span><p class="h">عنوان نائب</p></div>
+    <div class="toc" style="top:466px"><span class="num">04</span><p class="h">عنوان نائب</p></div>
+    <div class="toc" style="top:576px"><span class="num">05</span><p class="h">عنوان نائب</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><rect width="1280" height="720" fill="url(#ipNavy3)"/><rect x="-200" y="0" width="148" height="112" fill="url(#ipStrip)" transform="translate(952 0)"/><path fill="url(#ipBand3)" d="M752,112 L900,112 L900,345 C900,425 855,478 790,500 L-200,864 L-200,735 L630,430 C705,405 752,345 752,255 Z"/><path fill="#fff" d="M-200,0 L752,0 L752,255 C752,345 705,405 630,430 L-200,735 Z"/></svg>
+    <div class="logo"><svg viewBox="0 0 54 58" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9,4 C22,-1 40,0 50,6 C54,18 54,40 50,52 C38,58 18,58 5,54 C0,42 0,18 9,4 Z M15,13 C24,10 36,10 43,14 C45,23 45,35 43,44 C34,48 22,48 12,45 C10,36 10,22 15,13 Z"/></svg><p>شعار شركتك<br>هنا</p></div><p class="big01" aria-hidden="true">01</p>
+    <h1 class="cvt">عنوان الموضوع<br>النائب</h1><p class="stm">أدخل عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p><p class="bd">أدخل النص المطلوب هنا. هذا نص توضيحي.</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="dtr" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>الملخص التنفيذي والأهداف</b></h1>
+    <p class="stm">أدخل عبارتك الرئيسية<br>هنا. عبارة موجزة<br>عن موضوعك.</p><p class="bd">أدخل النص المطلوب هنا. هذا<br>نص توضيحي. عبارة موجزة<br>عن موضوعك.</p>
+    <div class="box b1"><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div>
+    <div class="box b2"><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div>
+    <div class="box b3"><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div>
+    <div class="band"></div><i class="dot" style="inset-inline-start:35px"></i><i class="dot" style="inset-inline-start:415px"></i><i class="dot" style="inset-inline-start:789px"></i>
+    <div class="tl k1"><p class="num">01</p><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="tl k2"><p class="num">02</p><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="tl k3"><p class="num">03</p><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="dbl" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>خريطة محفظة الملكية الفكرية للمؤسسة</b></h1>
+    <svg class="donut" viewBox="0 0 316 316" aria-hidden="true"><circle cx="158" cy="158" r="138" fill="none" stroke="#0060E2" stroke-width="40"/><circle cx="158" cy="158" r="138" fill="none" stroke="#20B4F0" stroke-width="40" stroke-dasharray="563.6 867.1" transform="rotate(-90 158 158)"/></svg><p class="pct"><bdi dir="ltr">65%</bdi></p><p class="h dh">عنوان<br>نائب</p><p class="t dt">أدخل العبارة المطلوبة<br>هنا. هذا نص توضيحي.</p>
+    <div class="line"></div><div class="card c1"><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div><div class="card c2"><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div><div class="card c3"><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div><div class="ring r1"><i></i></div><p class="num n n1">01</p><div class="ring r2"><i></i></div><p class="num n n2">02</p><div class="ring r3"><i></i></div><p class="num n n3">03</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <div class="dtr" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>استراتيجية براءات الاختراع:<br>حماية التقنيات الجوهرية</b></h1>
+    <div class="panel"></div>
+    <div class="pi" style="top:282px"><span class="num">01</span><div><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div></div>
+    <div class="pi" style="top:426px"><span class="num">02</span><div><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div></div>
+    <div class="pi" style="top:570px"><span class="num">03</span><div><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div></div>
+    <div class="col" style="top:275px;inset-inline-start:420px"><svg class="chev" viewBox="0 0 180 140" aria-hidden="true"><path d="M0,1 L142,1 L177,69 L142,138 L88,138" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><p class="ch" style="inset-inline-start:2px">عنوان<br>نائب</p><p class="lead">أدخل النص<br>المطلوب هنا.</p><hr><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div></div>
+    <div class="col" style="top:275px;inset-inline-start:638px"><svg class="chev" viewBox="0 0 180 140" aria-hidden="true"><path d="M0,1 L142,1 L177,69 L142,138 L88,138" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><p class="ch" style="inset-inline-start:2px">عنوان<br>نائب</p><p class="lead">أدخل النص<br>المطلوب هنا.</p><hr><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div></div>
+    <div class="col" style="top:275px;inset-inline-start:847px"><svg class="chev" viewBox="0 0 180 140" aria-hidden="true"><path d="M0,1 L142,1 L177,69 L142,138 L88,138" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><p class="ch" style="inset-inline-start:2px">عنوان<br>نائب</p><p class="lead">أدخل النص<br>المطلوب هنا.</p><hr><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div></div>
+    <div class="col" style="top:275px;inset-inline-start:1064px"><svg class="chev" viewBox="0 0 180 140" aria-hidden="true"><path d="M0,1 L142,1 L177,69 L142,138 L88,138" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><p class="ch" style="inset-inline-start:2px">عنوان<br>نائب</p><p class="lead">أدخل النص<br>المطلوب هنا.</p><hr><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص<br>المطلوب هنا.</p></div></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <div class="dtr" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>قيمة العلامة وبنية العلامات التجارية</b></h1>
+    <div class="top"></div><div class="pill" style="inset-inline-start:35px">العنوان هنا</div><p class="t pt" style="inset-inline-start:35px">أدخل النص المطلوب<br>هنا.</p><div class="pill" style="inset-inline-start:284px">العنوان هنا</div><p class="t pt" style="inset-inline-start:284px">أدخل النص المطلوب<br>هنا.</p><div class="pill" style="inset-inline-start:533px">العنوان هنا</div><p class="t pt" style="inset-inline-start:533px">أدخل النص المطلوب<br>هنا.</p><div class="pill" style="inset-inline-start:781px">العنوان هنا</div><p class="t pt" style="inset-inline-start:781px">أدخل النص المطلوب<br>هنا.</p><div class="pill" style="inset-inline-start:1030px">العنوان هنا</div><p class="t pt" style="inset-inline-start:1030px">أدخل النص المطلوب<br>هنا.</p><svg class="ar" style="inset-inline-start:252px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 12h10M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ar" style="inset-inline-start:501px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 12h10M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ar" style="inset-inline-start:750px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 12h10M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ar" style="inset-inline-start:998px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 12h10M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="colb" style="inset-inline-start:0px"><h2 class="h2">عنوان<br>نائب</h2><p class="t lead">أدخل النص المطلوب هنا.</p><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div></div>
+    <div class="colb alt" style="inset-inline-start:320px"><h2 class="h2">عنوان<br>نائب</h2><p class="t lead">أدخل النص المطلوب هنا.</p><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div></div>
+    <div class="colb" style="inset-inline-start:640px"><h2 class="h2">عنوان<br>نائب</h2><p class="t lead">أدخل النص المطلوب هنا.</p><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div></div>
+    <div class="colb alt" style="inset-inline-start:960px"><h2 class="h2">عنوان<br>نائب</h2><p class="t lead">أدخل النص المطلوب هنا.</p><div class="bl x1"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div><div class="bl x2"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب<br>هنا.</p></div></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="dtr" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>صون الأسرار التجارية<br>والمعرفة الفنية السرية</b></h1>
+    <p class="stm">أدخل عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p><p class="bd">أدخل النص المطلوب هنا. هذا نص توضيحي.<br>عبارة موجزة عن موضوعك.</p>
+    <svg class="rings" viewBox="536 193 744 380" aria-hidden="true"><path d="M536,573 A372,380 0 0 1 1280,573 Z" fill="#61CBF3"/><path d="M645,575 A263,268 0 0 1 1171,575 Z" fill="#20B4F0"/><path d="M754,573 A154,160 0 0 1 1062,573 Z" fill="#0D8CBF"/></svg><p class="t rt" style="top:228px">أدخل النص المطلوب<br>هنا.</p><p class="t rt" style="top:349px">أدخل النص المطلوب<br>هنا.</p><p class="t rt" style="top:479px">أدخل النص المطلوب<br>هنا.</p>
+    <div class="band"></div><div class="lg l1"><i style="background:#0D8CBF"></i><div><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="lg l2"><i style="background:#20B4F0"></i><div><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="lg l3"><i style="background:#61CBF3"></i><div><h2 class="h">العنوان هنا</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <div class="dbl" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>امتثال الموظفين والمقاولين<br>والأطراف الثالثة</b></h1><svg class="cn" style="top:236px;height:414px;inset-inline-start:35px;width:280px" viewBox="0 0 280 414" aria-hidden="true"><path d="M98,414 L98,256 C98,239 111,226 128,226 L250,226 L250,414 Z" fill="url(#ipGray)"/><path d="M87,1 L243,1 C260,1 273,14 273,31 L273,196 C273,213 260,226 243,226 L128,226 C111,226 98,239 98,256 L98,414" fill="none" stroke="#0D8CBF" stroke-width="1.2"/></svg><svg class="cn" style="top:236px;height:414px;inset-inline-start:341px;width:280px" viewBox="0 0 280 414" aria-hidden="true"><path d="M98,414 L98,256 C98,239 111,226 128,226 L250,226 L250,414 Z" fill="url(#ipPale)"/><path d="M87,1 L243,1 C260,1 273,14 273,31 L273,196 C273,213 260,226 243,226 L128,226 C111,226 98,239 98,256 L98,414" fill="none" stroke="#0D8CBF" stroke-width="1.2"/></svg><svg class="cn" style="top:236px;height:414px;inset-inline-start:645px;width:280px" viewBox="0 0 280 414" aria-hidden="true"><path d="M98,414 L98,256 C98,239 111,226 128,226 L250,226 L250,414 Z" fill="url(#ipPale)"/><path d="M87,1 L243,1 C260,1 273,14 273,31 L273,196 C273,213 260,226 243,226 L128,226 C111,226 98,239 98,256 L98,414" fill="none" stroke="#0D8CBF" stroke-width="1.2"/></svg><svg class="cn" style="top:236px;height:414px;inset-inline-start:949px;width:280px" viewBox="0 0 280 414" aria-hidden="true"><path d="M98,414 L98,256 C98,239 111,226 128,226 L250,226 L250,414 Z" fill="url(#ipPale)"/><path d="M87,1 L243,1 C260,1 273,14 273,31 L273,196 C273,213 260,226 243,226 L128,226 C111,226 98,239 98,256 L98,414" fill="none" stroke="#0D8CBF" stroke-width="1.2"/></svg>
+    <div class="crd q1"><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div>
+    <div class="crd q2"><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div>
+    <div class="crd q3"><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div>
+    <div class="crd q4"><p class="t">أدخل النص المطلوب<br>هنا. هذا نص<br>توضيحي.</p></div><p class="num nm" style="inset-inline-start:79px">01</p><h2 class="hh" style="inset-inline-start:154px">عنوان<br>نائب</h2><p class="num nm" style="inset-inline-start:385px">02</p><h2 class="hh" style="inset-inline-start:460px">عنوان<br>نائب</h2><p class="num nm" style="inset-inline-start:689px">03</p><h2 class="hh" style="inset-inline-start:764px">عنوان<br>نائب</h2><p class="num nm" style="inset-inline-start:993px">04</p><h2 class="hh" style="inset-inline-start:1068px">عنوان<br>نائب</h2>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <div class="dtr" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>المشهد التنافسي</b></h1>
+    <p class="rl" style="top:248px">أدخل النص المطلوب<br>هنا.</p>
+    <p class="rl" style="top:354px">أدخل النص المطلوب<br>هنا.</p>
+    <p class="rl" style="top:459px">أدخل النص المطلوب<br>هنا.</p>
+    <p class="rl" style="top:565px">أدخل النص المطلوب<br>هنا.</p>
+    <div class="main"></div><div class="colc" style="inset-inline-start:467px"></div><div class="colc" style="inset-inline-start:665px"></div><div class="colc" style="inset-inline-start:862px"></div><div class="colc" style="inset-inline-start:1060px"></div><i class="gap" style="top:341px"></i><i class="gap" style="top:447px"></i><i class="gap" style="top:552px"></i>
+    <p class="hd w" style="inset-inline-start:269px">العنوان هنا</p><p class="hd" style="inset-inline-start:467px">العنوان هنا</p><p class="hd" style="inset-inline-start:665px">العنوان هنا</p><p class="hd" style="inset-inline-start:862px">العنوان هنا</p><p class="hd" style="inset-inline-start:1060px">العنوان هنا</p><svg class="ic" style="top:273px;inset-inline-start:343px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#fff"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#5CC6F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:379px;inset-inline-start:343px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#fff"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#5CC6F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:484px;inset-inline-start:343px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#fff"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#5CC6F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:590px;inset-inline-start:343px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#fff"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#5CC6F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:273px;inset-inline-start:541px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:273px;inset-inline-start:739px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:273px;inset-inline-start:936px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:273px;inset-inline-start:1134px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:379px;inset-inline-start:541px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:379px;inset-inline-start:739px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:379px;inset-inline-start:936px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:379px;inset-inline-start:1134px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:484px;inset-inline-start:541px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:484px;inset-inline-start:739px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:484px;inset-inline-start:936px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:484px;inset-inline-start:1134px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:590px;inset-inline-start:541px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:590px;inset-inline-start:739px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="ic" style="top:590px;inset-inline-start:936px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg><svg class="ic" style="top:590px;inset-inline-start:1134px" viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#12A6E3"/><path d="M13 13l12 12M25 13L13 25" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/></svg>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <div class="dtr" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>الإنفاذ والرصد<br>والجاهزية للتقاضي</b></h1>
+    <div class="cl ca"></div><div class="cl cb"></div><div class="cl cc"></div><p class="hd ha">عنوان نائب</p><p class="hd hb">عنوان نائب</p><p class="hd hc">عنوان نائب</p>
+    <div class="grp ga"><p class="lead">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><hr><div class="bl"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="bl"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="grp gb"><p class="lead">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><hr><div class="bl"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="bl"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="grp gc"><p class="lead">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p><hr><div class="bl"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="bl"><svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h9M12.5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <div class="dbl" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>مسارات التسييل والتسويق التجاري</b></h1>
+    <i class="hl" style="top:259px;inset-inline-start:36px;width:461px"></i><i class="hl" style="top:406px;inset-inline-start:36px;width:401px"></i><i class="hl" style="top:552px;inset-inline-start:36px;width:461px"></i><i class="hl" style="top:259px;inset-inline-start:783px;width:458px"></i><i class="hl" style="top:406px;inset-inline-start:855px;width:386px"></i><i class="hl" style="top:552px;inset-inline-start:783px;width:458px"></i>
+    <svg class="hex" viewBox="430 210 430 395" aria-hidden="true"><g stroke="#0A3548" stroke-width="3.2"><line x1="738" y1="260" x2="810" y2="407"/><line x1="810" y1="407" x2="738" y2="553"/><line x1="738" y1="553" x2="541" y2="553"/><line x1="541" y1="553" x2="481" y2="407"/><line x1="481" y1="407" x2="541" y2="260"/><line x1="541" y1="260" x2="738" y2="260"/></g><path d="M566,305 L590,345 M715,305 L691,345 M590,468 L566,508 M691,468 L715,508" stroke="#3AAFDD" stroke-width="1.2"/><circle cx="738" cy="260" r="44" fill="#0D8CBF" stroke="#0A3548" stroke-width="3"/><circle cx="738" cy="260" r="30" fill="#61CBF3"/><circle cx="810" cy="407" r="44" fill="#0D8CBF" stroke="#0A3548" stroke-width="3"/><circle cx="810" cy="407" r="30" fill="#0060E2"/><circle cx="738" cy="553" r="44" fill="#0D8CBF" stroke="#0A3548" stroke-width="3"/><circle cx="738" cy="553" r="30" fill="#C8ECFB"/><circle cx="541" cy="553" r="44" fill="#0D8CBF" stroke="#0A3548" stroke-width="3"/><circle cx="541" cy="553" r="30" fill="#E3F6FD"/><circle cx="481" cy="407" r="44" fill="#0D8CBF" stroke="#0A3548" stroke-width="3"/><circle cx="481" cy="407" r="30" fill="#FFFFFF"/><circle cx="541" cy="260" r="44" fill="#0D8CBF" stroke="#0A3548" stroke-width="3"/><circle cx="541" cy="260" r="30" fill="#61CBF3"/></svg><span class="cx" style="top:215px;inset-inline-start:693px;color:#fff">1</span><span class="cx" style="top:362px;inset-inline-start:765px;color:#fff">2</span><span class="cx" style="top:508px;inset-inline-start:693px;color:#0D8CBF">3</span><span class="cx" style="top:508px;inset-inline-start:496px;color:#0D8CBF">4</span><span class="cx" style="top:362px;inset-inline-start:436px;color:#0D8CBF">5</span><span class="cx" style="top:215px;inset-inline-start:496px;color:#fff">6</span><p class="ctr">عنوان نائب</p>
+    <div class="it" style="top:223px;inset-inline-start:39px"><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="it" style="top:371px;inset-inline-start:39px"><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="it" style="top:514px;inset-inline-start:39px"><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="it e" style="top:223px;inset-inline-end:39px"><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="it e" style="top:371px;inset-inline-end:39px"><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div><div class="it e" style="top:514px;inset-inline-end:39px"><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <div class="dbl" aria-hidden="true"><i></i><i></i></div><p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>خارطة الطريق الاستراتيجية<br>لثلاث سنوات والمعالم الرئيسية</b></h1>
+    <p class="stm">أدخل عبارتك الرئيسية<br>هنا. عبارة موجزة<br>عن موضوعك.</p><p class="bd">أدخل النص المطلوب هنا. هذا<br>نص توضيحي. عبارة موجزة<br>عن موضوعك.</p>
+    <div class="step w1"><div class="sh"></div><span class="yr">السنة <bdi dir="ltr">1</bdi></span><div class="in"><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p><ul><li>هذا نص توضيحي.</li><li>أدخل النص المطلوب هنا.</li><li>أدخل نصك هنا.</li></ul></div></div><div class="step w2"><div class="sh"></div><span class="yr">السنة <bdi dir="ltr">2</bdi></span><div class="in"><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p><ul><li>هذا نص توضيحي.</li><li>أدخل النص المطلوب هنا.</li><li>أدخل نصك هنا.</li></ul></div></div><div class="step w3"><div class="sh"></div><span class="yr">السنة <bdi dir="ltr">3</bdi></span><div class="in"><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p><ul><li>هذا نص توضيحي.</li><li>أدخل النص المطلوب هنا.</li><li>أدخل نصك هنا.</li></ul></div></div>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <p class="co">اسم شركتك هنا</p><h1 class="ttl">شريحة <b>الملخص وبنود<br>العمل العاجلة</b></h1>
+    <p class="stm">أدخل عبارتك الرئيسية هنا.<br>عبارة موجزة عن موضوعك.</p><p class="bd">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p><div class="ck k1"><svg viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div><div class="ck k2"><svg viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div><div class="ck k3"><svg viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="19" fill="#0060E2"/><path d="M11 19.5l5.5 5.5L27.5 13" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب<br>هنا. هذا نص توضيحي.</p></div>
+    <div class="side"></div><p class="ai">بنود العمل:</p><div class="act" style="top:140px"><span class="num">01</span><div><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="act" style="top:323px"><span class="num">02</span><div><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="act" style="top:515px"><span class="num">03</span><div><h2 class="h">عنوان<br>نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><rect width="1280" height="720" fill="url(#ipNavy15)"/><path fill="url(#ipBandTR)" d="M800,0 L1120,0 L1280,60 L1280,300 C1272,235 1230,172 1160,145 Z"/><path fill="url(#ipBandBL)" d="M0,420 C10,480 50,530 110,556 L520,720 L190,720 L0,650 Z"/></svg>
+    <div class="dbr" aria-hidden="true"><i></i><i></i></div><div class="logo"><svg viewBox="0 0 54 58" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9,4 C22,-1 40,0 50,6 C54,18 54,40 50,52 C38,58 18,58 5,54 C0,42 0,18 9,4 Z M15,13 C24,10 36,10 43,14 C45,23 45,35 43,44 C34,48 22,48 12,45 C10,36 10,22 15,13 Z"/></svg><p>شعار شركتك<br>هنا</p></div>
+    <p class="qa">س &amp; ج</p><h1 class="q2">هل لديكم أي أسئلة؟</h1><p class="bd">أدخل النص المطلوب هنا. هذا نص توضيحي.<br>عبارة موجزة عن موضوعك.</p><div class="qi" style="top:163px"><span class="num">01</span><div><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="qi" style="top:344px"><span class="num">02</span><div><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><div class="qi" style="top:525px"><span class="num">03</span><div><h2 class="h">عنوان نائب</h2><p class="t">أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div></div><i class="sep" style="top:296px"></i><i class="sep" style="top:478px"></i>
+  </div></section>
+  <!-- 16 -->
+  <section class="slide"><div class="frame s16">
+    <svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><rect width="1280" height="720" fill="url(#ipNavy3)"/><g transform="translate(-115 0)"><rect x="-200" y="0" width="148" height="112" fill="url(#ipStrip)" transform="translate(952 0)"/><path fill="url(#ipBand3)" d="M752,112 L900,112 L900,345 C900,425 855,478 790,500 L-200,864 L-200,735 L630,430 C705,405 752,345 752,255 Z"/><path fill="#fff" d="M-200,0 L752,0 L752,255 C752,345 705,405 630,430 L-200,735 Z"/></g></svg>
+    <div class="dbr" aria-hidden="true"><i></i><i></i></div><div class="logo"><svg viewBox="0 0 54 58" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9,4 C22,-1 40,0 50,6 C54,18 54,40 50,52 C38,58 18,58 5,54 C0,42 0,18 9,4 Z M15,13 C24,10 36,10 43,14 C45,23 45,35 43,44 C34,48 22,48 12,45 C10,36 10,22 15,13 Z"/></svg><p>شعار شركتك<br>هنا</p></div>
+    <h1 class="cvt">شكرًا لكم<br>تواصلوا معنا</h1><p class="bd">أدخل النص المطلوب هنا. هذا نص توضيحي.<br>عبارة موجزة عن موضوعك.</p><div class="ci" style="top:258px"><svg viewBox="0 0 34 34" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 14 L17 4 L31 14 V31 H3 Z"/><path d="M3 14 L17 24 L31 14"/><path d="M3 31 L13 21 M31 31 L21 21"/><rect x="9" y="8" width="16" height="11" fill="#0B6F98"/><path d="M12 11.5h10M12 15h7"/></svg><div><h2 class="h">البريد الإلكتروني</h2><p class="t">أدخل النص المطلوب هنا.</p></div></div><div class="ci" style="top:403px"><svg viewBox="0 0 34 34" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="17" cy="17" r="14"/><ellipse cx="17" cy="17" rx="6.5" ry="14"/><path d="M3 17h28M5.5 9.5h23M5.5 24.5h23"/></svg><div><h2 class="h">الموقع الإلكتروني</h2><p class="t">أدخل النص المطلوب هنا.</p></div></div><div class="ci" style="top:538px"><svg viewBox="0 0 34 34" aria-hidden="true"><path fill="currentColor" d="M8.5 6.5 L12.5 5.8 L15 12 L12.3 14.2 C13.6 17.4 16 20 19.3 21.6 L21.6 19 L27.6 21.6 L26.8 25.6 C26.4 27.4 24.8 28.4 23 28 C14.2 26.2 7.6 19.4 6 10.6 C5.7 8.6 6.7 6.9 8.5 6.5 Z"/><path d="M19 3.5 A11 11 0 0 1 30.5 15 M19 8 A6.5 6.5 0 0 1 26 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><div><h2 class="h">التواصل</h2><p class="t">أدخل النص المطلوب هنا.</p></div></div><i class="sep" style="top:362px;inset-inline-start:825px"></i><i class="sep" style="top:499px;inset-inline-start:830px"></i>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 16</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
