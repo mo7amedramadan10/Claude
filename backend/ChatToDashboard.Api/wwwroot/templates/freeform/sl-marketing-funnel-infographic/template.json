@@ -1,0 +1,37 @@
+{
+  "key": "sl-marketing-funnel-infographic",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "📣",
+  "name": "رسم قمع التسويق",
+  "nameEn": "Marketing Funnel Infographic",
+  "description": "ست شرائح لقمع تسويق بخمس مراحل: نظرة عامة ملوّنة ثم إبراز كل مرحلة على حدة",
+  "descriptionEn": "Six slides of a 5-stage marketing funnel: colored overview, then each stage highlighted",
+  "sections": [
+    {
+      "title": "القمع كاملًا",
+      "titleEn": "Full Funnel"
+    },
+    {
+      "title": "مرحلة الوعي",
+      "titleEn": "Awareness"
+    },
+    {
+      "title": "مرحلة الاهتمام",
+      "titleEn": "Interest"
+    },
+    {
+      "title": "مرحلة الدراسة والمقارنة",
+      "titleEn": "Consideration"
+    },
+    {
+      "title": "مرحلة التحويل",
+      "titleEn": "Conversion"
+    },
+    {
+      "title": "مرحلة الولاء والمناصرة",
+      "titleEn": "Loyalty & Advocacy"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ القمع رسم SVG بخمس مراحل، والصنف off يجعل المرحلة رمادية فتبقى المرحلة المُبرزة في كل شريحة بلونها."
+}
