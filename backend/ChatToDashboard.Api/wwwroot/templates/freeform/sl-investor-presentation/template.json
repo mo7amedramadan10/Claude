@@ -1,0 +1,108 @@
+{
+  "key": "sl-investor-presentation",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💼",
+  "name": "عرض المستثمرين",
+  "nameEn": "Investor Presentation",
+  "description": "21 شريحة لعرض المستثمرين: الشركة والسجل والفريق والمؤشرات والمحفظة والصندوق ودراسة حالة وإخلاء مسؤولية",
+  "descriptionEn": "21 investor slides: company, track record, team, metrics, portfolio, fund, case study and disclaimer",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "المقدمة والملخص التنفيذي",
+      "titleEn": "Introduction & Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "نبذة عن شركتنا",
+      "titleEn": "About Our Company",
+      "needsData": true
+    },
+    {
+      "title": "أبرز إنجازات السجل",
+      "titleEn": "Track Record Highlights",
+      "needsData": true
+    },
+    {
+      "title": "فريق القيادة",
+      "titleEn": "Our Leadership Team"
+    },
+    {
+      "title": "المؤشرات الرئيسية",
+      "titleEn": "Key Metrics",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على المحفظة",
+      "titleEn": "Portfolio Overview",
+      "needsData": true
+    },
+    {
+      "title": "زخم المحفظة",
+      "titleEn": "Portfolio Traction",
+      "needsData": true
+    },
+    {
+      "title": "فلسفة الاستثمار",
+      "titleEn": "Investment Philosophy",
+      "needsData": true
+    },
+    {
+      "title": "آلية الاستثمار",
+      "titleEn": "Investment Process"
+    },
+    {
+      "title": "القيمة المقترحة",
+      "titleEn": "Value Proposition"
+    },
+    {
+      "title": "الدروس والتطور",
+      "titleEn": "Learnings & Evolution",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الصندوق",
+      "titleEn": "Fund Overview",
+      "needsData": true
+    },
+    {
+      "title": "استراتيجية توزيع رأس المال",
+      "titleEn": "Capital Allocation Strategy",
+      "needsData": true
+    },
+    {
+      "title": "محاور الخطوات التالية",
+      "titleEn": "Next Steps Focus"
+    },
+    {
+      "title": "الجدول الزمني للاستثمار",
+      "titleEn": "Investment Timeline"
+    },
+    {
+      "title": "نموذج دراسة حالة",
+      "titleEn": "Case Study Sample",
+      "needsData": true
+    },
+    {
+      "title": "قصة نجاحنا من عملائنا",
+      "titleEn": "Our Success Story from Our Clients"
+    },
+    {
+      "title": "إخلاء المسؤولية القانونية",
+      "titleEn": "Legal Disclaimer"
+    },
+    {
+      "title": "شكرًا وتواصلوا معنا",
+      "titleEn": "Thank You – Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ الحلقتان في شريحتي المحفظة والصندوق والأعمدة المكدّسة تُرسم من كتلة chart-data (portfolio وfund وbars) فعدّل قيمها هناك مع النسب المكتوبة بجوارها."
+}
