@@ -1,0 +1,81 @@
+{
+  "key": "sl-global-expansion-plan",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🌍",
+  "name": "خطة التوسع العالمي",
+  "nameEn": "Global Expansion Plan",
+  "description": "خمس عشرة شريحة لخطة توسع عالمي: السوق والأولويات ودخول السوق والمخاطر والمنافسون والتوقعات المالية والفريق",
+  "descriptionEn": "15 slides for a global expansion plan: market, priorities, go-to-market, risks, competitors, financials, team",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "رؤيتنا",
+      "titleEn": "Our Vision",
+      "needsData": true
+    },
+    {
+      "title": "الفرصة العالمية – حجم السوق",
+      "titleEn": "The Global Opportunity – Market Size",
+      "needsData": true
+    },
+    {
+      "title": "اختيار الأسواق وترتيب أولوياتها",
+      "titleEn": "Market Selection & Prioritization",
+      "needsData": true
+    },
+    {
+      "title": "استراتيجية دخول السوق",
+      "titleEn": "Go-to-Market Strategy"
+    },
+    {
+      "title": "الحدّ من المخاطر والتخطيط للطوارئ",
+      "titleEn": "Risk Mitigation & Contingency Planning",
+      "needsData": true
+    },
+    {
+      "title": "المشهد التنافسي – محلي مقابل عالمي",
+      "titleEn": "Competitive Landscape – Local vs. Global",
+      "needsData": true
+    },
+    {
+      "title": "الشراكات الاستراتيجية",
+      "titleEn": "Strategic Partnerships",
+      "needsData": true
+    },
+    {
+      "title": "خارطة الطريق التشغيلية والتنظيمية",
+      "titleEn": "Operational & Regulatory Roadmap"
+    },
+    {
+      "title": "التوقعات المالية والعائد على الاستثمار",
+      "titleEn": "Financial Projections & ROI",
+      "needsData": true
+    },
+    {
+      "title": "فريق جاهز للعالمية",
+      "titleEn": "The Global-Ready Team"
+    },
+    {
+      "title": "الخلاصة والخطوات التالية",
+      "titleEn": "Summary & Next Steps"
+    },
+    {
+      "title": "شكرًا وتواصلوا معنا",
+      "titleEn": "Thank You – Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في كتلة chart-data ونِسب الحلقتين في كتلة donut-data (من query_data عند طلب بيانات)."
+}
