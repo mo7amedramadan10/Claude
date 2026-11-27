@@ -1,0 +1,71 @@
+{
+  "key": "sl-key-customer-onboarding",
+  "kind": "slides",
+  "category": "cx",
+  "icon": "🤝",
+  "name": "تهيئة العملاء الرئيسيين",
+  "nameEn": "Key Customer Onboarding",
+  "description": "أربع عشرة شريحة لتهيئة العملاء: من نحن، الفريق، خطة النجاح، الأسابيع، الإعداد، التدريب، المواعيد، المقاييس، الدعم",
+  "descriptionEn": "Fourteen onboarding slides: about us, team, success plan, weeks, setup, training, dates, metrics, support",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نبذة عن شركتنا",
+      "titleEn": "About Our Company"
+    },
+    {
+      "title": "فريق التهيئة",
+      "titleEn": "Onboarding Team"
+    },
+    {
+      "title": "خطة نجاحك",
+      "titleEn": "Your Success Plan"
+    },
+    {
+      "title": "ما تتوقّعه من التهيئة",
+      "titleEn": "What to Expect from Onboarding"
+    },
+    {
+      "title": "نظرة على المنتج",
+      "titleEn": "Product Overview"
+    },
+    {
+      "title": "قائمة البدء",
+      "titleEn": "Getting Started Checklist"
+    },
+    {
+      "title": "دليل إعداد الحساب",
+      "titleEn": "Account Setup Guide"
+    },
+    {
+      "title": "دليل إعداد الحساب (بديل)",
+      "titleEn": "Account Setup Guide (Alt)"
+    },
+    {
+      "title": "موارد التدريب",
+      "titleEn": "Training Resources"
+    },
+    {
+      "title": "التواريخ والمواعيد النهائية",
+      "titleEn": "Key Dates & Deadlines",
+      "needsData": true
+    },
+    {
+      "title": "مقاييس النجاح",
+      "titleEn": "Metrics for Success",
+      "needsData": true
+    },
+    {
+      "title": "قنوات الدعم",
+      "titleEn": "Support Channels"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ الرسم الخطي في الشريحة 12 يُرسم من كتلة chart-data (التسميات والسلاسل وقيمها) فعدّل أرقامه هناك."
+}
