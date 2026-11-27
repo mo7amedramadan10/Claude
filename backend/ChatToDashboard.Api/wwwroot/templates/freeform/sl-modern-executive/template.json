@@ -1,0 +1,64 @@
+{
+  "key": "sl-modern-executive",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "💼",
+  "name": "العرض التنفيذي الحديث",
+  "nameEn": "Modern Executive",
+  "description": "اثنتا عشرة شريحة تنفيذية: ملخص، سياق بأرقام، أهداف، تحديات، أولويات، حل، بيانات، جدول زمني، أثر، مخاطر، وقرار",
+  "descriptionEn": "Twelve executive slides: summary, context, objectives, challenges, priorities, solution, data, timeline, risks, decision",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary"
+    },
+    {
+      "title": "سياق الأعمال",
+      "titleEn": "Business Context",
+      "needsData": true
+    },
+    {
+      "title": "الأهداف ومعايير النجاح",
+      "titleEn": "Objectives & Success Criteria",
+      "needsData": true
+    },
+    {
+      "title": "التحديات الرئيسية",
+      "titleEn": "Key Challenges"
+    },
+    {
+      "title": "الأولويات الاستراتيجية",
+      "titleEn": "Strategic Priorities"
+    },
+    {
+      "title": "الحل المقترح",
+      "titleEn": "Proposed Solution"
+    },
+    {
+      "title": "البيانات والرؤى",
+      "titleEn": "Data & Insights",
+      "needsData": true
+    },
+    {
+      "title": "الجدول الزمني",
+      "titleEn": "Timeline"
+    },
+    {
+      "title": "الأثر والفوائد",
+      "titleEn": "Impact & Benefits"
+    },
+    {
+      "title": "المخاطر وسبل التخفيف",
+      "titleEn": "Risks & Mitigation"
+    },
+    {
+      "title": "القرار والخطوات التالية",
+      "titleEn": "Decision & Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والأشكال، وغيّر النصوص والأرقام فقط (المبالغ والنسب في شرائح سياق الأعمال والأهداف والبيانات من query_data عند طلب بيانات حقيقية)."
+}

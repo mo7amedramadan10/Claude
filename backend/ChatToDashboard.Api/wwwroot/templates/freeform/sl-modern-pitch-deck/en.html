@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modern Pitch Deck</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «عرض استثماري حديث»: شريحة ختام بخلفية #E7E8EA، أربع دوائر بنصف قطر 325px في SVG واحد بقاعدة evenodd تنعكس في العربية، شعار عام، شارة ليمونية، عنوان كبير بخط Public Sans وعنوان فرعي أخضر. */
+  :root { --font: 'Public Sans', 'Segoe UI', Arial, sans-serif; --ink: #000000; --accent: #BEF035; --green: #6B8A10; --bg: #E7E8EA; --arc: #D6D9DE; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame p, .frame h1 { margin: 0; }
+  html[dir="rtl"] .dec { transform: scaleX(-1); }
+  .dec { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  .logo { position: absolute; top: 110px; inset-inline-start: 118px; width: 53px; height: 59px; color: #000; }
+  .logo-t { position: absolute; top: 117px; inset-inline-start: 198px; font-size: 16px; line-height: 23px; letter-spacing: 2.9px; color: #111; font-weight: 500; }
+  html[lang="ar"] .logo-t { letter-spacing: 0; font-size: 17px; }
+  .tag { position: absolute; top: 307px; inset-inline-start: 99px; height: 48px; padding: 0 16px; border-radius: 6px; background: var(--accent); color: #000; font-size: 24.5px; line-height: 48px; font-weight: 700; letter-spacing: -0.3px; }
+  html[lang="ar"] .tag { letter-spacing: 0; font-size: 24px; }
+  .ttl { position: absolute; top: 369px; inset-inline-start: 112px; font-size: 87px; line-height: 103px; font-weight: 700; color: var(--ink); letter-spacing: -1.6px; word-spacing: -6px; white-space: nowrap; }
+  html[lang="ar"] .ttl { letter-spacing: 0; word-spacing: 0; font-size: 84px; }
+  .sub { position: absolute; top: 590px; inset-inline-start: 112px; font-size: 44.5px; line-height: 52px; color: var(--green); letter-spacing: -0.2px; white-space: nowrap; }
+  html[lang="ar"] .sub { letter-spacing: 0; font-size: 38px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="dec" viewBox="0 0 1280 720" aria-hidden="true"><path d="M503 -7A325 325 0 1 0 1153 -7A325 325 0 1 0 503 -7ZM663 -142A325 325 0 1 0 1313 -142A325 325 0 1 0 663 -142ZM895 97A325 325 0 1 0 1545 97A325 325 0 1 0 895 97ZM978 -100A325 325 0 1 0 1628 -100A325 325 0 1 0 978 -100Z" fill="#D6D9DE" fill-rule="evenodd"/></svg>
+    <div class="logo"><svg viewBox="0 0 72 80" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M22 6C34 3 52 8 64 13c6 2 8 6 7 13l-2 26c-1 8-4 12-11 15C45 73 30 78 18 79 9 80 4 77 3 68L1 32c0-12 5-18 13-22zM19 21c11-2 27 0 38 4 3 1 4 4 3 8l-2 23c0 4-2 6-6 7-10 2-22 5-30 6-4 0-6-2-6-6L15 29c0-5 1-7 4-8z"/><path d="M13.5 22.5 22 4.5M59.5 61 69 70.5" stroke="#E7E8EA" stroke-width="1.6"/></svg></div><p class="logo-t">YOUR COMPANY<br>LOGO HERE</p>
+    <p class="tag">THANK YOU</p>
+    <h1 class="ttl">BUILDING THE<br>FUTURE OF WELLNESS</h1>
+    <p class="sub">Smarter, Healthier, Better You</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 1</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

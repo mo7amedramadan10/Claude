@@ -1,0 +1,17 @@
+{
+  "key": "sl-modern-pitch-deck",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🙏",
+  "name": "عرض استثماري حديث",
+  "nameEn": "Modern Pitch Deck",
+  "description": "شريحة ختام بشارة «شكرًا» وعنوان كبير وعنوان فرعي وأقواس زخرفية متقاطعة",
+  "descriptionEn": "A closing slide with a “Thank you” tag, a large headline, a subtitle and interlocking decorative arcs",
+  "sections": [
+    {
+      "title": "شريحة الختام",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأقواس الزخرفية، وغيّر النصوص فقط."
+}
