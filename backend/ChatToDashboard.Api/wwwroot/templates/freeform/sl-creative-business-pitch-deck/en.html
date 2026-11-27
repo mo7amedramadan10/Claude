@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creative Business Pitch Deck</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «عرض أعمال إبداعي»: أزرق #0070C0 وسماوي #45A2DB وفيروزي #44D9B1 وطوبي #CA7B6A؛ العناوين بتدرّج أزرق (.gt)، والتذييل مشترك (.ft-*)؛ الرسوم من كتل chart-data* والصور المائلة تنعكس كاملة في العربية. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --ink-2: #404040; --accent: #0070C0; --bg: #FFFFFF; --blue: #0070C0; --navy: #005391; --sky: #45A2DB; --teal: #44D9B1; --teal-d: #24B28C; --clay: #CA7B6A; --clay-d: #AC513C; --gray: #F2F2F2; --gray-2: #D9D9D9; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  :where(.frame p, .frame h1, .frame h2, .frame h3) { margin: 0; font-weight: 400; }
+  .ab { position: absolute; }
+  .flip { }
+  html[dir="rtl"] .flip { transform: scaleX(-1); }
+  /* العناوين بتدرّج أزرق أفقي (ينعكس اتجاهه في العربية) */
+  .gt { background-image: linear-gradient(90deg, #3874CF 0%, #82ABE1 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  html[dir="rtl"] .gt { background-image: linear-gradient(270deg, #3874CF 0%, #82ABE1 100%); }
+  .ttl { position: absolute; top: 37px; inset-inline-start: 64px; font-size: 46px; font-weight: 700; line-height: 1.3; white-space: nowrap; letter-spacing: -0.3px; }
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; top: 34px; }
+  .tx { position: absolute; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  .hd { position: absolute; font-size: 22px; font-weight: 700; line-height: 1.3; color: var(--ink); }
+  html[lang="ar"] .tx { font-size: 20px; }
+  html[lang="ar"] .hd { font-weight: 800; }
+  .ctr { text-align: center; } .end { text-align: end; }
+  .ph { position: absolute; display: block; object-fit: cover; }
+  /* التذييل المشترك */
+  .ft-g { position: absolute; top: 672px; inset-inline-start: 0; width: 1280px; height: 48px; background: var(--gray); }
+  .ft-b { position: absolute; top: 672px; inset-inline-start: 0; width: 304px; height: 48px; background: var(--blue); clip-path: polygon(0 0, 278px 0, 304px 100%, 0 100%); }
+  html[dir="rtl"] .ft-b { clip-path: polygon(100% 0, calc(100% - 278px) 0, calc(100% - 304px) 100%, 100% 100%); }
+  .ft-n { position: absolute; top: 672px; inset-inline-start: 64px; line-height: 48px; font-size: 17.5px; font-weight: 700; color: #fff; white-space: nowrap; letter-spacing: -0.3px; }
+  .ft-t { position: absolute; top: 672px; inset-inline-start: 317px; line-height: 48px; font-size: 17.5px; color: var(--ink-2); white-space: nowrap; letter-spacing: -0.2px; }
+  .ft-p { position: absolute; top: 672px; inset-inline-end: 64px; line-height: 48px; font-size: 28px; font-weight: 700; color: #1A1A1A; }
+  .ft-l { position: absolute; top: 696px; inset-inline-end: 0; width: 58px; height: 1.5px; background: #8C8C8C; }
+  .ft-b, .ft-n, .ft-t, .ft-p, .ft-l { z-index: 2; }
+  .s2 .blue { z-index: 1; }
+  .ft.w5 .ft-b { width: 315px; clip-path: polygon(0 0, 289px 0, 315px 100%, 0 100%); }
+  html[dir="rtl"] .ft.w5 .ft-b { clip-path: polygon(100% 0, calc(100% - 289px) 0, calc(100% - 315px) 100%, 100% 100%); }
+  .ft.w5 .ft-t { inset-inline-start: 722px; }
+  .ft.w19 .ft-b { width: 352px; clip-path: polygon(0 0, 326px 0, 352px 100%, 0 100%); }
+  html[dir="rtl"] .ft.w19 .ft-b { clip-path: polygon(100% 0, calc(100% - 326px) 0, calc(100% - 352px) 100%, 100% 100%); }
+  .ft.w19 .ft-t { inset-inline-start: 440px; }
+  .ft.w15 .ft-t { inset-inline-start: 480px; }
+  .ft.w5 .ft-g, .ft.w19 .ft-g, .ft.w15 .ft-g { z-index: 0; }
+  /* الشعار العام */
+  .logo { position: absolute; display: flex; align-items: center; gap: 26px; }
+  .logo svg { width: 58px; height: 64px; flex: none; transform: skewY(7deg); }
+  .logo span { font-size: 14px; line-height: 20px; letter-spacing: 2px; text-transform: uppercase; }
+  html[lang="ar"] .logo span { letter-spacing: 0; font-size: 15px; }
+  /* أيقونات الدوائر والمربعات */
+  .ci { position: absolute; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .ci svg { width: 44%; height: 44%; }
+  .g-blue { background: linear-gradient(180deg, #0A76C8 0%, #005A9E 100%); }
+  .g-sky { background: linear-gradient(180deg, #5DB3E6 0%, #3A92CF 100%); }
+  .g-teal { background: linear-gradient(180deg, #44D9B1 0%, #24B28C 100%); }
+  .g-clay { background: linear-gradient(180deg, #D08473 0%, #B5604B 100%); }
+  .g-purple { background: linear-gradient(180deg, #9A55C9 0%, #6B2C98 100%); }
+  .g-blueh { background: linear-gradient(135deg, #2F9BF0 0%, #0A6BC4 100%); }
+  .g-skyh { background: linear-gradient(135deg, #8CC6EE 0%, #4AA3DC 100%); }
+  .g-tealh { background: linear-gradient(135deg, #52E0BA 0%, #24B28C 100%); }
+
+  /* 1: الغلاف */
+  .s1 .band, .s19 .band { position: absolute; top: 0; inset-inline-start: 0; width: 452px; height: 682px; background: linear-gradient(90deg, #4AA7DF 0%, #2E8FD2 45%, #0070C0 100%); clip-path: polygon(0 0, 452px 0, 0 682px); }
+  .s1 .dark, .s19 .dark { position: absolute; top: 0; inset-inline-start: 0; width: 342px; height: 512px; background: linear-gradient(180deg, #005490 0%, #1E77B1 50%, #3F9AD3 100%); clip-path: polygon(0 0, 342px 0, 0 512px); }
+  html[dir="rtl"] .s1 .band, html[dir="rtl"] .s1 .dark, html[dir="rtl"] .s19 .band, html[dir="rtl"] .s19 .dark { transform: scaleX(-1); }
+  .s1 .deco, .s19 .deco { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s1 .gray { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; background: var(--gray); clip-path: polygon(958px 720px, 1280px 232px, 1280px 585px, 1190px 720px); }
+  html[dir="rtl"] .s1 .gray { transform: scaleX(-1); }
+  .s1 .logo { top: 66px; inset-inline-start: 998px; color: #1F6FB0; }
+  .s1 .t1 { position: absolute; top: 236px; inset-inline-start: 488px; font-size: 74px; font-weight: 700; line-height: 95px; letter-spacing: -0.8px; white-space: nowrap; }
+  html[lang="ar"] .s1 .t1 { font-weight: 800; letter-spacing: 0; font-size: 70px; top: 232px; }
+  .s1 .t2 { position: absolute; top: 455px; inset-inline-start: 490px; font-size: 33px; letter-spacing: 3.7px; color: var(--ink); text-transform: uppercase; white-space: nowrap; }
+  html[lang="ar"] .s1 .t2 { letter-spacing: 0; font-size: 34px; font-weight: 500; }
+
+  /* 2: من نحن */
+  .s2 .blue { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; background: linear-gradient(180deg, #0070C0 0%, #2C8FD2 60%, #45A2DB 100%); clip-path: polygon(1142px 0, 1280px 0, 1280px 422px, 1081px 720px, 662px 720px); }
+  html[dir="rtl"] .s2 .blue { transform: scaleX(-1); }
+  .s2 .ttl { top: 65px; }
+  html[lang="ar"] .s2 .ttl { top: 62px; }
+  .s2 .p1 { top: 158px; inset-inline-start: 64px; width: 480px; }
+  .s2 .p2 { top: 260px; inset-inline-start: 64px; width: 480px; }
+  .s2 .bld { top: 80px; inset-inline-start: 614px; width: 522px; height: 516px; }
+  .s2 .fnd { top: 368px; inset-inline-start: 64px; width: 222px; height: 228px; }
+  .s2 .ln { position: absolute; inset-inline-start: 317px; width: 251px; height: 3px; background: var(--teal); }
+  .s2 .nm { top: 386px; inset-inline-start: 317px; font-size: 25px; color: var(--ink-2); }
+  .s2 .rl { top: 422px; inset-inline-start: 317px; font-size: 18px; }
+  .s2 .bd { top: 456px; inset-inline-start: 317px; width: 230px; line-height: 28px; }
+
+  /* 3: فريقنا */
+  .tm { position: absolute; top: 88px; width: 237px; height: 514px; }
+  .tm img { position: absolute; top: 0; inset-inline-start: 0; width: 100%; height: 352px; object-fit: cover; }
+  .tm .cb { position: absolute; top: 352px; inset-inline-start: 0; width: 100%; height: 162px; }
+  .tm h2 { position: absolute; top: 372px; inset-inline-start: 23px; font-size: 22px; font-weight: 700; line-height: 30px; color: #fff; white-space: nowrap; }
+  .tm .r { position: absolute; top: 406px; inset-inline-start: 23px; font-size: 18px; line-height: 24px; color: #fff; }
+  .tm .d { position: absolute; top: 440px; inset-inline-start: 23px; width: 200px; font-size: 18px; line-height: 25px; color: #fff; }
+  html[lang="ar"] .tm h2 { font-weight: 800; }
+  .s3 .tt { position: absolute; top: 69px; inset-inline-start: 887px; font-size: 46px; font-weight: 700; line-height: 56px; letter-spacing: -0.3px; }
+  html[lang="ar"] .s3 .tt { font-weight: 800; letter-spacing: 0; }
+  .s3 .p1 { top: 199px; inset-inline-start: 887px; width: 330px; }
+  .s3 .p2 { top: 301px; inset-inline-start: 887px; width: 330px; }
+
+  /* 4: خدماتنا */
+  .s4 .h { top: 150px; inset-inline-start: 64px; font-size: 25.5px; color: var(--ink-2); }
+  .s4 .p1 { top: 205px; inset-inline-start: 64px; width: 650px; line-height: 28px; }
+  .s4 .p2 { top: 318px; inset-inline-start: 64px; width: 650px; line-height: 28px; }
+  .s4 .panel { position: absolute; top: 126px; inset-inline-start: 829px; width: 387px; height: 476px; background: var(--gray); }
+  .s4 .ci { width: 78px; height: 78px; inset-inline-start: 792px; }
+  .s4 .ci svg { width: 54%; height: 54%; }
+  .s4 .sh { inset-inline-start: 912px; font-size: 22.5px; }
+  .s4 .sp { inset-inline-start: 912px; width: 270px; line-height: 28px; }
+  .s4 .sep { position: absolute; inset-inline-start: 907px; width: 275px; height: 1px; background: #CFCFCF; }
+
+  /* 5: اقتباس بصورة مائلة */
+  .s5 .man { top: 0; inset-inline-start: 82px; width: 1071px; height: 720px; clip-path: polygon(479px 0, 1071px 0, 591px 720px, 2px 720px); }
+  html[dir="rtl"] .s5 .man { transform: scaleX(-1); }
+  .s5 .tt { position: absolute; top: 58px; inset-inline-start: 64px; font-size: 40px; line-height: 51px; letter-spacing: -0.3px; }
+  .s5 .tt b { font-weight: 700; }
+  html[lang="ar"] .s5 .tt b { font-weight: 800; }
+  .s5 .nmb { position: absolute; top: 447px; inset-inline-start: 134px; width: 287px; height: 48px; border-radius: 6px; background: linear-gradient(90deg, #0A6DC0 0%, #45A2DB 100%); color: #fff; font-size: 22px; font-weight: 700; line-height: 48px; padding-inline-start: 17px; }
+  html[dir="rtl"] .s5 .nmb, html[dir="rtl"] .s15 .nmb { background: linear-gradient(270deg, #0A6DC0 0%, #45A2DB 100%); }
+  .s5 .q { position: absolute; top: 305px; inset-inline-start: 884px; width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(180deg, #3FD6AE, #1FAE88); display: grid; place-items: center; }
+  .s5 .q svg { width: 50px; height: 50px; color: #fff; }
+  .s5 .p1 { top: 448px; inset-inline-start: 887px; width: 330px; }
+  .s5 .p2 { top: 550px; inset-inline-start: 887px; width: 330px; }
+
+  /* 6: استراتيجية المنتج (مربعات) */
+  .s6 .bw { top: 118px; inset-inline-start: 64px; width: 586px; height: 514px; }
+  .pr { position: absolute; width: 266px; height: 249px; color: #fff; text-align: center; padding: 75px 30px 0; }
+  .pr h2 { font-size: 22px; font-weight: 700; line-height: 30px; }
+  .pr p { margin-top: 6px; font-size: 20px; line-height: 25.5px; }
+  html[lang="ar"] .pr h2 { font-weight: 800; }
+  .pr1 { top: 118px; inset-inline-start: 667px; background: linear-gradient(180deg, #006FBE, #005391); }
+  .pr2 { top: 118px; inset-inline-start: 950px; background: linear-gradient(180deg, #45A3DC, #217EB7); }
+  .pr3 { top: 383px; inset-inline-start: 667px; background: linear-gradient(180deg, #45D9B3, #24B28C); }
+  .pr4 { top: 383px; inset-inline-start: 950px; background: linear-gradient(180deg, #CB7D6C, #AC513C); }
+
+  /* 7: مصفوفة استراتيجية المنتج */
+  .s7 .card { position: absolute; inset-inline-start: 64px; width: 557px; height: 147px; border-radius: 14px; background: var(--gray); }
+  .s7 .card h2 { position: absolute; top: 31px; inset-inline-start: 169px; font-size: 20px; font-weight: 700; line-height: 28px; color: var(--ink); }
+  .s7 .card p { position: absolute; top: 69px; inset-inline-start: 169px; width: 345px; font-size: 18px; line-height: 25px; color: var(--ink-2); }
+  html[lang="ar"] .s7 .card h2 { font-weight: 800; }
+  .s7 .ax { position: absolute; background: #BFBFBF; }
+  .s7 .q { position: absolute; width: 244px; height: 218px; }
+  .s7 .qd { background: var(--gray-2); } .s7 .ql { background: var(--gray); }
+  .s7 .ql2 { position: absolute; width: 244px; text-align: center; font-size: 18px; line-height: 24px; color: var(--ink); }
+  .s7 .al { position: absolute; width: 120px; text-align: center; font-size: 18px; line-height: 24px; color: var(--ink); }
+  .bb { position: absolute; width: 54px; height: 54px; margin-top: -27px; margin-inline-start: -27px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 23px; line-height: 1; }
+  .bb.b { background: var(--blue); } .bb.t { background: var(--teal); }
+
+  /* 8: خريطة العالم */
+  .s8 .h { top: 150px; inset-inline-start: 64px; font-size: 25px; }
+  .s8 .p1 { top: 204px; inset-inline-start: 64px; width: 480px; line-height: 28px; }
+  .s8 .p2 { top: 260px; inset-inline-start: 64px; width: 470px; line-height: 28.5px; }
+  .s8 .map { position: absolute; top: 195px; inset-inline-start: 585px; width: 640px; height: 320px; }
+  .s8 .map path { fill: var(--gray-2); }
+  .st { position: absolute; top: 438px; width: 257px; height: 97px; border-radius: 10px; }
+  .st .v { position: absolute; top: 0; inset-inline-end: 38px; line-height: 97px; font-size: 32px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .st svg { position: absolute; bottom: 0; }
+  .st1 { inset-inline-start: 64px; background: var(--blue); }
+  .st1 svg { inset-inline-start: 16px; width: 92px; height: 130px; }
+  .st2 { inset-inline-start: 338px; background: var(--teal); }
+  .st2 .v { inset-inline-end: 40px; }
+  .st2 svg { inset-inline-start: 14px; width: 112px; height: 147px; }
+  html[dir="rtl"] .st svg { transform: scaleX(-1); }
+  .s8 .c1 { top: 561px; inset-inline-start: 64px; width: 240px; font-size: 18px; line-height: 23px; }
+  .s8 .c2 { top: 561px; inset-inline-start: 338px; width: 240px; font-size: 18px; line-height: 23px; }
+
+  /* 9: نظرة على السوق */
+  .mk { position: absolute; width: 258px; height: 258px; border: 3px solid #C3C3C3; border-radius: 12px; }
+  .mk .ci { top: -59px; inset-inline-start: 69px; width: 114px; height: 114px; }
+  .mk .ci svg { width: 46%; height: 46%; }
+  .mk h2 { position: absolute; top: 84px; inset-inline-start: 0; width: 100%; text-align: center; font-size: 22px; font-weight: 700; line-height: 30px; color: var(--ink); }
+  .mk .v { position: absolute; top: 112px; inset-inline-start: 0; width: 100%; text-align: center; font-size: 42px; font-weight: 700; line-height: 56px; color: var(--ink); }
+  .mk p { position: absolute; top: 175px; inset-inline-start: 0; width: 100%; padding: 0 30px; text-align: center; font-size: 18px; line-height: 23px; color: var(--ink-2); }
+  html[lang="ar"] .mk h2 { font-weight: 800; }
+  .mk1 { top: 294px; inset-inline-start: 76px; } .mk2 { top: 225px; inset-inline-start: 511px; } .mk3 { top: 156px; inset-inline-start: 946px; }
+  .s9 .dash { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s9 .ft9 { top: 553px; inset-inline-start: 395px; width: 490px; text-align: center; line-height: 25px; }
+
+  /* 10: الإنجازات (أسهم متدرجة) */
+  .s10 .arr { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s10 .ci { width: 73px; height: 73px; }
+  .s10 .ci svg { width: 48%; height: 48%; }
+  .ms { position: absolute; width: 200px; text-align: end; }
+  .ms h2 { font-size: 22px; font-weight: 700; line-height: 30px; color: var(--ink); }
+  .ms p { margin-top: 8px; font-size: 18px; line-height: 22.5px; color: var(--ink-2); }
+  html[lang="ar"] .ms h2 { font-weight: 800; }
+
+  /* 11: مخطط البيانات المالية (أشرطة تقدّم من chart-data) */
+  .s11 .in { top: 114px; inset-inline-start: 64px; width: 860px; line-height: 25px; font-size: 18px; }
+  .s11 .sq { position: absolute; inset-inline-start: 64px; width: 78px; height: 78px; border-radius: 10px; display: grid; place-items: center; color: #fff; }
+  .s11 .sq svg { width: 52%; height: 52%; }
+  .s11 .hh { inset-inline-start: 190px; font-size: 22px; }
+  .s11 .pp { inset-inline-start: 190px; width: 345px; font-size: 18px; line-height: 25px; }
+  .pb { position: absolute; inset-inline-start: 579px; width: 637px; height: 78px; border-radius: 8px; background: var(--gray); }
+  .pb .tr { position: absolute; top: 26px; inset-inline-start: 26px; width: 482px; height: 27px; background: var(--gray-2); }
+  .pb .fl { position: absolute; top: 0; inset-inline-start: 0; height: 100%; width: 0; }
+  .pb .val { position: absolute; top: 0; inset-inline-start: 520px; width: 92px; text-align: center; line-height: 78px; font-size: 30px; font-weight: 700; }
+
+  /* 12: المخصصات المالية (حلقات من chart-data-2) */
+  .alc { position: absolute; top: 160px; width: 309px; height: 90px; border-radius: 14px; background: var(--gray); text-align: center; }
+  .alc .v { margin-top: 8px; font-size: 38px; font-weight: 700; line-height: 46px; color: var(--ink); }
+  .alc p { font-size: 18px; line-height: 24px; color: var(--ink-2); }
+  .s12 .ring { position: absolute; top: 275px; width: 324px; height: 324px; }
+  .s12 .cp { position: absolute; top: 343px; width: 188px; height: 188px; border-radius: 50%; object-fit: cover; }
+
+  /* 13: تحليل البيانات (خط متعرج) */
+  .s13 .zz { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s13 .ci { width: 95px; height: 95px; }
+  .s13 .ci svg { width: 40%; height: 40%; }
+  .ph13 { position: absolute; width: 240px; }
+  .ph13 h2 { font-size: 22px; font-weight: 700; line-height: 30px; color: var(--ink); }
+  .ph13 p { margin-top: 6px; font-size: 18px; line-height: 23.5px; color: var(--ink-2); }
+  html[lang="ar"] .ph13 h2 { font-weight: 800; }
+  .s13 .box { position: absolute; top: 506px; inset-inline-start: 64px; width: 1158px; height: 140px; border-radius: 14px; background: var(--gray); }
+  .s13 .box h2 { position: absolute; top: 24px; inset-inline-start: 32px; font-size: 25px; font-weight: 700; line-height: 32px; color: var(--ink); }
+  .s13 .box p { position: absolute; top: 60px; inset-inline-start: 32px; width: 1080px; font-size: 18px; line-height: 23.5px; color: var(--ink-2); }
+  html[lang="ar"] .s13 .box h2 { font-weight: 800; }
+
+  /* 14: لوحة متابعة الأعمال */
+  .s14 table { position: absolute; border-collapse: collapse; table-layout: fixed; }
+  .s14 td, .s14 th { padding: 0; font-size: 18px; color: var(--ink-2); font-weight: 400; }
+  .s14 .tl { top: 113px; inset-inline-start: 64px; width: 330px; }
+  .s14 .tl td, .s14 .tl th { text-align: center; height: 46.6px; }
+  .s14 .tl th { color: #fff; font-weight: 700; font-size: 19px; }
+  .s14 .tl .hb { background: var(--blue); } .s14 .tl .hs { background: var(--sky); border-inline-start: 2px solid #fff; }
+  .s14 .tl .gr td { background: var(--gray); }
+  .s14 .tr2 { top: 113px; inset-inline-start: 407px; width: 809px; }
+  .s14 .tr2 th { height: 39px; text-align: start; padding-inline-start: 10px; font-weight: 700; font-size: 19px; color: #fff; }
+  .s14 .tr2 th:first-child { color: var(--ink); background: var(--gray); }
+  .s14 .tr2 td { height: 39px; padding-inline-start: 10px; }
+  .s14 .tr2 tbody tr:nth-child(even) td { background: var(--gray); }
+  .s14 .lg td { height: 41px; border-bottom: 1px solid #CFCFCF; }
+  .s14 .lg span { display: inline-flex; align-items: center; gap: 8px; margin-inline-end: 28px; }
+  .s14 .lg i { width: 18px; height: 18px; border-radius: 50%; display: inline-block; }
+  html[lang="ar"] .s14 .tl th, html[lang="ar"] .s14 .tr2 th { font-weight: 800; }
+  .s14 .pan { position: absolute; top: 367px; inset-inline-start: 64px; width: 1152px; height: 283px; background: var(--gray); }
+  .s14 .ch { position: absolute; top: 377px; width: 357px; text-align: center; font-size: 18px; font-weight: 700; line-height: 24px; color: var(--ink); padding-bottom: 8px; border-bottom: 1px solid #D9D9D9; }
+  html[lang="ar"] .s14 .ch { font-weight: 800; }
+  .s14 .cv { position: absolute; top: 420px; width: 356px; height: 220px; overflow: visible; }
+  .s14 .cv text { font-family: var(--font); font-size: 17px; fill: #595959; }
+  .s14 .pl { position: absolute; top: 432px; inset-inline-start: 692px; }
+  .s14 .pl li { list-style: none; display: flex; align-items: center; gap: 10px; font-size: 18px; line-height: 33px; color: var(--ink-2); }
+  .s14 .pl ul { margin: 0; padding: 0; }
+  .s14 .pl i { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+
+  /* 15: تعريف بمدير التسويق */
+  .s15 .sky { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; background: #45A2DB; clip-path: polygon(0 0, 766px 0, 286px 720px, 0 720px); }
+  .s15 .man { top: 0; inset-inline-start: 0; width: 770px; height: 720px; clip-path: polygon(0 0, 766px 0, 286px 720px, 0 720px); }
+  .s15 .bnd { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; background: linear-gradient(200deg, #44D9B1 0%, #36C3B3 30%, #1A86C8 70%, #0A6FC2 100%); clip-path: polygon(764px 0, 907px 0, 427px 720px, 284px 720px); }
+  html[dir="rtl"] .s15 .sky, html[dir="rtl"] .s15 .man, html[dir="rtl"] .s15 .bnd { transform: scaleX(-1); }
+  .s15 .nmb { position: absolute; top: 458px; inset-inline-start: 64px; width: 287px; height: 48px; border-radius: 6px; background: linear-gradient(90deg, #0A5A9A 0%, #45A2DB 100%); color: #fff; font-size: 22px; font-weight: 700; line-height: 48px; padding-inline-start: 17px; }
+  .s15 .tt { position: absolute; top: 247px; inset-inline-start: 803px; font-size: 46px; font-weight: 700; line-height: 56px; letter-spacing: -0.3px; }
+  html[lang="ar"] .s15 .tt, html[lang="ar"] .s5 .nmb, html[lang="ar"] .s15 .nmb { font-weight: 800; letter-spacing: 0; }
+  .s15 .p1 { top: 394px; inset-inline-start: 803px; width: 380px; }
+  .s15 .p2 { top: 496px; inset-inline-start: 803px; width: 380px; }
+
+  /* 16: خطة التسويق (مصباح) */
+  .s16 .bulb { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .s16 .ring { position: absolute; width: 76px; height: 76px; margin-top: -38px; margin-inline-start: -38px; border-radius: 50%; background: #F0F0F0; }
+  .s16 .ci { width: 60px; height: 60px; margin-top: -30px; margin-inline-start: -30px; }
+  .s16 .ci svg { width: 50%; height: 50%; }
+  .s16 .mp { position: absolute; top: 354px; inset-inline-start: 567px; width: 150px; text-align: center; font-size: 25px; font-weight: 700; line-height: 32px; color: #111; }
+  html[lang="ar"] .s16 .mp { font-weight: 800; }
+  .mp16 { position: absolute; width: 240px; }
+  .mp16 h2 { font-size: 22px; font-weight: 700; line-height: 30px; color: var(--ink); }
+  .mp16 p { margin-top: 6px; font-size: 18px; line-height: 23px; color: var(--ink-2); }
+  html[lang="ar"] .mp16 h2 { font-weight: 800; }
+
+  /* 17: الجدول الزمني */
+  .s17 .tl { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; }
+  .yr { position: absolute; width: 160px; margin-inline-start: -80px; text-align: center; font-size: 30px; font-weight: 700; line-height: 40px; color: #fff; }
+  .tl17 { position: absolute; width: 260px; margin-inline-start: -130px; text-align: center; }
+  .tl17 h2 { font-size: 22px; font-weight: 700; line-height: 30px; color: var(--ink); }
+  .tl17 p { margin-top: 6px; font-size: 18px; line-height: 23px; color: var(--ink-2); }
+  html[lang="ar"] .tl17 h2 { font-weight: 800; }
+
+  /* 18: تحليل التسويق (خطوط من chart-data-6) */
+  .s18 .cv { position: absolute; top: 140px; inset-inline-start: 60px; width: 680px; height: 430px; overflow: visible; }
+  .s18 .cv text { font-family: var(--font); font-size: 17px; fill: #595959; }
+  .s18 .lg { position: absolute; top: 575px; inset-inline-start: 100px; width: 632px; display: flex; justify-content: center; gap: 18px; font-size: 17px; color: #595959; }
+  .s18 .lg span { display: inline-flex; align-items: center; gap: 4px; }
+  .s18 .lg i { position: relative; display: inline-block; width: 26px; height: 2.5px; }
+  .s18 .lg i::after { content: ''; position: absolute; top: -2.5px; inset-inline-start: 10px; width: 7px; height: 7px; border-radius: 50%; background: inherit; }
+  .s18 .cl { position: absolute; top: 161px; inset-inline-start: 602px; width: 111px; height: 44px; border-radius: 6px; background: linear-gradient(90deg, #24B28C, #44D9B1); color: #fff; font-size: 21px; line-height: 44px; text-align: center; }
+  html[dir="rtl"] .s18 .cl { background: linear-gradient(270deg, #24B28C, #44D9B1); }
+  .s18 .h { top: 160px; inset-inline-start: 803px; font-size: 36px; }
+  .s18 .p1 { top: 230px; inset-inline-start: 803px; width: 380px; }
+  .s18 .p2 { top: 333px; inset-inline-start: 803px; width: 380px; }
+  .s18 .kb { position: absolute; top: 418px; inset-inline-start: 802px; width: 389px; height: 131px; border-radius: 10px; background: linear-gradient(90deg, #0A6CC2 0%, #45A2DB 100%); color: #fff; }
+  html[dir="rtl"] .s18 .kb { background: linear-gradient(270deg, #0A6CC2 0%, #45A2DB 100%); }
+  .s18 .kb .v { position: absolute; top: 0; inset-inline-start: 22px; line-height: 131px; font-size: 46px; font-weight: 700; }
+  .s18 .kb h2 { position: absolute; top: 18px; inset-inline-start: 149px; font-size: 22px; font-weight: 700; line-height: 32px; }
+  .s18 .kb p { position: absolute; top: 59px; inset-inline-start: 149px; width: 215px; font-size: 14.5px; line-height: 19px; }
+  html[lang="ar"] .s18 .kb h2 { font-weight: 800; }
+
+  /* 19: تواصل معنا */
+  .s19 .bld { top: 0; inset-inline-start: 0; width: 853px; height: 720px; clip-path: polygon(0 0, 853px 0, 373px 720px, 0 720px); }
+  html[dir="rtl"] .s19 .bld { transform: scaleX(-1); }
+  .s19 .logo { top: 37px; inset-inline-start: 42px; color: #fff; }
+  .s19 .qr { position: absolute; top: 57px; inset-inline-start: 968px; width: 232px; height: 232px; }
+  .s19 .tt { position: absolute; top: 380px; inset-inline-start: 726px; font-size: 46px; font-weight: 700; line-height: 60px; white-space: nowrap; letter-spacing: -0.3px; }
+  html[lang="ar"] .s19 .tt { font-weight: 800; letter-spacing: 0; }
+  .s19 .k { position: absolute; font-size: 19px; line-height: 25px; color: #111; }
+  .s19 .k b { display: block; font-weight: 700; }
+  html[lang="ar"] .s19 .k b { font-weight: 800; }
+  .s19 .rule { position: absolute; top: 530px; inset-inline-start: 727px; width: 493px; height: 1px; background: #B7C3CC; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="gray"></div><svg class="deco flip" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="300,124 422,112 379,208" fill="#45A2DB" stroke="#45A2DB" stroke-width="24" stroke-linejoin="round"/></svg><div class="band"></div><div class="dark"></div>
+    <svg class="deco flip" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="299,447 377,601 204,588" fill="#44D9B1" stroke="#44D9B1" stroke-width="32" stroke-linejoin="round"/><line x1="392" y1="0" x2="248" y2="218" stroke="#3CD9B3" stroke-width="3"/><line x1="178" y1="462" x2="34" y2="680" stroke="#C57B6B" stroke-width="3"/></svg>
+    <div class="logo"><svg viewBox="0 0 58 64" aria-hidden="true"><path fill="#0070C0" fill-rule="evenodd" d="M10 3C22 0 40 2 52 6c4 1 5.5 4 5.5 8l-1 34c0 5-2 9-7 10-13 3-28 4-41 2-5-1-8-4-8-9V14C.5 8 4 4.5 10 3zm7 10c-4 .5-6 2.5-6 6.5v24c0 4 2 6 6 6.5 8 .8 15 .3 22-1.4 4-1 5.5-3 5.5-7l.5-20c0-4-1.5-6-5.5-7-7.5-1.8-15-2.4-22.5-1.6z"/></svg><span>Your Company<br>Logo Here</span></div>
+    <h1 class="t1 gt">Creative Business<br>Pitch Deck</h1><p class="t2">Presentation Template</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="blue"></div><img class="ph bld" src="/templates/freeform/sl-creative-business-pitch-deck/assets/building.jpg" alt="Modern office building">
+    <h1 class="ttl gt">About Us Slide</h1>
+    <p class="tx p1">This is a sample text. Insert your desired text here. Insert your desired text here. Insert your desired text here.</p><p class="tx p2">This is a sample text. Insert your desired text here. Insert your desired text here. Insert your desired text here.</p>
+    <img class="ph fnd" src="/templates/freeform/sl-creative-business-pitch-deck/assets/founder.jpg" alt="Founder portrait">
+    <div class="ln" style="top:366px"></div><div class="ln" style="top:594px"></div>
+    <h2 class="hd nm">Name</h2><p class="tx rl">Founder</p><p class="tx bd">This is a sample text. Insert your desired text here.</p>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">2</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="tm" style="inset-inline-start:64px"><img src="/templates/freeform/sl-creative-business-pitch-deck/assets/team-1.jpg" alt="Team member portrait"><div class="cb" style="background:#0071C1"></div><h2>Company Role</h2><p class="r">Name</p><p class="d">This is a sample text. Insert your text here.</p></div>
+    <div class="tm" style="inset-inline-start:314px"><img src="/templates/freeform/sl-creative-business-pitch-deck/assets/team-2.jpg" alt="Team member portrait"><div class="cb" style="background:#45A2DB"></div><h2>Company Role</h2><p class="r">Name</p><p class="d">This is a sample text. Insert your text here.</p></div>
+    <div class="tm" style="inset-inline-start:565px"><img src="/templates/freeform/sl-creative-business-pitch-deck/assets/team-3.jpg" alt="Team member portrait"><div class="cb" style="background:#24B28C"></div><h2>Company Role</h2><p class="r">Name</p><p class="d">This is a sample text. Insert your text here.</p></div>
+    <h1 class="tt gt">Our Team<br>Slide</h1>
+    <p class="tx p1">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p class="tx p2">This is a sample text. Insert your desired text here. This is a sample text.</p>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">3</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl gt">Our Service Slide</h1>
+    <h2 class="hd h">Placeholder</h2><p class="tx p1">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here. This is a sample text.</p><p class="tx p2">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here.</p>
+    <img class="ph" style="top:419px;inset-inline-start:64px;width:205px;height:183px" src="/templates/freeform/sl-creative-business-pitch-deck/assets/work-1.jpg" alt="Workspace with monitors"><img class="ph" style="top:419px;inset-inline-start:285px;width:205px;height:183px" src="/templates/freeform/sl-creative-business-pitch-deck/assets/work-2.jpg" alt="Business discussion at a laptop"><img class="ph" style="top:419px;inset-inline-start:506px;width:204px;height:183px" src="/templates/freeform/sl-creative-business-pitch-deck/assets/work-3.jpg" alt="Desk with computer and laptop">
+    <div class="panel"></div><div class="sep" style="top:288px"></div><div class="sep" style="top:430px"></div>
+    <div class="ci g-blueh" style="top:179px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19.36 7.38L20.86 7.53L20.86 8.87L19.36 9.02L18.75 10.49L19.71 11.66L18.76 12.61L17.59 11.65L16.12 12.26L15.97 13.76L14.63 13.76L14.48 12.26L13.01 11.65L11.84 12.61L10.89 11.66L11.85 10.49L11.24 9.02L9.74 8.87L9.74 7.53L11.24 7.38L11.85 5.91L10.89 4.74L11.84 3.79L13.01 4.75L14.48 4.14L14.63 2.64L15.97 2.64L16.12 4.14L17.59 4.75L18.76 3.79L19.71 4.74L18.75 5.91Z"/><circle cx="15.3" cy="8.2" r="1.904"/><path d="M12.46 14.78L13.96 14.93L13.96 16.27L12.46 16.42L11.85 17.89L12.81 19.06L11.86 20.01L10.69 19.05L9.22 19.66L9.07 21.16L7.73 21.16L7.58 19.66L6.11 19.05L4.94 20.01L3.99 19.06L4.95 17.89L4.34 16.42L2.84 16.27L2.84 14.93L4.34 14.78L4.95 13.31L3.99 12.14L4.94 11.19L6.11 12.15L7.58 11.54L7.73 10.04L9.07 10.04L9.22 11.54L10.69 12.15L11.86 11.19L12.81 12.14L11.85 13.31Z"/><circle cx="8.4" cy="15.6" r="1.904"/></svg></div><h2 class="hd sh" style="top:172px">Service 01</h2><p class="tx sp" style="top:212px">This is a sample text. Insert your desired text here.</p>
+    <div class="ci g-skyh" style="top:319px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5V20h16V9.5"/><path d="M3 9.5 5 4h14l2 5.5c0 1.2-1 2-2.25 2S16.5 10.7 16.5 9.5c0 1.2-1 2-2.25 2S12 10.7 12 9.5c0 1.2-1 2-2.25 2S7.5 10.7 7.5 9.5c0 1.2-1 2-2.25 2S3 10.7 3 9.5z"/><path d="M7 4v5.5M10 4v5.5M14 4v5.5M17 4v5.5"/><rect x="7" y="14" width="4" height="6"/><rect x="13.5" y="14" width="4" height="3.5"/></svg></div><h2 class="hd sh" style="top:312px">Service 02</h2><p class="tx sp" style="top:352px">This is a sample text. Insert your desired text here.</p>
+    <div class="ci g-tealh" style="top:458px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 13H6z"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10"/></svg></div><h2 class="hd sh" style="top:451px">Service 03</h2><p class="tx sp" style="top:491px">This is a sample text. Insert your desired text here.</p>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">4</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <div class="ft w5"><div class="ft-g"></div><img class="ph man" src="/templates/freeform/sl-creative-business-pitch-deck/assets/quote-man.jpg" alt="Smiling man on a phone call"><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">5</span><div class="ft-l"></div></div>
+    <h1 class="tt gt"><b>Creative Business</b><br>Pitch Deck<br>Template</h1>
+    <div class="nmb">Name</div><div class="q"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.5c0-4.6 1.8-8.6 5.3-11.2l1.4 1.6c-1.8 1.6-2.7 3.4-2.9 5.2 2 .1 3.2 1.4 3.2 3.2 0 1.9-1.4 3.3-3.3 3.3-2.2 0-3.7-1.6-3.7-2.1zM13 17.5c0-4.6 1.8-8.6 5.3-11.2l1.4 1.6c-1.8 1.6-2.7 3.4-2.9 5.2 2 .1 3.2 1.4 3.2 3.2 0 1.9-1.4 3.3-3.3 3.3-2.2 0-3.7-1.6-3.7-2.1z"/></svg></div>
+    <p class="tx p1">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p class="tx p2">This is a sample text. Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl gt">Product Strategy Slide</h1>
+    <img class="ph bw" src="/templates/freeform/sl-creative-business-pitch-deck/assets/tower-bw.jpg" alt="Glass skyscraper in black and white">
+    <div class="pr pr1"><h2>Product 01</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="pr pr2"><h2>Product 02</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="pr pr3"><h2>Product 03</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="pr pr4"><h2>Product 04</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">6</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <h1 class="ttl gt">Product Strategy Slide</h1>
+    <div class="card" style="top:145px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+    <div class="card" style="top:300px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+    <div class="card" style="top:456px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here. Insert your desired text here.</p></div>
+    <div class="q qd" style="top:145px;inset-inline-start:681px"></div><div class="q ql" style="top:145px;inset-inline-start:925px"></div><div class="q ql" style="top:362px;inset-inline-start:681px"></div><div class="q qd" style="top:362px;inset-inline-start:925px"></div>
+    <div class="ax" style="top:145px;inset-inline-start:653px;width:3px;height:460px"></div><div class="ax" style="top:602px;inset-inline-start:653px;width:518px;height:3px"></div>
+    <p class="ql2" style="top:313px;inset-inline-start:681px">Placeholder</p><p class="ql2" style="top:313px;inset-inline-start:925px">Placeholder</p><p class="ql2" style="top:386px;inset-inline-start:681px">Placeholder</p><p class="ql2" style="top:386px;inset-inline-start:925px">Placeholder</p>
+    <p class="al" style="top:108px;inset-inline-start:594px">High</p><p class="al" style="top:108px;inset-inline-start:1108px">Strong</p><p class="al" style="top:618px;inset-inline-start:594px">Low</p><p class="al" style="top:618px;inset-inline-start:1108px">Weak</p>
+    <span class="bb b" style="top:215px;inset-inline-start:746px">D</span><span class="bb b" style="top:252px;inset-inline-start:826px">C</span><span class="bb t" style="top:229px;inset-inline-start:1086px">G</span><span class="bb t" style="top:285px;inset-inline-start:986px">F</span><span class="bb t" style="top:447px;inset-inline-start:730px">B</span><span class="bb t" style="top:486px;inset-inline-start:867px">A</span><span class="bb b" style="top:531px;inset-inline-start:1063px">H</span>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">7</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="ttl gt">Business World Map Slide</h1>
+    <h2 class="hd h">Placeholder</h2><p class="tx p1">This is a sample text. Insert your desired text here.</p><p class="tx p2">Insert your desired text here. Insert your desired text here.&nbsp; Insert your desired text here. This is a sample text.</p>
+    <svg class="map" viewBox="585 195 640 320" aria-hidden="true"><path fill-rule="evenodd" d="M1202 472 1199 473 1198 476 1196 476 1192 480 1191 480 1190 482 1191 484 1196 484 1196 483 1200 478 1202 478 1202 476ZM1158 472 1156 474 1152 473 1153 478 1156 478ZM1202 461 1202 464 1204 466 1204 468 1202 469 1202 470 1204 470 1205 474 1206 474 1210 467 1207 467 1204 464 1204 461ZM1186 431 1188 434 1190 434 1190 432ZM1214 422 1212 422 1209 426 1212 426ZM986 414 985 414 982 420 976 424 977 426 976 436 978 442 982 442 986 430 986 427 988 424ZM1168 448 1166 444 1166 441 1164 440 1162 430 1156 428 1154 421 1150 416 1148 411 1146 412 1147 420 1144 425 1136 420 1138 413 1130 412 1130 414 1128 414 1127 412 1127 414 1124 419 1120 416 1118 417 1116 421 1111 421 1111 428 1108 430 1102 430 1095 437 1095 440 1098 441 1098 446 1100 448 1100 452 1102 454 1102 456 1100 457 1101 462 1106 462 1108 460 1116 460 1116 457 1117 454 1122 454 1128 452 1130 454 1134 456 1134 460 1136 460 1136 458 1138 458 1139 460 1140 460 1144 463 1144 466 1148 468 1148 470 1150 470 1151 468 1154 470 1156 468 1160 466 1162 459 1168 454ZM1107 407 1107 410 1110 410 1110 407ZM1120 406 1118 405 1115 408 1115 410 1120 408ZM1108 390 1107 396 1110 394 1111 398 1114 400 1114 397 1112 394 1114 392 1114 391ZM1127 391 1131 393 1130 396 1134 396 1135 398 1138 398 1142 402 1140 406 1144 406 1145 408 1148 408 1150 404 1154 404 1158 410 1160 410 1160 408 1158 406 1158 405 1156 404 1156 401 1150 395 1140 391 1134 392 1131 391 1130 389ZM1118 386 1109 387 1109 388 1116 388ZM1124 384 1122 387 1122 390 1124 390 1124 388ZM1066 377 1066 378 1074 387 1074 392 1076 398 1080 398 1085 404 1100 406 1100 404 1096 403 1087 403 1084 400 1086 393 1083 392 1072 382 1072 380 1071 380 1068 377ZM1104 374 1102 375 1102 378 1099 378 1096 383 1094 383 1092 385 1090 385 1091 392 1094 396 1102 396 1102 392 1106 388 1104 380 1106 378 1104 378ZM1120 371 1120 370 1113 371 1112 374 1116 374 1117 376 1118 376 1120 374ZM1040 369 1039 371 1039 378 1040 378 1042 376ZM1112 366 1112 368 1116 368 1114 365ZM1117 364 1117 366 1120 366 1120 364ZM765 352 765 354 766 354 766 352ZM1112 350 1108 355 1109 358 1111 360 1111 362 1109 363 1109 366 1112 362 1113 360 1116 360 1112 358 1112 356 1114 354ZM785 350 785 352 786 352 786 350ZM773 350 773 352 776 352 782 352 782 350 780 348 776 348ZM754 342 754 344 762 344 765 346 770 348 770 346 764 344 760 341ZM1112 337 1110 337 1109 339 1109 342 1110 342 1112 340ZM764 337 764 338 766 338 766 337ZM922 310 924 312 928 312 926 310ZM915 304 914 308 916 308 916 305ZM1144 303 1143 304 1142 312 1140 313 1138 313 1136 316 1130 315 1125 319 1126 324 1128 324 1130 320 1138 320 1138 318 1140 318 1144 314 1144 311 1146 310ZM1143 302 1150 302 1152 300 1154 298 1150 298 1147 296 1146 298 1143 300ZM596 281 596 282 600 282 600 281ZM612 277 608 280 612 280ZM888 275 886 275 883 278 883 284 886 284 888 282 890 282 890 276ZM610 266 612 266 612 265ZM755 259 755 260 758 260ZM857 253 859 256 862 256 863 258 868 258 869 256 874 256 872 253 861 253 860 252ZM723 238 723 240 726 240 728 242 730 242 732 240 730 237ZM734 233 734 234 737 236 735 240 740 240 740 237 738 236 736 233ZM719 236 720 236 721 234 730 234 730 231 720 231ZM1020 230 1017 230 1014 232 1009 231 1008 232 1000 233 998 236 992 238 990 242 995 244 1000 244 998 238 1004 234 1016 234 1020 232ZM612 247 613 248 618 250 621 252 617 253 615 251 612 253 610 253 610 256 612 256 620 256 621 258 613 260 612 262 616 266 620 264 620 268 627 268 626 271 616 275 615 276 620 276 622 274 626 276 628 274 629 272 634 272 636 270 636 269 634 268 636 264 638 264 637 266 640 266 644 266 645 262 650 264 652 266 660 266 664 269 665 272 668 272 669 274 669 278 672 282 674 280 672 278 672 276 678 282 678 286 682 288 684 290 685 293 685 302 684 302 685 308 689 314 689 316 694 318 697 321 699 328 702 329 701 334 704 334 706 338 708 340 709 342 710 342 710 339 708 336 708 334 704 330 706 328 710 333 711 336 717 342 718 348 722 350 724 351 725 356 730 356 732 358 736 356 742 360 748 362 750 364 750 368 752 368 756 372 760 374 761 372 764 372 766 376 766 380 765 384 760 388 759 400 763 403 763 406 767 414 768 420 774 422 778 426 778 448 776 448 776 456 772 465 773 467 773 470 772 471 773 478 770 481 769 490 771 490 770 494 772 495 772 498 774 498 778 502 788 502 786 500 782 499 780 496 780 493 786 488 786 486 784 485 784 483 790 476 790 475 788 475 786 473 792 472 792 468 800 468 802 462 798 460 798 456 800 456 800 458 802 460 806 460 810 456 810 452 814 450 814 448 816 448 816 446 816 441 818 438 828 434 832 428 832 416 838 410 840 401 836 398 833 397 830 394 825 394 820 390 816 391 816 389 813 389 812 391 810 391 810 389 814 388 814 384 812 384 810 380 804 375 800 376 798 372 795 372 794 370 794 366 794 368 790 366 788 366 788 368 786 368 784 366 782 367 780 365 778 365 776 369 776 365 776 363 775 363 768 369 768 371 766 371 764 369 757 370 756 368 756 357 754 356 749 357 746 356 748 354 748 350 750 348 748 344 748 345 743 345 742 347 743 348 742 350 736 351 732 346 730 344 730 338 732 338 730 332 736 330 736 328 744 328 745 328 752 326 756 328 757 334 759 335 759 336 760 336 760 330 758 325 762 322 762 321 767 316 770 316 768 311 770 310 770 308 772 306 772 305 778 304 778 300 780 298 784 296 785 300 788 300 789 298 796 296 796 293 792 294 792 292 788 292 788 288 784 288 782 290 779 290 778 289 781 286 788 284 790 286 790 288 792 288 794 284 798 284 799 282 800 282 801 284 799 286 797 290 804 290 804 292 806 290 808 292 806 287 802 284 804 279 802 279 800 275 794 274 788 264 787 264 784 268 780 268 778 266 780 264 780 263 776 263 772 260 766 261 764 268 767 270 767 274 764 275 762 274 764 282 760 282 760 280 760 279 758 278 758 274 756 273 752 274 752 273 747 273 744 271 740 271 738 268 738 263 741 260 742 260 743 258 748 258 749 254 751 256 751 258 758 256 760 260 760 257 757 256 756 254 756 252 760 250 760 249 758 248 759 246 766 246 768 248 766 250 770 250 771 248 774 249 774 250 771 251 770 254 766 253 764 255 765 258 766 256 774 256 775 258 781 260 784 260 785 260 788 260 788 257 784 254 786 254 790 256 794 254 794 251 790 251 786 248 784 249 782 246 782 243 777 243 766 237 753 238 752 241 750 240 750 237 747 237 743 239 746 244 752 245 752 248 748 250 746 246 743 247 738 241 736 241 737 248 736 250 732 248 734 246 732 245 729 245 730 250 719 250 718 248 720 246 724 246 724 244 720 242 718 240 720 238 718 237 718 238 716 238 716 236 718 236 718 232 715 233 714 231 710 231 708 233 707 233 704 231 700 231 698 229 691 230 688 233 698 232 698 235 685 236 684 240 682 240 685 242 692 242 694 240 696 244 698 245 698 247 688 244 683 244 682 245 673 244 672 245 665 245 664 247 662 247 660 245 655 245 654 243 644 244 640 242 635 243 634 242 629 242 628 241 624 244 619 244ZM778 498 779 498 778 500ZM814 392 815 394 813 394 812 393ZM702 324 704 325 704 328 702 326ZM769 297 760 303 758 302 764 296ZM762 294 762 296 760 295 760 299 756 298 756 294 753 294 751 297 751 302 748 302 748 294 750 292 754 292 755 292 760 292ZM686 286 688 288 688 291 686 288ZM742 290 744 288 746 288 748 286 750 286 754 288 752 291 748 289 744 291ZM682 285 684 284 686 286 684 287ZM752 252 754 252 755 254 752 254ZM713 240 714 240 714 242 712 242ZM698 235 702 234 703 236 714 236 714 238 712 240 710 238 703 239ZM1212 247 1210 245 1203 246 1198 244 1196 247 1194 247 1192 245 1182 245 1180 246 1174 242 1163 243 1158 239 1150 239 1148 238 1148 236 1152 236 1152 233 1148 233 1148 232 1144 232 1144 233 1138 232 1138 234 1142 234 1144 236 1142 241 1138 241 1138 242 1130 241 1128 243 1126 243 1124 242 1124 237 1115 237 1112 239 1105 238 1104 237 1097 237 1098 232 1096 231 1086 231 1085 232 1084 230 1079 230 1078 228 1076 231 1072 233 1065 230 1064 233 1060 234 1056 233 1051 235 1048 238 1040 238 1046 242 1046 245 1044 244 1044 242 1038 239 1035 239 1034 242 1032 243 1031 239 1029 241 1030 250 1024 254 1024 252 1028 248 1028 247 1026 246 1026 239 1025 239 1024 237 1021 238 1018 242 1016 242 1017 246 1020 247 1020 248 1013 247 1012 246 1006 246 1004 248 1001 248 1000 247 994 249 994 248 989 248 988 249 984 249 981 251 980 249 982 248 978 247 977 248 977 252 971 253 970 257 968 256 962 257 960 254 961 252 972 252 972 250 970 247 960 247 958 245 955 245 952 243 944 240 936 242 929 246 920 255 913 257 910 261 910 266 913 270 918 270 918 268 920 268 921 270 921 274 924 274 925 274 928 274 930 270 934 266 934 264 932 264 930 261 932 260 936 260 939 254 944 254 944 256 938 259 939 266 942 266 944 264 950 264 951 266 942 267 941 268 943 270 938 270 936 272 936 277 934 276 920 277 918 276 918 272 915 272 914 276 916 278 910 279 906 283 904 283 904 281 898 274 898 272 900 270 900 269 892 268 890 270 888 270 888 272 892 276 895 277 895 278 890 284 894 286 898 284 902 286 892 289 893 290 898 292 898 298 896 299 885 299 884 301 885 304 884 312 888 312 891 316 885 320 883 325 883 328 875 334 874 340 872 342 873 354 870 358 871 359 871 364 872 364 874 366 876 366 879 369 881 376 886 380 888 380 888 379 890 378 898 378 902 374 908 374 910 380 912 380 914 378 916 378 918 380 916 392 918 392 921 396 923 402 923 408 924 409 924 412 921 418 921 426 925 434 928 436 927 444 931 450 932 458 933 460 938 460 939 458 942 456 943 458 950 456 954 450 958 446 956 440 962 438 960 431 962 427 966 424 968 424 972 416 970 416 970 411 972 410 968 406 968 399 974 392 974 390 980 384 982 382 984 378 986 376 990 368 988 364 984 365 980 368 976 368 976 364 974 360 970 356 968 352 964 350 964 342 960 334 960 330 963 331 964 336 967 339 969 346 973 350 976 362 982 362 988 358 990 358 994 354 996 354 1000 350 1002 345 1004 344 1004 342 1002 339 1000 339 998 336 997 336 994 340 991 340 988 333 984 330 985 326 988 326 990 332 992 332 994 334 1000 334 1002 338 1014 338 1016 336 1018 340 1021 340 1022 346 1027 345 1026 348 1027 349 1027 354 1032 366 1034 368 1034 372 1035 374 1040 364 1040 358 1040 357 1050 348 1051 344 1056 344 1060 342 1064 350 1064 360 1066 360 1067 354 1071 355 1071 364 1073 367 1071 369 1071 372 1074 374 1077 384 1080 386 1082 386 1080 377 1072 368 1074 362 1076 362 1082 370 1082 374 1084 374 1086 368 1090 366 1092 362 1092 359 1086 352 1084 347 1088 344 1090 344 1089 352 1090 352 1092 350 1092 348 1092 344 1102 342 1112 330 1112 325 1108 318 1109 316 1112 314 1112 312 1107 312 1106 308 1108 308 1110 304 1112 305 1111 307 1112 308 1116 306 1117 312 1120 310 1121 313 1119 318 1122 318 1124 316 1124 310 1122 308 1122 307 1126 306 1126 303 1128 302 1129 300 1134 300 1134 299 1144 290 1146 282 1147 283 1147 292 1150 294 1150 289 1150 288 1150 279 1146 279 1146 278 1141 278 1140 279 1140 276 1138 277 1136 276 1139 274 1142 272 1149 266 1152 268 1162 266 1166 268 1171 264 1172 264 1176 260 1178 260 1178 264 1182 264 1175 268 1171 272 1170 276 1172 282 1170 286 1178 278 1179 276 1182 276 1184 267 1186 264 1198 264 1202 262 1212 260 1212 259 1210 256 1212 254 1212 251 1212 250ZM960 388 959 392 956 393 956 389 957 388ZM892 314 898 312 900 310 900 307 902 304 906 304 907 300 912 300 914 298 918 298 921 304 926 304 930 312 930 307 932 305 922 296 924 296 934 304 936 308 937 316 942 312 942 309 940 307 944 304 946 305 946 310 951 314 962 314 963 316 962 316 962 320 958 325 953 324 950 326 950 323 938 322 937 324 933 327 930 325 928 325 924 322 922 322 918 318 919 316 920 316 920 312 918 311 916 312 905 312 894 317 893 317ZM948 299 950 298 954 292 956 292 959 298 962 294 963 292 966 292 965 296 973 301 973 304 964 304 958 302 956 304 949 305ZM989 290 992 290 995 293 994 296 990 295 988 297 988 298 990 298 993 303 994 312 992 314 984 312 984 308 988 306 988 304 984 303 980 298 980 295 983 292 988 292ZM902 285 904 284 904 286 902 286ZM954 263 956 262 958 264 955 265ZM1030 247 1032 246 1036 246 1037 248 1034 249ZM731 228 744 236 762 236 762 234 758 233 756 234 743 233 738 229ZM710 226 704 228 704 230 710 230ZM718 228 722 228 724 230 728 230 726 226 724 225 719 225ZM870 215 868 214 863 215 858 219 854 212 852 207 841 208 841 206 844 206 837 205 836 204 822 205 818 208 815 208 812 212 812 210 810 210 809 214 808 216 804 216 804 215 794 215 792 216 790 219 786 220 786 224 782 224 780 228 775 228 774 230 778 230 781 234 784 230 785 232 790 232 800 234 801 237 801 242 803 244 803 248 806 248 804 252 806 256 808 256 809 260 810 260 815 264 818 264 818 266 822 266 822 260 826 258 824 258 825 256 829 254 834 254 837 250 844 250 854 244 854 237 858 236 860 238 860 233 862 232 862 230 860 230 860 226 867 218 870 218ZM807 242 809 244 808 247 806 246ZM848 240 851 242 852 246 848 244ZM804 241 806 240 807 242 804 243ZM836 208 840 208 837 209Z"/></svg>
+    <div class="st st1"><svg viewBox="0 0 92 130" aria-hidden="true"><defs><linearGradient id="hw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B5DEFF"/><stop offset="1" stop-color="#3AA6F2"/></linearGradient></defs><path fill="url(#hw)" d="M14 130c3-10 9-18 16-22l1-9c-6-3-11-9-12-14-6-2-11-7-11-14 0-6 4-10 8-12C17 25 30 8 48 7c18-1 31 12 32 30 0 5-1 8 1 12l7 11c1 2 0 4-2 4l-4 1c1 3 1 6-1 8 1 3 0 6-3 7l-1 5c-1 4-4 5-8 5l-8-1c-3 0-5 2-5 5l1 9c4 2 8 4 11 8 2 3 3 7 3 9z"/></svg><span class="v"><bdi dir="ltr">354 M</bdi></span></div><div class="st st2"><svg viewBox="0 0 112 147" aria-hidden="true"><defs><linearGradient id="hm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46DDB4"/><stop offset="1" stop-color="#1EA67F"/></linearGradient></defs><path fill="url(#hm)" d="M6 147c4-12 12-20 22-25l2-13c-7-6-11-14-12-24-5-1-8-6-7-12 1-5 4-6 7-6 0-14 3-29 14-38C43 22 56 19 68 22c9 2 15 8 18 16l-2 8 3 14c1 4 0 7 2 10l9 12c1 2 0 4-2 5l-5 2c1 4 1 7-1 9 1 3 0 6-3 7 0 5-2 9-7 10l-10 1-3 6c4 3 7 6 9 11 2 5 3 10 3 14z"/></svg><span class="v"><bdi dir="ltr">291 M</bdi></span></div>
+    <p class="tx c1">This is a sample text. Insert your desired text here.</p><p class="tx c2">This is a sample text. Insert your desired text here.</p>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">8</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <h1 class="ttl gt">Market Overview Slide</h1>
+    <svg class="dash flip" viewBox="0 0 1280 720" aria-hidden="true" fill="none" stroke="#BFBFBF" stroke-width="3" stroke-dasharray="11 8"><path d="M355 453H423V355H478"/><path d="M790 351H858V254H913"/><path d="M477 347 492 355 477 363z" fill="#BFBFBF" stroke="none"/><path d="M912 246 927 254 912 262z" fill="#BFBFBF" stroke="none"/></svg>
+    <div class="mk mk1"><div class="ci g-blue"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19.36 7.38L20.86 7.53L20.86 8.87L19.36 9.02L18.75 10.49L19.71 11.66L18.76 12.61L17.59 11.65L16.12 12.26L15.97 13.76L14.63 13.76L14.48 12.26L13.01 11.65L11.84 12.61L10.89 11.66L11.85 10.49L11.24 9.02L9.74 8.87L9.74 7.53L11.24 7.38L11.85 5.91L10.89 4.74L11.84 3.79L13.01 4.75L14.48 4.14L14.63 2.64L15.97 2.64L16.12 4.14L17.59 4.75L18.76 3.79L19.71 4.74L18.75 5.91Z"/><circle cx="15.3" cy="8.2" r="1.904"/><path d="M12.46 14.78L13.96 14.93L13.96 16.27L12.46 16.42L11.85 17.89L12.81 19.06L11.86 20.01L10.69 19.05L9.22 19.66L9.07 21.16L7.73 21.16L7.58 19.66L6.11 19.05L4.94 20.01L3.99 19.06L4.95 17.89L4.34 16.42L2.84 16.27L2.84 14.93L4.34 14.78L4.95 13.31L3.99 12.14L4.94 11.19L6.11 12.15L7.58 11.54L7.73 10.04L9.07 10.04L9.22 11.54L10.69 12.15L11.86 11.19L12.81 12.14L11.85 13.31Z"/><circle cx="8.4" cy="15.6" r="1.904"/></svg></div><h2>Placeholder</h2><p class="v"><bdi dir="ltr">55%</bdi></p><p>Insert your desired text here.</p></div>
+    <div class="mk mk2"><div class="ci g-sky"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18"/><path d="M6.5 18v-4M10 18v-6M13.5 18v-8M17 18V8"/><path d="M6 11l4-3 3 1.5L18 5"/><path d="M15.5 5H18v2.5"/></svg></div><h2>Placeholder</h2><p class="v"><bdi dir="ltr">65%</bdi></p><p>Insert your desired text here.</p></div>
+    <div class="mk mk3"><div class="ci g-teal"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.5c2.5-1.4 4.6-1.5 5-1 .5.4.4 2.5-1 5L13 14l-3-3z"/><path d="M10 11 6.5 10 4 12.5l4 .5M13 14l1 3.5-2.5 2.5-.5-4"/><circle cx="16" cy="8" r="1.4"/><path d="M8.5 15.5 5 19M10 17l-2.5 2.5M7 14l-2.5 2.5"/></svg></div><h2>Placeholder</h2><p class="v"><bdi dir="ltr">89%</bdi></p><p>Insert your desired text here.</p></div>
+    <p class="tx ft9">This is a sample text. Insert your desired text here. Insert your desired text here. This is a sample text.</p>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">9</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <h1 class="ttl gt">Business Milestones Slide</h1>
+    <svg class="arr flip" viewBox="0 0 1280 720" aria-hidden="true"><defs><linearGradient id="ar1" gradientUnits="userSpaceOnUse" x1="64" y1="0" x2="395" y2="0"><stop offset="0" stop-color="#0A72C2"/><stop offset=".75" stop-color="#005FAA"/><stop offset="1" stop-color="#0066B6"/></linearGradient><linearGradient id="ar2" gradientUnits="userSpaceOnUse" x1="305" y1="0" x2="640" y2="0"><stop offset="0" stop-color="#2E8FD0"/><stop offset=".8" stop-color="#45A2DB"/><stop offset="1" stop-color="#2A85C6"/></linearGradient><linearGradient id="ar3" gradientUnits="userSpaceOnUse" x1="548" y1="0" x2="882" y2="0"><stop offset="0" stop-color="#47D8B2"/><stop offset=".8" stop-color="#36C9A2"/><stop offset="1" stop-color="#27B48E"/></linearGradient><linearGradient id="ar4" gradientUnits="userSpaceOnUse" x1="790" y1="0" x2="1124" y2="0"><stop offset="0" stop-color="#CB7E6E"/><stop offset=".8" stop-color="#B4604C"/><stop offset="1" stop-color="#AC513C"/></linearGradient></defs><g stroke="url(#ar1)" stroke-width="30" stroke-linecap="round" fill="none"><path d="M79 521H382"/><path d="M320 451L388 521L320 591" stroke-linejoin="round"/></g><g stroke="url(#ar2)" stroke-width="30" stroke-linecap="round" fill="none"><path d="M320 450H624"/><path d="M562 380L630 450L562 520" stroke-linejoin="round"/></g><g stroke="url(#ar3)" stroke-width="30" stroke-linecap="round" fill="none"><path d="M563 377H867"/><path d="M805 307L873 377L805 447" stroke-linejoin="round"/></g><g stroke="url(#ar4)" stroke-width="30" stroke-linecap="round" fill="none"><path d="M806 305H1109"/><path d="M1047 235L1115 305L1047 375" stroke-linejoin="round"/></g></svg>
+    <div class="ci g-blue" style="top:485px;inset-inline-start:412px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l4-2 4 2 3-1 4 1 5-2"/><path d="M2 9v6l3 1 4 4c.8.7 1.8.5 2.3-.2.5.6 1.5.6 2-.1.6.4 1.5.3 1.9-.4.7.2 1.4-.2 1.6-1l2.2-1.3V7"/><path d="M13 8l-3.5 3c-.6.6-.3 1.6.6 1.7L13 12l4 4"/><path d="M9 20l-1.5-1.5M11.3 19.8l-2-2M13.3 19.7l-2-2"/></svg></div><div class="ci g-sky" style="top:414px;inset-inline-start:660px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c0-3.8 2.9-6.5 6.5-6.5 1.2 0 2.3.3 3.2.8"/><circle cx="17" cy="17" r="3.5"/><path d="M17 15.3v3.4M15.3 17h3.4"/></svg></div><div class="ci g-teal" style="top:342px;inset-inline-start:900px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="3" width="7" height="4.5"/><path d="M12 7.5v4M5 15v-3.5h14V15M12 11.5V15"/><circle cx="5" cy="17" r="2"/><circle cx="12" cy="17" r="2"/><circle cx="19" cy="17" r="2"/></svg></div><div class="ci g-clay" style="top:270px;inset-inline-start:1141px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 9l9 5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></div>
+    <div class="ms" style="top:326px;inset-inline-start:73px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="ms" style="top:255px;inset-inline-start:316px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="ms" style="top:184px;inset-inline-start:557px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="ms" style="top:112px;inset-inline-start:800px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">10</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <h1 class="ttl gt">Financial Data Chart Slide</h1>
+    <p class="tx in">This is a sample text. Insert your desired text here. Insert your desired text here. This is a sample text. Insert your desired text here. Insert your desired text here.</p>
+    <div class="sq g-blue" style="top:221px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19.36 7.38L20.86 7.53L20.86 8.87L19.36 9.02L18.75 10.49L19.71 11.66L18.76 12.61L17.59 11.65L16.12 12.26L15.97 13.76L14.63 13.76L14.48 12.26L13.01 11.65L11.84 12.61L10.89 11.66L11.85 10.49L11.24 9.02L9.74 8.87L9.74 7.53L11.24 7.38L11.85 5.91L10.89 4.74L11.84 3.79L13.01 4.75L14.48 4.14L14.63 2.64L15.97 2.64L16.12 4.14L17.59 4.75L18.76 3.79L19.71 4.74L18.75 5.91Z"/><circle cx="15.3" cy="8.2" r="1.904"/><path d="M12.46 14.78L13.96 14.93L13.96 16.27L12.46 16.42L11.85 17.89L12.81 19.06L11.86 20.01L10.69 19.05L9.22 19.66L9.07 21.16L7.73 21.16L7.58 19.66L6.11 19.05L4.94 20.01L3.99 19.06L4.95 17.89L4.34 16.42L2.84 16.27L2.84 14.93L4.34 14.78L4.95 13.31L3.99 12.14L4.94 11.19L6.11 12.15L7.58 11.54L7.73 10.04L9.07 10.04L9.22 11.54L10.69 12.15L11.86 11.19L12.81 12.14L11.85 13.31Z"/><circle cx="8.4" cy="15.6" r="1.904"/></svg></div><h2 class="hd hh" style="top:218px">Placeholder</h2><p class="tx pp" style="top:254px">This is a sample text. Insert your desired text here. Insert your desired text here.</p><div class="pb" style="top:221px"><div class="tr"><div class="fl" data-i="0"></div></div><span class="val" data-i="0"></span></div>
+    <div class="sq g-sky" style="top:357px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.5v-2.3c0-1-.6-1.9-1.4-2.7A6 6 0 1 1 16.4 12.5c-.8.8-1.4 1.7-1.4 2.7v2.3z"/><path d="M9.5 20h5M10.5 22h3M10 14l2-2 2 2M12 12v5.5"/></svg></div><h2 class="hd hh" style="top:354px">Placeholder</h2><p class="tx pp" style="top:390px">This is a sample text. Insert your desired text here. Insert your desired text here.</p><div class="pb" style="top:357px"><div class="tr"><div class="fl" data-i="1"></div></div><span class="val" data-i="1"></span></div>
+    <div class="sq g-teal" style="top:492px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M12 6.5V21M8 10h8"/><path d="M4 13c.5 4.5 4 8 8 8s7.5-3.5 8-8"/><path d="M2.5 15 4 13l2 1.5M21.5 15 20 13l-2 1.5"/></svg></div><h2 class="hd hh" style="top:489px">Placeholder</h2><p class="tx pp" style="top:525px">This is a sample text. Insert your desired text here. Insert your desired text here.</p><div class="pb" style="top:492px"><div class="tr"><div class="fl" data-i="2"></div></div><span class="val" data-i="2"></span></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">11</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <h1 class="ttl gt">Financial Allocations</h1>
+    <div class="alc" style="inset-inline-start:81px"><p class="v"><bdi dir="ltr" data-i="0"></bdi></p><p>Insert your desired text here.</p></div><svg class="ring" data-i="0" viewBox="-162 -162 324 324" style="inset-inline-start:74px" aria-hidden="true"></svg><img class="cp" src="/templates/freeform/sl-creative-business-pitch-deck/assets/alloc-1.jpg" alt="Skyscraper" style="inset-inline-start:142px">
+    <div class="alc" style="inset-inline-start:485px"><p class="v"><bdi dir="ltr" data-i="1"></bdi></p><p>Insert your desired text here.</p></div><svg class="ring" data-i="1" viewBox="-162 -162 324 324" style="inset-inline-start:478px" aria-hidden="true"></svg><img class="cp" src="/templates/freeform/sl-creative-business-pitch-deck/assets/alloc-2.jpg" alt="Glass tower" style="inset-inline-start:546px">
+    <div class="alc" style="inset-inline-start:890px"><p class="v"><bdi dir="ltr" data-i="2"></bdi></p><p>Insert your desired text here.</p></div><svg class="ring" data-i="2" viewBox="-162 -162 324 324" style="inset-inline-start:882px" aria-hidden="true"></svg><img class="cp" src="/templates/freeform/sl-creative-business-pitch-deck/assets/alloc-3.jpg" alt="Curved office building" style="inset-inline-start:950px">
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">12</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <h1 class="ttl gt">Business Data Analysis Slide</h1>
+    <svg class="zz flip" viewBox="0 0 1280 720" aria-hidden="true"><polyline points="62,430 146,353 270,473 560,218 868,457 1218,152" fill="none" stroke="#C3C3C3" stroke-width="3"/></svg>
+    <div class="ci g-blue" style="top:306px;inset-inline-start:99px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19.36 7.38L20.86 7.53L20.86 8.87L19.36 9.02L18.75 10.49L19.71 11.66L18.76 12.61L17.59 11.65L16.12 12.26L15.97 13.76L14.63 13.76L14.48 12.26L13.01 11.65L11.84 12.61L10.89 11.66L11.85 10.49L11.24 9.02L9.74 8.87L9.74 7.53L11.24 7.38L11.85 5.91L10.89 4.74L11.84 3.79L13.01 4.75L14.48 4.14L14.63 2.64L15.97 2.64L16.12 4.14L17.59 4.75L18.76 3.79L19.71 4.74L18.75 5.91Z"/><circle cx="15.3" cy="8.2" r="1.904"/><path d="M12.46 14.78L13.96 14.93L13.96 16.27L12.46 16.42L11.85 17.89L12.81 19.06L11.86 20.01L10.69 19.05L9.22 19.66L9.07 21.16L7.73 21.16L7.58 19.66L6.11 19.05L4.94 20.01L3.99 19.06L4.95 17.89L4.34 16.42L2.84 16.27L2.84 14.93L4.34 14.78L4.95 13.31L3.99 12.14L4.94 11.19L6.11 12.15L7.58 11.54L7.73 10.04L9.07 10.04L9.22 11.54L10.69 12.15L11.86 11.19L12.81 12.14L11.85 13.31Z"/><circle cx="8.4" cy="15.6" r="1.904"/></svg></div><div class="ci g-sky" style="top:251px;inset-inline-start:512px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="1"/><path d="M12 16.5V20M8.5 20h7"/><path d="M8 7.5l2.5 5 2-2 3 3"/><circle cx="8" cy="7.5" r=".8"/><path d="M14 7.5h3"/></svg></div><div class="ci g-teal" style="top:330px;inset-inline-start:818px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="1"/><path d="M3 8h18"/><path d="M16 6.3h.01M18 6.3h.01"/><path d="M9.5 11 7 13.5 9.5 16M14.5 11 17 13.5 14.5 16M13 10.5l-2 6"/></svg></div><div class="ci g-clay" style="top:114px;inset-inline-start:1059px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M19.36 7.38L20.86 7.53L20.86 8.87L19.36 9.02L18.75 10.49L19.71 11.66L18.76 12.61L17.59 11.65L16.12 12.26L15.97 13.76L14.63 13.76L14.48 12.26L13.01 11.65L11.84 12.61L10.89 11.66L11.85 10.49L11.24 9.02L9.74 8.87L9.74 7.53L11.24 7.38L11.85 5.91L10.89 4.74L11.84 3.79L13.01 4.75L14.48 4.14L14.63 2.64L15.97 2.64L16.12 4.14L17.59 4.75L18.76 3.79L19.71 4.74L18.75 5.91Z"/><circle cx="15.3" cy="8.2" r="1.904"/><path d="M12.46 14.78L13.96 14.93L13.96 16.27L12.46 16.42L11.85 17.89L12.81 19.06L11.86 20.01L10.69 19.05L9.22 19.66L9.07 21.16L7.73 21.16L7.58 19.66L6.11 19.05L4.94 20.01L3.99 19.06L4.95 17.89L4.34 16.42L2.84 16.27L2.84 14.93L4.34 14.78L4.95 13.31L3.99 12.14L4.94 11.19L6.11 12.15L7.58 11.54L7.73 10.04L9.07 10.04L9.22 11.54L10.69 12.15L11.86 11.19L12.81 12.14L11.85 13.31Z"/><circle cx="8.4" cy="15.6" r="1.904"/></svg></div>
+    <div class="ph13" style="top:186px;inset-inline-start:99px"><h2>Phase 01</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="ph13" style="top:374px;inset-inline-start:514px"><h2>Phase 02</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="ph13" style="top:115px;inset-inline-start:786px"><h2>Phase 03</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="ph13" style="top:386px;inset-inline-start:980px"><h2>Phase 04</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="box"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">13</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <h1 class="ttl gt">Business Dashboard Slide</h1>
+    <table class="tl"><tr><th class="hb">Project</th><th class="hs">Text</th></tr><tr class="gr"><td colspan="2">Project Manager</td></tr><tr><td colspan="2">Status Date</td></tr><tr><th colspan="2" class="hb">Project Description</th></tr><tr class="gr"><td colspan="2">Placeholder</td></tr></table>
+    <table class="tr2"><thead><tr><th>Project</th><th style="background:#0070C0">Quality</th><th style="background:#45A2DB">Budget</th><th style="background:#44D9B1;color:#1A1A1A">Resources</th><th style="background:#CA7B6A">Risks</th></tr></thead><tbody><tr><td>Project A</td><td></td><td></td><td></td><td></td></tr><tr><td>Project B</td><td></td><td></td><td></td><td></td></tr><tr><td>Project C</td><td></td><td></td><td></td><td></td></tr><tr><td>Project D</td><td></td><td></td><td></td><td></td></tr><tr class="lg"><td colspan="5"><span><i style="background:#FF0000"></i>High</span><span><i style="background:#FFC000"></i>Medium</span><span><i style="background:#00B050"></i>Low</span></td></tr></tbody></table>
+    <div class="pan"></div>
+    <h2 class="ch" style="inset-inline-start:82px">Placeholder</h2><h2 class="ch" style="inset-inline-start:462px">Placeholder</h2><h2 class="ch" style="inset-inline-start:843px">Placeholder</h2>
+    <svg class="cv" id="c14a" viewBox="0 0 356 220" style="inset-inline-start:82px" aria-hidden="true"></svg><svg class="cv" id="c14b" viewBox="0 0 220 220" style="inset-inline-start:470px;width:220px" aria-hidden="true"></svg><svg class="cv" id="c14c" viewBox="0 0 356 220" style="inset-inline-start:843px" aria-hidden="true"></svg>
+    <div class="pl"><ul><li><i style="background:#0070C0"></i>Project 01</li><li><i style="background:#45A2DB"></i>Project 02</li><li><i style="background:#44D9B1"></i>Project 03</li></ul></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">14</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <div class="ft w19 w15"><div class="ft-g"></div><div class="sky"></div><img class="ph man" src="/templates/freeform/sl-creative-business-pitch-deck/assets/manager.jpg" alt="Marketing manager portrait"><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">15</span><div class="ft-l"></div></div>
+    <div class="bnd"></div><div class="nmb">Name</div>
+    <h1 class="tt gt">Marketing<br>Manager Intro</h1>
+    <p class="tx p1">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p class="tx p2">This is a sample text. Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 16 -->
+  <section class="slide"><div class="frame s16">
+    <h1 class="ttl gt">Marketing Plan Slide</h1>
+    <svg class="bulb flip" viewBox="0 0 1280 720" aria-hidden="true"><defs><linearGradient id="bl" gradientUnits="userSpaceOnUse" x1="0" y1="262" x2="0" y2="630"><stop offset="0" stop-color="#44D9B1"/><stop offset=".45" stop-color="#2FB3B8"/><stop offset=".7" stop-color="#1A86C8"/><stop offset="1" stop-color="#0A6BC2"/></linearGradient></defs><path d="M502 492A175 175 0 1 1 778 492" fill="none" stroke="#DCDCDC" stroke-width="4"/><path d="M582 490C560 452 528 420 535 360 543 304 589 273 640 273 691 273 737 304 745 360 752 420 718 452 694 513" fill="none" stroke="url(#bl)" stroke-width="22" stroke-linecap="round"/><g stroke="url(#bl)" stroke-width="20" stroke-linecap="round"><path d="M590 537 697 530"/><path d="M582 562 700 553"/><path d="M582 588 700 578"/><path d="M612 616 671 611"/></g></svg>
+    <div class="ring" style="top:212px;inset-inline-start:640px"></div><div class="ci g-teal" style="top:212px;inset-inline-start:640px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="2.6"/><circle cx="5.8" cy="10" r="2.1"/><circle cx="18.2" cy="10" r="2.1"/><path d="M7.5 18.5c0-2.8 2-4.8 4.5-4.8s4.5 2 4.5 4.8M2 18c0-2.3 1.6-4 3.8-4 .8 0 1.4.2 2 .5M22 18c0-2.3-1.6-4-3.8-4-.8 0-1.4.2-2 .5"/></svg></div>
+    <div class="ring" style="top:310px;inset-inline-start:486px"></div><div class="ci g-sky" style="top:310px;inset-inline-start:486px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="10"/><path d="M5 3v2M9 3v2M15 3v2M19 3v2M8 15l-2 6M16 15l2 6M12 15v4"/><path d="M3 12.5c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5h2"/></svg></div>
+    <div class="ring" style="top:310px;inset-inline-start:794px"></div><div class="ci g-clay" style="top:310px;inset-inline-start:794px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18"/><path d="M6 17l5.5-5.5 2.5 2.5L18.5 9"/><path d="M15.5 8.8h3v3"/></svg></div>
+    <div class="ring" style="top:492px;inset-inline-start:510px"></div><div class="ci g-blue" style="top:492px;inset-inline-start:510px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5V20h16V9.5"/><path d="M3 9.5 5 4h14l2 5.5c0 1.2-1 2-2.25 2S16.5 10.7 16.5 9.5c0 1.2-1 2-2.25 2S12 10.7 12 9.5c0 1.2-1 2-2.25 2S7.5 10.7 7.5 9.5c0 1.2-1 2-2.25 2S3 10.7 3 9.5z"/><path d="M7 4v5.5M10 4v5.5M14 4v5.5M17 4v5.5"/><rect x="7" y="14" width="4" height="6"/><rect x="13.5" y="14" width="4" height="3.5"/></svg></div>
+    <div class="ring" style="top:492px;inset-inline-start:770px"></div><div class="ci g-purple" style="top:492px;inset-inline-start:770px"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4l3 .5L16 19V5L6 9.5z"/><path d="M6 14.5l1.5 5h2.5l-1.3-4.3"/><path d="M18.5 9.5a3 3 0 0 1 0 5M16 5l1.5-.5V19.5L16 19"/></svg></div>
+    <p class="mp">Marketing Plan</p>
+    <div class="mp16" style="top:113px;inset-inline-start:724px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="mp16 end" style="top:296px;inset-inline-start:121px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="mp16" style="top:296px;inset-inline-start:919px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="mp16 end" style="top:480px;inset-inline-start:121px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div><div class="mp16" style="top:480px;inset-inline-start:919px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">16</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 17 -->
+  <section class="slide"><div class="frame s17">
+    <h1 class="ttl gt">Our Timeline Slide</h1>
+    <svg class="tl flip" viewBox="0 0 1280 720" aria-hidden="true"><defs><linearGradient id="t1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00589A"/><stop offset="1" stop-color="#0070C0"/></linearGradient><linearGradient id="t2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2878B2"/><stop offset="1" stop-color="#45A2DB"/></linearGradient><linearGradient id="t3" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#21AE88"/><stop offset=".7" stop-color="#44D9B1"/></linearGradient><linearGradient id="t4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#AC513C"/><stop offset="1" stop-color="#CA7B6A"/></linearGradient></defs><path d="M188 373A94 94 0 0 0 376 373Z" fill="#0070C0"/><path d="M162 373A120 120 0 0 1 402 373Z" fill="url(#t1)"/><path d="M426 373A94 94 0 0 1 614 373Z" fill="#45A2DB"/><path d="M400 373A120 120 0 0 0 640 373Z" fill="url(#t2)"/><path d="M665 373A94 94 0 0 0 853 373Z" fill="#44D9B1"/><path d="M639 373A120 120 0 0 1 879 373Z" fill="url(#t3)"/><path d="M904 373A94 94 0 0 1 1092 373Z" fill="#CA7B6A"/><path d="M878 373A120 120 0 0 0 1118 373Z" fill="url(#t4)"/></svg>
+    <p class="yr" style="top:332px;inset-inline-start:282px">2025</p><p class="yr" style="top:371px;inset-inline-start:520px">2026</p><p class="yr" style="top:332px;inset-inline-start:759px">2027</p><p class="yr" style="top:371px;inset-inline-start:998px">2028</p>
+    <div class="tl17" style="top:135px;inset-inline-start:282px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="tl17" style="top:135px;inset-inline-start:759px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="tl17" style="top:506px;inset-inline-start:520px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="tl17" style="top:506px;inset-inline-start:998px"><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">17</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 18 -->
+  <section class="slide"><div class="frame s18">
+    <h1 class="ttl gt">Marketing Analysis Slide</h1>
+    <svg class="cv" id="c18" viewBox="0 0 680 430" aria-hidden="true"></svg>
+    <div class="lg"><span><i style="background:#0070C0"></i>Series 1</span><span><i style="background:#45A2DB"></i>Series 2</span><span><i style="background:#44D9B1"></i>Series 3</span></div>
+    <div class="cl">▲ <bdi dir="ltr">52%</bdi></div>
+    <h2 class="hd h">Placeholder</h2><p class="tx p1">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p class="tx p2">This is a sample text. Insert your desired text here. This is a sample text.</p>
+    <div class="kb"><span class="v"><bdi dir="ltr">22%</bdi></span><h2>Placeholder</h2><p>This is a sample text. Insert your desired text here.</p></div>
+    <div class="ft"><div class="ft-g"></div><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">18</span><div class="ft-l"></div></div>
+  </div></section>
+  <!-- 19 -->
+  <section class="slide"><div class="frame s19">
+    <div class="ft w19"><div class="ft-g"></div><img class="ph bld" src="/templates/freeform/sl-creative-business-pitch-deck/assets/contact-building.jpg" alt="Office building against the sky"><div class="band"></div><div class="dark"></div><svg class="deco flip" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="757,64 858,46 816,141" fill="#45A2DB" stroke="#45A2DB" stroke-width="24" stroke-linejoin="round"/><polygon points="690,121 758,244 615,234" fill="#44D9B1" stroke="#44D9B1" stroke-width="26" stroke-linejoin="round"/><line x1="392" y1="0" x2="248" y2="218" stroke="#fff" stroke-width="3"/><line x1="180" y1="462" x2="38" y2="672" stroke="#fff" stroke-width="3"/></svg><div class="ft-b"></div><span class="ft-n">Company Name</span><span class="ft-t">Creative Business Pitch Deck</span><span class="ft-p">19</span><div class="ft-l"></div></div>
+    <div class="logo"><svg viewBox="0 0 58 64" aria-hidden="true"><path fill="#FFFFFF" fill-rule="evenodd" d="M10 3C22 0 40 2 52 6c4 1 5.5 4 5.5 8l-1 34c0 5-2 9-7 10-13 3-28 4-41 2-5-1-8-4-8-9V14C.5 8 4 4.5 10 3zm7 10c-4 .5-6 2.5-6 6.5v24c0 4 2 6 6 6.5 8 .8 15 .3 22-1.4 4-1 5.5-3 5.5-7l.5-20c0-4-1.5-6-5.5-7-7.5-1.8-15-2.4-22.5-1.6z"/></svg><span>Your Company<br>Logo Here</span></div>
+    <svg class="qr" viewBox="0 0 29 29" shape-rendering="crispEdges" aria-hidden="true"><path fill="#000" d="M0 0h7v1h-7zM9 0h1v1h-1zM12 0h1v1h-1zM14 0h1v1h-1zM17 0h4v1h-4zM22 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM10 1h2v1h-2zM18 1h2v1h-2zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM9 2h3v1h-3zM17 2h4v1h-4zM22 2h1v1h-1zM24 2h3v1h-3zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM9 3h1v1h-1zM12 3h1v1h-1zM14 3h3v1h-3zM18 3h2v1h-2zM22 3h1v1h-1zM24 3h3v1h-3zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM9 4h1v1h-1zM11 4h2v1h-2zM16 4h3v1h-3zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM10 5h4v1h-4zM16 5h2v1h-2zM19 5h2v1h-2zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM8 7h3v1h-3zM12 7h1v1h-1zM15 7h1v1h-1zM20 7h1v1h-1zM4 8h4v1h-4zM9 8h6v1h-6zM16 8h1v1h-1zM20 8h1v1h-1zM22 8h2v1h-2zM27 8h1v1h-1zM0 9h1v1h-1zM4 9h1v1h-1zM7 9h2v1h-2zM11 9h1v1h-1zM13 9h1v1h-1zM16 9h3v1h-3zM20 9h1v1h-1zM22 9h1v1h-1zM24 9h1v1h-1zM27 9h2v1h-2zM0 10h3v1h-3zM4 10h1v1h-1zM6 10h1v1h-1zM8 10h6v1h-6zM15 10h1v1h-1zM17 10h2v1h-2zM20 10h2v1h-2zM23 10h1v1h-1zM25 10h1v1h-1zM28 10h1v1h-1zM1 11h1v1h-1zM4 11h2v1h-2zM7 11h2v1h-2zM11 11h1v1h-1zM14 11h1v1h-1zM16 11h1v1h-1zM18 11h1v1h-1zM20 11h2v1h-2zM24 11h2v1h-2zM27 11h2v1h-2zM0 12h1v1h-1zM2 12h3v1h-3zM6 12h1v1h-1zM8 12h2v1h-2zM12 12h2v1h-2zM16 12h2v1h-2zM20 12h1v1h-1zM23 12h1v1h-1zM25 12h1v1h-1zM28 12h1v1h-1zM1 13h3v1h-3zM11 13h3v1h-3zM15 13h2v1h-2zM22 13h1v1h-1zM24 13h1v1h-1zM26 13h1v1h-1zM28 13h1v1h-1zM4 14h3v1h-3zM8 14h1v1h-1zM10 14h2v1h-2zM14 14h1v1h-1zM20 14h1v1h-1zM24 14h1v1h-1zM28 14h1v1h-1zM1 15h3v1h-3zM5 15h1v1h-1zM8 15h3v1h-3zM14 15h2v1h-2zM18 15h2v1h-2zM21 15h1v1h-1zM23 15h1v1h-1zM25 15h1v1h-1zM28 15h1v1h-1zM3 16h2v1h-2zM6 16h1v1h-1zM9 16h1v1h-1zM15 16h3v1h-3zM19 16h3v1h-3zM27 16h1v1h-1zM2 17h1v1h-1zM4 17h1v1h-1zM8 17h2v1h-2zM12 17h1v1h-1zM14 17h1v1h-1zM17 17h1v1h-1zM22 17h3v1h-3zM28 17h1v1h-1zM0 18h2v1h-2zM4 18h5v1h-5zM12 18h5v1h-5zM18 18h1v1h-1zM20 18h1v1h-1zM25 18h2v1h-2zM28 18h1v1h-1zM0 19h2v1h-2zM3 19h1v1h-1zM8 19h1v1h-1zM10 19h3v1h-3zM15 19h1v1h-1zM17 19h1v1h-1zM19 19h2v1h-2zM25 19h1v1h-1zM3 20h4v1h-4zM10 20h2v1h-2zM16 20h1v1h-1zM18 20h1v1h-1zM20 20h6v1h-6zM27 20h1v1h-1zM8 21h1v1h-1zM10 21h2v1h-2zM13 21h2v1h-2zM18 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM28 21h1v1h-1zM0 22h7v1h-7zM8 22h1v1h-1zM10 22h4v1h-4zM17 22h4v1h-4zM22 22h1v1h-1zM24 22h1v1h-1zM28 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h4v1h-4zM13 23h1v1h-1zM19 23h2v1h-2zM24 23h2v1h-2zM27 23h2v1h-2zM0 24h1v1h-1zM2 24h3v1h-3zM6 24h1v1h-1zM8 24h5v1h-5zM14 24h2v1h-2zM17 24h8v1h-8zM27 24h1v1h-1zM0 25h1v1h-1zM2 25h3v1h-3zM6 25h1v1h-1zM11 25h1v1h-1zM13 25h2v1h-2zM23 25h1v1h-1zM26 25h2v1h-2zM0 26h1v1h-1zM2 26h3v1h-3zM6 26h1v1h-1zM12 26h6v1h-6zM19 26h3v1h-3zM27 26h2v1h-2zM0 27h1v1h-1zM6 27h1v1h-1zM9 27h1v1h-1zM11 27h1v1h-1zM14 27h1v1h-1zM16 27h1v1h-1zM18 27h1v1h-1zM20 27h4v1h-4zM25 27h1v1h-1zM27 27h2v1h-2zM0 28h7v1h-7zM9 28h3v1h-3zM13 28h1v1h-1zM15 28h4v1h-4zM20 28h3v1h-3zM24 28h2v1h-2zM27 28h1v1h-1z"/></svg>
+    <h1 class="tt gt">Contact Us Today</h1>
+    <p class="k" style="top:456px;inset-inline-start:727px"><b>Address</b># Placeholder Address</p><div class="rule"></div><p class="k" style="top:550px;inset-inline-start:727px"><b>Contact</b><bdi dir="ltr">+1 999 999 0909</bdi></p><p class="k" style="top:550px;inset-inline-start:973px"><b>Email:</b>Enter Email Address</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 19</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"items": [{"value": 55, "color": "#0070C0"}, {"value": 80, "color": "#45A2DB"}, {"value": 45, "color": "#24B28C"}]}</script>
+<script type="application/json" id="chart-data-2">{"items": [{"value": 59, "color": "#0070C0"}, {"value": 65, "color": "#45A2DB"}, {"value": 82, "color": "#44D9B1"}]}</script>
+<script type="application/json" id="chart-data-3">{"max": 10, "step": 2, "categories": ["Category 1", "Category 2", "Category 3"], "series": [{"name": "Series 1", "color": "#0070C0", "values": [4.3, 2.5, 3.5]}, {"name": "Series 2", "color": "#45A2DB", "values": [2.4, 4.4, 1.8]}, {"name": "Series 3", "color": "#44D9B1", "values": [2, 2, 3]}]}</script>
+<script type="application/json" id="chart-data-4">{"items": [{"value": 42, "color": "#0070C0"}, {"value": 24, "color": "#45A2DB"}, {"value": 34, "color": "#44D9B1"}]}</script>
+<script type="application/json" id="chart-data-5">{"unit": 15.7, "categories": ["2021", "2023", "2025"], "series": [{"color": "#0070C0", "values": [4.3, 2.5, 3.5]}, {"color": "#45A2DB", "values": [1.0, 1.0, 2.0]}, {"color": "#44D9B1", "values": [4.1, 2.5, 1.5]}]}</script>
+<script type="application/json" id="chart-data-6">{"max": 6, "categories": ["Category 1", "Category 2", "Category 3", "Category 4"], "series": [{"name": "Series 1", "color": "#0070C0", "values": [4.3, 2.5, 3.5, 4.5]}, {"name": "Series 2", "color": "#45A2DB", "values": [2.4, 4.4, 1.8, 2.8]}, {"name": "Series 3", "color": "#44D9B1", "values": [2, 2, 3, 5]}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- الرسوم: كل الأرقام في كتل chart-data* -----
+  var NS = 'http://www.w3.org/2000/svg';
+  function J(id) { var e = document.getElementById(id); try { return e ? JSON.parse(e.textContent) : null; } catch (x) { return null; } }
+  function mk(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function clear(s) { while (s.firstChild) s.removeChild(s.firstChild); }
+  function fmt(v) { return (Math.round(v * 10) / 10).toString(); }
+  // 11: أشرطة التقدّم
+  var d1 = J('chart-data');
+  if (d1) d1.items.forEach(function (it, i) {
+    var f = document.querySelector('.s11 .fl[data-i="' + i + '"]'), v = document.querySelector('.s11 .val[data-i="' + i + '"]');
+    if (f) { f.style.width = Math.max(0, Math.min(100, it.value)) + '%'; f.style.background = it.color; }
+    if (v) { v.textContent = it.value + '%'; v.style.color = it.color; }
+  });
+  // 12: الحلقات (تبدأ من الأعلى؛ مع عقارب الساعة في الإنجليزية وعكسها في العربية)
+  function arcPath(r0, r1, a0, a1, dir) {
+    function pt(r, a) { return [dir * r * Math.sin(a), -r * Math.cos(a)]; }
+    var big = (a1 - a0) > Math.PI ? 1 : 0, sw = dir > 0 ? 1 : 0;
+    var p0 = pt(r1, a0), p1 = pt(r1, a1), q1 = pt(r0, a1), q0 = pt(r0, a0);
+    return 'M' + p0 + 'A' + r1 + ',' + r1 + ' 0 ' + big + ' ' + sw + ' ' + p1 + 'L' + q1 + 'A' + r0 + ',' + r0 + ' 0 ' + big + ' ' + (1 - sw) + ' ' + q0 + 'Z';
+  }
+  var d2 = J('chart-data-2');
+  if (d2) d2.items.forEach(function (it, i) {
+    var s = document.querySelector('.s12 .ring[data-i="' + i + '"]'), v = document.querySelector('.s12 .alc bdi[data-i="' + i + '"]');
+    if (s) { clear(s); var a = Math.min(99.99, Math.max(0, it.value)) / 100 * 2 * Math.PI; mk('path', { d: arcPath(92, 162, 0, a, RTL ? -1 : 1), fill: it.color }, s); }
+    if (v) v.textContent = it.value + '%';
+  });
+  // 14 أ: أعمدة مكدّسة بمحور واحد
+  var d3 = J('chart-data-3'), s3 = document.getElementById('c14a');
+  if (d3 && s3) {
+    var W = 356, X = function (x) { return RTL ? W - x : x; }, base = 175, top = 18, sc = (base - top) / d3.max;
+    for (var t = 0; t <= d3.max; t += d3.step) { var tx = mk('text', { x: X(18), y: base - t * sc + 6, 'text-anchor': 'middle' }, s3); tx.textContent = t; }
+    mk('line', { x1: X(46), x2: X(340), y1: base + .5, y2: base + .5, stroke: '#BFBFBF', 'stroke-width': 1 }, s3);
+    var n3 = d3.categories.length, step3 = 294 / n3;
+    d3.categories.forEach(function (c, i) {
+      var cx = 46 + step3 * (i + .5), y = base;
+      d3.series.forEach(function (se) { var h = se.values[i] * sc; mk('rect', { x: X(cx) - 20, y: y - h, width: 40, height: h, fill: se.color }, s3); y -= h; });
+      var lb = mk('text', { x: X(cx), y: 204, 'text-anchor': 'middle' }, s3); lb.textContent = c;
+    });
+  }
+  // 14 ب: دائري
+  var d4 = J('chart-data-4'), s4 = document.getElementById('c14b');
+  if (d4 && s4) {
+    var tot = d4.items.reduce(function (a, b) { return a + b.value; }, 0), acc = 0;
+    d4.items.forEach(function (it) {
+      var a0 = acc / tot * 2 * Math.PI; acc += it.value; var a1 = acc / tot * 2 * Math.PI, dir = RTL ? -1 : 1, r = 94, cx = 107, cy = 109;
+      var p0 = [cx + dir * r * Math.sin(a0), cy - r * Math.cos(a0)], p1 = [cx + dir * r * Math.sin(a1), cy - r * Math.cos(a1)];
+      mk('path', { d: 'M' + cx + ',' + cy + 'L' + p0 + 'A' + r + ',' + r + ' 0 ' + ((a1 - a0) > Math.PI ? 1 : 0) + ' ' + (dir > 0 ? 1 : 0) + ' ' + p1 + 'Z', fill: it.color }, s4);
+    });
+  }
+  // 14 ج: مساحات مكدّسة
+  var d5 = J('chart-data-5'), s5 = document.getElementById('c14c');
+  if (d5 && s5) {
+    var W5 = 356, X5 = function (x) { return RTL ? W5 - x : x; }, b5 = 175, xs = d5.categories.map(function (c, i) { return 7 + i * 320 / (d5.categories.length - 1); });
+    var low = xs.map(function () { return 0; });
+    d5.series.forEach(function (se) {
+      var high = low.map(function (l, i) { return l + se.values[i]; });
+      var pts = xs.map(function (x, i) { return X5(x) + ',' + (b5 - high[i] * d5.unit); }).concat(xs.slice().reverse().map(function (x, j) { var i = xs.length - 1 - j; return X5(x) + ',' + (b5 - low[i] * d5.unit); }));
+      mk('polygon', { points: pts.join(' '), fill: se.color }, s5); low = high;
+    });
+    xs.forEach(function (x, i) { var t = mk('text', { x: X5(x), y: 204, 'text-anchor': 'middle' }, s5); t.textContent = d5.categories[i]; });
+  }
+  // 18: خطوط بمحور واحد
+  var d6 = J('chart-data-6'), s6 = document.getElementById('c18');
+  if (d6 && s6) {
+    var W6 = 680, X6 = function (x) { return RTL ? W6 - x : x; }, b6 = 385, t6 = 12, sc6 = (b6 - t6) / d6.max;
+    for (var g = 0; g <= d6.max; g++) {
+      var gy = b6 - g * sc6; mk('line', { x1: X6(40), x2: X6(672), y1: gy, y2: gy, stroke: '#D9D9D9', 'stroke-width': 1 }, s6);
+      var gt = mk('text', { x: X6(18), y: gy + 6, 'text-anchor': 'middle' }, s6); gt.textContent = g;
+    }
+    var n6 = d6.categories.length, st6 = 632 / n6, cx6 = function (i) { return 40 + st6 * (i + .5); };
+    d6.categories.forEach(function (c, i) { var t = mk('text', { x: X6(cx6(i)), y: 418, 'text-anchor': 'middle' }, s6); t.textContent = c; });
+    d6.series.forEach(function (se) {
+      mk('polyline', { points: se.values.map(function (v, i) { return X6(cx6(i)) + ',' + (b6 - v * sc6); }).join(' '), fill: 'none', stroke: se.color, 'stroke-width': 2.6 }, s6);
+      se.values.forEach(function (v, i) { mk('circle', { cx: X6(cx6(i)), cy: b6 - v * sc6, r: 3.6, fill: se.color }, s6); });
+    });
+  }
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

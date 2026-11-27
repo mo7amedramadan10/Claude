@@ -1,0 +1,95 @@
+{
+  "key": "sl-creative-business-pitch-deck",
+  "kind": "slides",
+  "category": "general",
+  "icon": "💼",
+  "name": "عرض أعمال إبداعي",
+  "nameEn": "Creative Business Pitch Deck",
+  "description": "19 شريحة: غلاف، من نحن، الفريق، الخدمات، المنتجات، السوق، الإنجازات، مؤشرات ورسوم مالية، لوحة متابعة، وتواصل",
+  "descriptionEn": "19 slides: cover, about, team, services, products, market, milestones, financial charts, dashboard and contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Services"
+    },
+    {
+      "title": "اقتباس بصورة",
+      "titleEn": "Quote with Photo"
+    },
+    {
+      "title": "استراتيجية المنتج (المنتجات)",
+      "titleEn": "Product Strategy (Products)"
+    },
+    {
+      "title": "استراتيجية المنتج (مصفوفة)",
+      "titleEn": "Product Strategy (Matrix)"
+    },
+    {
+      "title": "خريطة الأعمال حول العالم",
+      "titleEn": "Business World Map",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على السوق",
+      "titleEn": "Market Overview",
+      "needsData": true
+    },
+    {
+      "title": "محطات الأعمال",
+      "titleEn": "Business Milestones"
+    },
+    {
+      "title": "مخطط البيانات المالية",
+      "titleEn": "Financial Data Chart",
+      "needsData": true
+    },
+    {
+      "title": "المخصصات المالية",
+      "titleEn": "Financial Allocations",
+      "needsData": true
+    },
+    {
+      "title": "تحليل بيانات الأعمال",
+      "titleEn": "Business Data Analysis"
+    },
+    {
+      "title": "لوحة متابعة الأعمال",
+      "titleEn": "Business Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "تعريف بمدير التسويق",
+      "titleEn": "Marketing Manager Intro"
+    },
+    {
+      "title": "خطة التسويق",
+      "titleEn": "Marketing Plan"
+    },
+    {
+      "title": "الجدول الزمني",
+      "titleEn": "Our Timeline"
+    },
+    {
+      "title": "تحليل التسويق",
+      "titleEn": "Marketing Analysis",
+      "needsData": true
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الأشرطة والحلقات والرسوم في كتل JSON بالمعرّفات chart-data وchart-data-2 حتى chart-data-6، والنسب الظاهرة في الشرائح تُكتب في الكتلة نفسها."
+}
