@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إطار ماكنزي للموقف والتعقيد والحل</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «إطار ماكنزي SCR»: عنوان أعلى ولوحة رمادية بزوايا مدوّرة من ثلاثة صفوف؛ في كل صف سهم ملوّن بأيقونة داخل دائرة بيضاء وعنوان، ثم سهم صغير ونص وصفي. الصنف on يلوّن الصف المُبرز، والصفوف بلا on رمادية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #000000; --ink-2: #262626; --accent: #1C3657; --c1: #1C3657; --c2: #588693; --c3: #4AA898; --panel: #F4F4F4; --off: #D9D9D9; --off-ink: #7D7D7D; --off-line: #BDBDBD; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 42px; font-weight: 400; line-height: 1.2; color: var(--ink); letter-spacing: -0.3px; }
+  html[lang="ar"] .ttl { font-weight: 500; letter-spacing: 0; }
+  /* الصف: شريط رمادي فاتح بعرض اللوحة، والسهم الملوّن مقصوص بـ clip-path في جهة البداية */
+  .row { position: absolute; inset-inline-start: 64px; width: 1152px; background: var(--panel); overflow: hidden; --c: var(--off); }
+  .row.r1 { top: 127px; height: 178px; border-start-start-radius: 18px; border-start-end-radius: 18px; }
+  .row.r2 { top: 307px; height: 176px; }
+  .row.r3 { top: 486px; height: 177px; border-end-start-radius: 18px; border-end-end-radius: 18px; }
+  .row.on.r1 { --c: var(--c1); } .row.on.r2 { --c: var(--c2); } .row.on.r3 { --c: var(--c3); }
+  .chev { position: absolute; top: 0; inset-inline-start: 0; width: 434px; height: 100%; background: var(--c); clip-path: polygon(0 0, 385px 0, 100% 50%, 385px 100%, 0 100%); }
+  html[dir="rtl"] .chev { clip-path: polygon(49px 0, 100% 0, 100% 100%, 49px 100%, 0 50%); }
+  /* الدائرة: حلقة رفيعة حول قرص أبيض فيه الأيقونة */
+  .ring { position: absolute; top: calc(50% - 57px); inset-inline-start: 28px; width: 114px; height: 114px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.1); display: grid; place-items: center; }
+  .row:not(.on) .ring { border-color: var(--off-line); }
+  .disc { width: 88px; height: 88px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; color: var(--c); }
+  .row:not(.on) .disc { color: #ABABAB; }
+  .disc svg { width: 42px; height: 42px; }
+  .lbl { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-start: 160px; margin: 0; font-size: 26px; font-weight: 700; line-height: 1.2; color: #FFFFFF; letter-spacing: 0.1px; }
+  html[lang="ar"] .lbl { font-size: 28px; font-weight: 800; }
+  .row:not(.on) .lbl { color: #797979; }
+  /* السهم الصغير بين العنوان والنص */
+  .arr { position: absolute; top: calc(50% - 23px); inset-inline-start: 464px; width: 28px; height: 46px; color: var(--c); }
+  .row:not(.on) .arr { color: #BFBFBF; }
+  html[dir="rtl"] .arr { transform: scaleX(-1); }
+  .tx { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-start: 525px; width: 530px; margin: 0; font-size: 17.5px; line-height: 1.33; color: var(--ink-2); }
+  html[lang="ar"] .tx { font-size: 18px; line-height: 1.5; }
+  .row:not(.on) .tx { color: var(--off-ink); }
+  html[lang="en"] .r3 .tx { width: 505px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب إطار ماكنزي للموقف والتعقيد والحل</h1>
+    <div class="row r1 on"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5V21h18"/><rect x="6" y="14.5" width="3" height="4.5"/><rect x="11" y="11" width="3" height="8"/><rect x="16" y="6.5" width="3" height="12.5"/><path d="M5.5 11.5l4.5-4.5 2 1.5L15 4.5"/><path d="M12.6 4.2H15.3v2.6"/></svg></div></div><h2 class="lbl">الموقف</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">يحظى خطّ ملابسنا الصديقة للبيئة باهتمام كبير، لكنّ المبيعات توقّفت عن النمو.</p></div>
+    <div class="row r2 on"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round" aria-hidden="true"><path stroke-width=".9" transform="translate(12 12) rotate(-40) scale(1.12) translate(-11.7 -13.3)" d="M4 8h4.2a2.4 2.4 0 1 1 4.6 0H17v4.2a2.4 2.4 0 1 1 0 4.6V21h-4.2a2.4 2.4 0 1 0-4.6 0H4v-4.2a2.4 2.4 0 1 0 0-4.6z"/></svg></div></div><h2 class="lbl">التعقيد</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تؤدي المنافسة المتزايدة واضطرابات سلاسل الإمداد إلى الحدّ من توافر المنتجات والإضرار بالعملاء.</p></div>
+    <div class="row r3 on"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="13" r="8"/><circle cx="11" cy="13" r="5"/><circle cx="11" cy="13" r="2"/><path d="M11 13l9-9"/><path d="M17 4l.3 2.7L20 7l2-2-2.6-.4L19 2z"/></svg></div></div><h2 class="lbl">الحل</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تعزيز التسويق الرقمي، وإطلاق منتجات مُعاد تدويرها، وتحسين التوريد المحلي، وتقديم برنامج للولاء.</p></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب إطار ماكنزي للموقف والتعقيد والحل</h1>
+    <div class="row r1 on"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5V21h18"/><rect x="6" y="14.5" width="3" height="4.5"/><rect x="11" y="11" width="3" height="8"/><rect x="16" y="6.5" width="3" height="12.5"/><path d="M5.5 11.5l4.5-4.5 2 1.5L15 4.5"/><path d="M12.6 4.2H15.3v2.6"/></svg></div></div><h2 class="lbl">الموقف</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">يحظى خطّ ملابسنا الصديقة للبيئة باهتمام كبير، لكنّ المبيعات توقّفت عن النمو.</p></div>
+    <div class="row r2"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round" aria-hidden="true"><path stroke-width=".9" transform="translate(12 12) rotate(-40) scale(1.12) translate(-11.7 -13.3)" d="M4 8h4.2a2.4 2.4 0 1 1 4.6 0H17v4.2a2.4 2.4 0 1 1 0 4.6V21h-4.2a2.4 2.4 0 1 0-4.6 0H4v-4.2a2.4 2.4 0 1 0 0-4.6z"/></svg></div></div><h2 class="lbl">التعقيد</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تؤدي المنافسة المتزايدة واضطرابات سلاسل الإمداد إلى الحدّ من توافر المنتجات والإضرار بالعملاء.</p></div>
+    <div class="row r3"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="13" r="8"/><circle cx="11" cy="13" r="5"/><circle cx="11" cy="13" r="2"/><path d="M11 13l9-9"/><path d="M17 4l.3 2.7L20 7l2-2-2.6-.4L19 2z"/></svg></div></div><h2 class="lbl">الحل</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تعزيز التسويق الرقمي، وإطلاق منتجات مُعاد تدويرها، وتحسين التوريد المحلي، وتقديم برنامج للولاء.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">قالب إطار ماكنزي للموقف والتعقيد والحل</h1>
+    <div class="row r1"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5V21h18"/><rect x="6" y="14.5" width="3" height="4.5"/><rect x="11" y="11" width="3" height="8"/><rect x="16" y="6.5" width="3" height="12.5"/><path d="M5.5 11.5l4.5-4.5 2 1.5L15 4.5"/><path d="M12.6 4.2H15.3v2.6"/></svg></div></div><h2 class="lbl">الموقف</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">يحظى خطّ ملابسنا الصديقة للبيئة باهتمام كبير، لكنّ المبيعات توقّفت عن النمو.</p></div>
+    <div class="row r2 on"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round" aria-hidden="true"><path stroke-width=".9" transform="translate(12 12) rotate(-40) scale(1.12) translate(-11.7 -13.3)" d="M4 8h4.2a2.4 2.4 0 1 1 4.6 0H17v4.2a2.4 2.4 0 1 1 0 4.6V21h-4.2a2.4 2.4 0 1 0-4.6 0H4v-4.2a2.4 2.4 0 1 0 0-4.6z"/></svg></div></div><h2 class="lbl">التعقيد</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تؤدي المنافسة المتزايدة واضطرابات سلاسل الإمداد إلى الحدّ من توافر المنتجات والإضرار بالعملاء.</p></div>
+    <div class="row r3"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="13" r="8"/><circle cx="11" cy="13" r="5"/><circle cx="11" cy="13" r="2"/><path d="M11 13l9-9"/><path d="M17 4l.3 2.7L20 7l2-2-2.6-.4L19 2z"/></svg></div></div><h2 class="lbl">الحل</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تعزيز التسويق الرقمي، وإطلاق منتجات مُعاد تدويرها، وتحسين التوريد المحلي، وتقديم برنامج للولاء.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">قالب إطار ماكنزي للموقف والتعقيد والحل</h1>
+    <div class="row r1"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5V21h18"/><rect x="6" y="14.5" width="3" height="4.5"/><rect x="11" y="11" width="3" height="8"/><rect x="16" y="6.5" width="3" height="12.5"/><path d="M5.5 11.5l4.5-4.5 2 1.5L15 4.5"/><path d="M12.6 4.2H15.3v2.6"/></svg></div></div><h2 class="lbl">الموقف</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">يحظى خطّ ملابسنا الصديقة للبيئة باهتمام كبير، لكنّ المبيعات توقّفت عن النمو.</p></div>
+    <div class="row r2"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round" aria-hidden="true"><path stroke-width=".9" transform="translate(12 12) rotate(-40) scale(1.12) translate(-11.7 -13.3)" d="M4 8h4.2a2.4 2.4 0 1 1 4.6 0H17v4.2a2.4 2.4 0 1 1 0 4.6V21h-4.2a2.4 2.4 0 1 0-4.6 0H4v-4.2a2.4 2.4 0 1 0 0-4.6z"/></svg></div></div><h2 class="lbl">التعقيد</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تؤدي المنافسة المتزايدة واضطرابات سلاسل الإمداد إلى الحدّ من توافر المنتجات والإضرار بالعملاء.</p></div>
+    <div class="row r3 on"><div class="chev"></div><div class="ring"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="13" r="8"/><circle cx="11" cy="13" r="5"/><circle cx="11" cy="13" r="2"/><path d="M11 13l9-9"/><path d="M17 4l.3 2.7L20 7l2-2-2.6-.4L19 2z"/></svg></div></div><h2 class="lbl">الحل</h2><svg class="arr" viewBox="0 0 28 46" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,4 24,23 4,42"/></svg><p class="tx">تعزيز التسويق الرقمي، وإطلاق منتجات مُعاد تدويرها، وتحسين التوريد المحلي، وتقديم برنامج للولاء.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 4</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

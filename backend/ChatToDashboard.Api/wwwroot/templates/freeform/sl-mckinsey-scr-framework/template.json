@@ -1,0 +1,29 @@
+{
+  "key": "sl-mckinsey-scr-framework",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "إطار ماكنزي: الموقف والتعقيد والحل",
+  "nameEn": "McKinsey SCR Framework",
+  "description": "أربع شرائح لإطار الموقف والتعقيد والحل: نظرة عامة ثم إبراز كل مرحلة على حدة",
+  "descriptionEn": "Four slides of the Situation-Complication-Resolution framework: overview, then each stage highlighted",
+  "sections": [
+    {
+      "title": "الإطار كاملًا",
+      "titleEn": "Full Framework"
+    },
+    {
+      "title": "الموقف",
+      "titleEn": "Situation"
+    },
+    {
+      "title": "التعقيد",
+      "titleEn": "Complication"
+    },
+    {
+      "title": "الحل",
+      "titleEn": "Resolution"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الصنف on على الصف يلوّنه بلون مرحلته، والصفوف بلا on تظهر رمادية."
+}
