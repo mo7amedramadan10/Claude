@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نموذج غريد لتحليل القرار</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Inter:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «غريد لتحليل القرار»: عنوان أعلى وخمس مراحل بخمسة ألوان (كحلي، أزرق داكن، أزرق، برتقالي، أخضر) ولكل لون درجة أغمق لشريط التسمية وخانة الحرف. الشريحة الأولى أعمدة، والثانية صفوف أفقية تنعكس تلقائيًا في العربية. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #000000; --accent: #3598DB; --bg: #FFFFFF; --tx: #F2F2F2; --c1: #44546B; --d1: #364353; --o1: #333E50; --c2: #1F74AD; --d2: #1A5D88; --o2: #134D73; --c3: #3598DB; --d3: #2A7AAF; --o3: #1F74AD; --c4: #ED7D31; --d4: #BE6428; --o4: #C55B11; --c5: #70AD46; --d5: #5A8939; --o5: #ED7D31; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 40px; inset-inline-start: 64px; margin: 0; font-size: 40px; font-weight: 400; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; }
+  /* ألوان كل مرحلة: c = الأساسي، d = الأغمق (التسمية وخانة الحرف)، o = دائرة الأيقونة في الشريحة الثانية (كما في الأصل) */
+  .p1 { --c: var(--c1); --d: var(--d1); --o: var(--o1); } .p2 { --c: var(--c2); --d: var(--d2); --o: var(--o2); }
+  .p3 { --c: var(--c3); --d: var(--d3); --o: var(--o3); } .p4 { --c: var(--c4); --d: var(--d4); --o: var(--o4); }
+  .p5 { --c: var(--c5); --d: var(--d5); --o: var(--o5); }
+  .ico { color: #fff; } .ico svg { width: 100%; height: 100%; fill: currentColor; }
+  .ico .ln { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  /* الحروف اللاتينية بخط Inter في الصفحتين حتى يتطابق موضعها */
+  .lt { margin: 0; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-weight: 700; line-height: 1; color: #fff; }
+  .lb { margin: 0; font-weight: 700; color: #fff; white-space: nowrap; }
+  .tx { margin: 0; color: var(--tx); }
+  /* الشريحة 1: خمسة أعمدة */
+  .cols { position: absolute; top: 121px; inset-inline-start: 63px; width: 1154px; height: 542px; display: flex; gap: 3px; }
+  .col { position: relative; flex: 1 1 0; min-width: 0; background: var(--c); }
+  .col .band { position: absolute; top: 176px; height: 85px; inset-inline: 0; background: var(--d); display: grid; place-items: center; }
+  .col .lb { font-size: 18.5px; letter-spacing: .1px; }
+  html[lang="ar"] .col .lb { font-size: 21px; }
+  .col .lt { position: absolute; top: 37px; inset-inline: 0; text-align: center; font-size: 112px; }
+  .col .ico { position: absolute; top: 294px; inset-inline-start: 50%; width: 86px; height: 86px; transform: translateX(-50%); }
+  html[dir="rtl"] .col .ico { transform: translateX(50%); }
+  .col .tx { position: absolute; top: 407px; inset-inline: 24px; text-align: center; font-size: 18px; line-height: 25px; }
+  /* الشريحة 2: خمسة صفوف */
+  .rows { position: absolute; top: 120px; inset-inline-start: 51px; width: 1165px; height: 546px; display: flex; flex-direction: column; gap: 2px; }
+  .row { position: relative; flex: 1 1 0; }
+  .row .bar { position: absolute; top: 0; bottom: 0; inset-inline-start: 55px; width: 341px; background: var(--c); }
+  .row .cell { position: absolute; top: 0; bottom: 0; inset-inline-start: 398px; width: 140px; background: var(--d); display: grid; place-items: center; }
+  .row .rest { position: absolute; top: 0; bottom: 0; inset-inline-start: 538px; inset-inline-end: 0; background: var(--c); }
+  .row .cir { position: absolute; top: 50%; inset-inline-start: 0; width: 110px; height: 110px; margin-top: -55px; border-radius: 50%; background: var(--o); z-index: 1; display: grid; place-items: center; }
+  .row .cir .ico { width: 62px; height: 62px; }
+  .row .cir { --c: var(--o); } /* علامة شارة الصح بلون الدائرة */
+  .row .lt { font-size: 60px; }
+  .row .lb { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-start: 129px; font-size: 22px; }
+  html[lang="ar"] .row .lb { font-size: 24px; }
+  .row .tx { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-start: 575px; width: 390px; font-size: 17.5px; line-height: 25px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب نموذج غريد لتحليل القرار</h1>
+    <div class="cols"><div class="col p1"><p class="lt">G</p><div class="band"><p class="lb">التقدير</p></div><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill-rule="evenodd" d="M5 44L16 13H23L34 44H27.2L24.9 37H14.1L11.8 44ZM15.8 31.5H23.2L19.5 20.5Z"/><path d="M34.6 3H37.6V10.4H45V13.4H37.6V20.8H34.6V13.4H27.2V10.4H34.6Z"/></svg></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا.</p></div><div class="col p2"><p class="lt">R</p><div class="band"><p class="lb">التوصيات</p></div><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-30 24 24)"><polygon points="11,19 33,10.5 33,37.5 11,29"/><rect x="32.5" y="8.5" width="4.5" height="31" rx="2.2"/><rect x="5" y="19" width="5" height="10" rx="2"/><path class="ln" stroke-width="2.6" d="M16 30.5L17.5 38H25.5L24.8 33.5"/></g></svg></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا.</p></div><div class="col p3"><p class="lt">A</p><div class="band"><p class="lb">التقييم</p></div><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="ln" stroke-width="2.8"><rect x="9" y="8" width="30" height="37" rx="2.5"/><path d="M18 8V5.5H30V8"/><path d="M14 17.5L16 19.5L19.5 16M14 24.5L16 26.5L19.5 23M14 31.5L16 33.5L19.5 30M14 38.5L16 40.5L19.5 37M24 18H34M24 25H34M24 32H34M24 39H34"/></g><circle cx="24" cy="5.5" r="2"/></svg></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا.</p></div><div class="col p4"><p class="lt">D</p><div class="band"><p class="lb">التطوير</p></div><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="13" cy="8" r="3.2"/><path d="M9.2 12.5h7.6l1.6 9.5h-2.1l-.5 10h-2.4v-8h-1.3v8h-2.4l-.5-10h-2.1z"/><circle cx="22" cy="8" r="3.2"/><path d="M18.2 12.5h7.6l1.6 9.5h-2.1l-.5 10h-2.4v-8h-1.3v8h-2.4l-.5-10h-2.1z"/><circle cx="31" cy="8" r="3.2"/><path d="M27.2 12.5h7.6l1.6 9.5h-2.1l-.5 10h-2.4v-8h-1.3v8h-2.4l-.5-10h-2.1z"/><path class="ln" stroke-width="3.2" d="M5 44L17 31L23 37L37 23"/><polygon points="32,19.5 43.5,16.5 40.5,28"/></svg></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا.</p></div><div class="col p5"><p class="lt">E</p><div class="band"><p class="lb">التقويم</p></div><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="ln" stroke-width="2.8"><path d="M18 42H9V3H39V42H30"/><path d="M14 11.5L16 13.5L19.5 10M14 19.5L16 21.5L19.5 18M14 27.5L16 29.5L19.5 26M24 12H34M24 20H34M24 28H34"/></g><circle cx="24" cy="41" r="6.5"/><path class="ln" stroke-width="2.4" style="stroke: var(--c)" d="M21 41L23 43L27 39"/></svg></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا.</p></div></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب نموذج غريد لتحليل القرار</h1>
+    <div class="rows"><div class="row p1"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill-rule="evenodd" d="M5 44L16 13H23L34 44H27.2L24.9 37H14.1L11.8 44ZM15.8 31.5H23.2L19.5 20.5Z"/><path d="M34.6 3H37.6V10.4H45V13.4H37.6V20.8H34.6V13.4H27.2V10.4H34.6Z"/></svg></div></div><p class="lb">التقدير</p><div class="cell"><p class="lt">G</p></div><div class="rest"></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div><div class="row p2"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-30 24 24)"><polygon points="11,19 33,10.5 33,37.5 11,29"/><rect x="32.5" y="8.5" width="4.5" height="31" rx="2.2"/><rect x="5" y="19" width="5" height="10" rx="2"/><path class="ln" stroke-width="2.6" d="M16 30.5L17.5 38H25.5L24.8 33.5"/></g></svg></div></div><p class="lb">التوصيات</p><div class="cell"><p class="lt">R</p></div><div class="rest"></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div><div class="row p3"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="ln" stroke-width="2.8"><rect x="9" y="8" width="30" height="37" rx="2.5"/><path d="M18 8V5.5H30V8"/><path d="M14 17.5L16 19.5L19.5 16M14 24.5L16 26.5L19.5 23M14 31.5L16 33.5L19.5 30M14 38.5L16 40.5L19.5 37M24 18H34M24 25H34M24 32H34M24 39H34"/></g><circle cx="24" cy="5.5" r="2"/></svg></div></div><p class="lb">التقييم</p><div class="cell"><p class="lt">A</p></div><div class="rest"></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div><div class="row p4"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="13" cy="8" r="3.2"/><path d="M9.2 12.5h7.6l1.6 9.5h-2.1l-.5 10h-2.4v-8h-1.3v8h-2.4l-.5-10h-2.1z"/><circle cx="22" cy="8" r="3.2"/><path d="M18.2 12.5h7.6l1.6 9.5h-2.1l-.5 10h-2.4v-8h-1.3v8h-2.4l-.5-10h-2.1z"/><circle cx="31" cy="8" r="3.2"/><path d="M27.2 12.5h7.6l1.6 9.5h-2.1l-.5 10h-2.4v-8h-1.3v8h-2.4l-.5-10h-2.1z"/><path class="ln" stroke-width="3.2" d="M5 44L17 31L23 37L37 23"/><polygon points="32,19.5 43.5,16.5 40.5,28"/></svg></div></div><p class="lb">التطوير</p><div class="cell"><p class="lt">D</p></div><div class="rest"></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div><div class="row p5"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="ln" stroke-width="2.8"><path d="M18 42H9V3H39V42H30"/><path d="M14 11.5L16 13.5L19.5 10M14 19.5L16 21.5L19.5 18M14 27.5L16 29.5L19.5 26M24 12H34M24 20H34M24 28H34"/></g><circle cx="24" cy="41" r="6.5"/><path class="ln" stroke-width="2.4" style="stroke: var(--c)" d="M21 41L23 43L27 39"/></svg></div></div><p class="lb">التقويم</p><div class="cell"><p class="lt">E</p></div><div class="rest"></div><p class="tx">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي.</p></div></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

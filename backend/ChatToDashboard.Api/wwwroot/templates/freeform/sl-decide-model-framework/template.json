@@ -1,0 +1,25 @@
+{
+  "key": "sl-decide-model-framework",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "إطار ديسايد لاتخاذ القرار",
+  "nameEn": "DECIDE Model Framework",
+  "description": "ثلاث شرائح لمراحل ديسايد الست: أعمدة بالنقاط، أعمدة بالأيقونات، وصفوف أفقية بالتفاصيل",
+  "descriptionEn": "Three slides of the six DECIDE steps: columns with bullets, icon columns, and detailed rows",
+  "sections": [
+    {
+      "title": "المراحل الست بالنقاط",
+      "titleEn": "Six Steps with Bullets"
+    },
+    {
+      "title": "المراحل الست بالأيقونات",
+      "titleEn": "Six Steps with Icons"
+    },
+    {
+      "title": "صفوف المراحل بالتفاصيل",
+      "titleEn": "Step Rows with Details"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان الستة وغيّر النصوص فقط؛ الحروف D/E/C/I/D/E تبقى كما هي، والأيقونات رسوم SVG."
+}

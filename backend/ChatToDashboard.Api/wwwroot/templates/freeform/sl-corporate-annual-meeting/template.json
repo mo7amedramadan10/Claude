@@ -1,0 +1,57 @@
+{
+  "key": "sl-corporate-annual-meeting",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "الاجتماع السنوي للشركة",
+  "nameEn": "Corporate Annual Meeting",
+  "description": "عشر شرائح للاجتماع السنوي: نظرة على العام، الأداء المالي، المؤشرات، السوق، الفريق، المشاريع والاستراتيجية",
+  "descriptionEn": "10 slides for an annual meeting: year overview, financials, KPIs, market, team, projects and strategy",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على العام",
+      "titleEn": "Year Overview"
+    },
+    {
+      "title": "الأداء المالي (رسم)",
+      "titleEn": "Financial Performance (chart)",
+      "needsData": true
+    },
+    {
+      "title": "لوحة مؤشرات الأداء",
+      "titleEn": "KPIs Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "توقعات السوق",
+      "titleEn": "Market Outlook",
+      "needsData": true
+    },
+    {
+      "title": "الفريق والقيادة",
+      "titleEn": "Team & Leadership"
+    },
+    {
+      "title": "المشاريع الكبرى",
+      "titleEn": "Major Projects"
+    },
+    {
+      "title": "أبرز العمليات",
+      "titleEn": "Operational Highlights"
+    },
+    {
+      "title": "الاستراتيجية المستقبلية (حصص)",
+      "titleEn": "Future Strategy (shares)",
+      "needsData": true
+    },
+    {
+      "title": "الختام",
+      "titleEn": "Closing"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام الرسوم في كتل JSON بالمعرّفات chart-data (المنحنى المالي) وchart-data-2 (الخط السنوي) وchart-data-3 (الأشرطة) وchart-data-4 (الحلقة)."
+}

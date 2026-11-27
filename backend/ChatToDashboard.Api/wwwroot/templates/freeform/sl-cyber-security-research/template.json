@@ -1,0 +1,67 @@
+{
+  "key": "sl-cyber-security-research",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🛡️",
+  "name": "بحث الأمن السيبراني",
+  "nameEn": "Cyber Security Research",
+  "description": "12 شريحة: غلاف، ملخص تنفيذي، أهداف، تهديدات، منهجية، جدولا مخاطر، ثغرات، مصفوفة مخاطر، توصيات، خلاصات",
+  "descriptionEn": "12 slides: cover, summary, objectives, threats, methodology, risk tables, vulnerabilities, matrix, takeaways",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي (مؤشرات)",
+      "titleEn": "Executive Summary (KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "أهداف البحث ونطاقه",
+      "titleEn": "Research Objectives & Scope"
+    },
+    {
+      "title": "مشهد التهديدات (نسب)",
+      "titleEn": "Threat Landscape (shares)",
+      "needsData": true
+    },
+    {
+      "title": "منهجية البحث",
+      "titleEn": "Research Methodology"
+    },
+    {
+      "title": "تقييم سطح الهجوم (جدول)",
+      "titleEn": "Attack Surface Assessment (table)",
+      "needsData": true
+    },
+    {
+      "title": "تحليل الجهات المهدِّدة (جدول)",
+      "titleEn": "Threat Actor Analysis (table)",
+      "needsData": true
+    },
+    {
+      "title": "تقييم الثغرات",
+      "titleEn": "Vulnerability Assessment"
+    },
+    {
+      "title": "تحليل سلسلة الهجوم",
+      "titleEn": "Attack Chain Analysis"
+    },
+    {
+      "title": "مصفوفة تقييم المخاطر",
+      "titleEn": "Risk Assessment Matrix",
+      "needsData": true
+    },
+    {
+      "title": "التوصيات",
+      "titleEn": "Recommendations"
+    },
+    {
+      "title": "أهم الخلاصات (مؤشر)",
+      "titleEn": "Key Takeaways (KPI)",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ مستويات الخطورة في الجداول أصناف hi/md/cr بلونها ونصها معًا، وخلايا مصفوفة المخاطر أصناف g/y/r."
+}

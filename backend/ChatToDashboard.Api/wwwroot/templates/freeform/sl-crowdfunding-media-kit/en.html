@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crowdfunding Media Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «الحقيبة الإعلامية للتمويل الجماعي»: خلفيات كحلية أو فيروزية أو فاتحة، بطاقات بيضاء مدوّرة، أزرار برتقالية، شرائط زخرفية منحنية باهتة (SVG يُعكس للعربية)، وصور فوتوغرافية مقصوصة من الأصل. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #0F1C18; --navy: #0E2841; --accent: #038D80; --teal: #038D80; --teal-2: #2FB0A9; --teal-d: #026A61; --orange: #FF9237; --gray: #595959; --dark: #121A2B; --line: #D0D3DA; --light: #F7FBFA; --deco: #EAF4F3; --bg: #F7FBFA; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .abs { position: absolute; margin: 0; }
+  .deco { position: absolute; inset: 0; width: 1280px; height: 720px; fill: var(--deco); }
+  html[dir="rtl"] .deco { transform: scaleX(-1); }
+  .frame.lt { background: var(--light); } .frame.lt2 { background: #F9FAFC; } .frame.wh { background: #FFFFFF; }
+  .frame.tl { background: var(--teal); } .frame.nv { background: var(--navy); }
+  .tl .deco { fill: #0F9386; } .nv .deco { fill: #0D2D44; }
+  /* العنوان والعنوان الفرعي */
+  .ttl { position: absolute; top: 58px; inset-inline-start: 98px; margin: 0; font-size: 59.5px; line-height: 76px; font-weight: 700; color: var(--ink); white-space: nowrap; letter-spacing: -.5px; }
+  .ttl.nvy { color: var(--navy); }
+  .sub { position: absolute; top: 140px; inset-inline-start: 98px; margin: 0; font-size: 22.5px; line-height: 32px; font-weight: 400; color: var(--teal); white-space: nowrap; }
+  .s9 .sub, .s10 .sub, .s11 .sub { top: 135px; }
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; font-size: 56px; }
+  html[lang="ar"] .sub { font-size: 23px; }
+  .p { margin: 0; font-size: 20px; line-height: 25.5px; color: var(--gray); }
+  html[lang="ar"] .p { font-size: 20px; line-height: 27px; }
+  .logo { position: absolute; width: 53px; height: 60px; color: #FFFFFF; }
+  .logo svg { width: 100%; height: 100%; }
+  .co { position: absolute; margin: 0; font-size: 18px; line-height: 23px; letter-spacing: 1.8px; color: #FFFFFF; font-weight: 400; white-space: nowrap; }
+  html[lang="ar"] .co { letter-spacing: 0; font-size: 19px; }
+
+  /* 1 الغلاف */
+  .s1 .panel { position: absolute; top: 86px; inset-inline-start: 380px; width: 825px; height: 634px; background: var(--teal); border-end-end-radius: 70px; }
+  .s1 .photo { position: absolute; top: 86px; inset-inline-start: 0; width: 443px; height: 634px; object-fit: cover; border-start-end-radius: 62px; }
+  html[dir="rtl"] .s1 .photo { transform: scaleX(-1); border-start-end-radius: 0; border-start-start-radius: 62px; }
+  .s1 .logo { top: 176px; inset-inline-start: 525px; }
+  .s1 .co { top: 184px; inset-inline-start: 605px; }
+  .s1 .t1 { position: absolute; top: 398px; inset-inline-start: 551px; margin: 0; font-size: 65px; line-height: 76px; font-weight: 700; color: #FFFFFF; letter-spacing: -1.2px; white-space: nowrap; }
+  .s1 .t2 { position: absolute; top: 478px; inset-inline-start: 553px; margin: 0; font-size: 44px; line-height: 54px; font-weight: 400; color: #FFFFFF; letter-spacing: 3px; white-space: nowrap; }
+  html[lang="ar"] .s1 .t1 { font-size: 66px; font-weight: 800; letter-spacing: 0; top: 388px; line-height: 90px; }
+  html[lang="ar"] .s1 .t2 { letter-spacing: 0; font-size: 42px; top: 476px; }
+  .s1 .ln { position: absolute; height: 2px; background: #FFFFFF; inset-inline-start: auto; }
+  .s1 .ln1 { top: 495px; inset-inline-start: 887px; width: 196px; } .s1 .ln2 { top: 512px; inset-inline-start: 962px; width: 121px; }
+  .s1 .launch { position: absolute; top: 588px; inset-inline-start: 443px; width: 409px; height: 132px; background: var(--orange); border-start-end-radius: 22px; }
+  .s1 .l1 { position: absolute; top: 619px; inset-inline-start: 553px; margin: 0; font-size: 19px; line-height: 26px; font-weight: 700; color: #FFFFFF; white-space: nowrap; letter-spacing: -.4px; }
+  .s1 .l2 { position: absolute; top: 650px; inset-inline-start: 552px; margin: 0; font-size: 31px; line-height: 44px; font-weight: 700; color: #FFFFFF; letter-spacing: -1.6px; white-space: nowrap; }
+  html[lang="ar"] .s1 .l2 { letter-spacing: 0; }
+
+  /* 2 العنوان الرئيسي */
+  .s2 .box { position: absolute; top: 27px; inset-inline-start: 23px; width: 1234px; height: 666px; background: var(--navy); border-radius: 22px; overflow: hidden; }
+  .s2 .box .deco { top: -27px; inset-inline-start: -23px; }
+  .s2 .hd { position: absolute; top: 101px; inset-inline-start: 0; width: 1280px; margin: 0; text-align: center; font-size: 21px; line-height: 30px; font-weight: 700; color: var(--teal-2); }
+  .s2 .big { position: absolute; top: 262px; inset-inline-start: 150px; width: 980px; margin: 0; text-align: center; font-size: 50px; line-height: 57px; font-weight: 400; color: #FFFFFF; }
+  html[lang="ar"] .s2 .big { font-size: 46px; line-height: 64px; top: 252px; }
+  .s2 .btn { position: absolute; top: 516px; inset-inline-start: 543px; width: 194px; height: 48px; border-radius: 8px; background: var(--orange); color: #FFFFFF; display: grid; place-items: center; margin: 0; font-size: 19px; }
+
+  /* 3 المنتج في 60 ثانية */
+  .s3 .cd { position: absolute; width: 538px; height: 175px; border-radius: 14px; background: #FFFFFF; }
+  .s3 .c1 { top: 241px; inset-inline-start: 88px; background: var(--teal); } .s3 .c2 { top: 241px; inset-inline-start: 654px; }
+  .s3 .c3 { top: 446px; inset-inline-start: 88px; } .s3 .c4 { top: 446px; inset-inline-start: 654px; }
+  .s3 .ci { position: absolute; top: 35px; inset-inline-start: 44px; width: 104px; height: 104px; border-radius: 50%; background: #E5F3F2; color: var(--teal); display: grid; place-items: center; }
+  .s3 .ci svg { width: 46px; height: 46px; } .s3 .c1 .ci { background: rgb(255 255 255 / .12); color: #FFFFFF; } .s3 .c4 .ci svg { width: 52px; height: 52px; }
+  .s3 .cd h2 { position: absolute; top: 44px; inset-inline-start: 187px; margin: 0; font-size: 23px; line-height: 30px; font-weight: 700; color: var(--dark); white-space: nowrap; }
+  .s3 .cd .p { position: absolute; top: 83px; inset-inline-start: 187px; width: 268px; }
+  .s3 .c1 h2, .s3 .c1 .p { color: #FFFFFF; }
+
+  /* 4 لماذا الآن */
+  .s4 .ttl { line-height: 62px; top: 64px; }
+  html[lang="ar"] .s4 .ttl { line-height: 70px; top: 56px; }
+  .s4 .sub { top: 204px; }
+  .s4 .p0 { position: absolute; top: 281px; inset-inline-start: 98px; width: 490px; }
+  .s4 .bl { position: absolute; inset-inline-start: 105px; width: 465px; }
+  .s4 .bl::before { content: ''; position: absolute; top: -3px; inset-inline-start: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--teal); }
+  .s4 .bl h3 { margin: 0 0 6px; padding-inline-start: 68px; font-size: 19.5px; line-height: 26px; font-weight: 700; color: var(--navy); }
+  .s4 .bl .p { padding-inline-start: 68px; }
+  .s4 .b1 { top: 397px; } .s4 .b2 { top: 518px; }
+  .s4 .card { position: absolute; top: 50px; inset-inline-start: 712px; width: 513px; height: 620px; border-radius: 18px; background: var(--teal); }
+  .s4 .oc { position: absolute; top: 63px; inset-inline-start: 74px; width: 114px; height: 114px; border-radius: 50%; background: var(--orange); color: #FFFFFF; display: grid; place-items: end center; overflow: hidden; }
+  .s4 .oc svg { width: 80px; height: 96px; margin-bottom: -2px; }
+  .s4 .num { position: absolute; top: 230px; inset-inline-start: 78px; margin: 0; font-size: 74px; line-height: 100px; font-weight: 300; color: #FFFFFF; }
+  .s4 .lab { position: absolute; top: 327px; inset-inline-start: 80px; margin: 0; font-size: 25px; line-height: 34px; font-weight: 700; color: #FFFFFF; }
+  .s4 .cp { position: absolute; top: 466px; inset-inline-start: 80px; width: 345px; margin: 0; font-size: 23px; line-height: 29.5px; color: #FFFFFF; }
+
+  /* 5 الاقتباس */
+  .s5 .ph { position: absolute; top: 154px; inset-inline-start: 88px; width: 338px; height: 338px; border-radius: 50%; object-fit: cover; }
+  html[dir="rtl"] .s5 .ph { transform: scaleX(-1); }
+  .s5 .qb { position: absolute; top: 149px; inset-inline-start: 104px; width: 84px; height: 84px; border-radius: 50%; background: #FFFFFF; color: var(--orange); display: grid; place-items: center; }
+  .s5 .qb svg { width: 50px; height: 30px; margin-top: -2px; }
+  html[dir="rtl"] .s5 .qb svg { transform: scaleX(-1); }
+  .s5 .nm { position: absolute; top: 509px; inset-inline-start: 57px; width: 400px; margin: 0; text-align: center; font-size: 28px; line-height: 38px; font-weight: 700; color: #FFFFFF; }
+  .s5 .tag { position: absolute; top: 559px; inset-inline-start: 133px; width: 248px; height: 50px; border-radius: 6px; background: var(--orange); color: #FFFFFF; display: grid; place-items: center; margin: 0; font-size: 19px; }
+  .s5 .q { position: absolute; top: 205px; inset-inline-start: 530px; width: 625px; margin: 0; font-size: 50px; line-height: 57.5px; font-weight: 400; color: #FFFFFF; }
+  html[lang="ar"] .s5 .q { font-size: 46px; line-height: 64px; top: 196px; }
+
+  /* 6 الصور عالية الدقة */
+  .s6 .im { position: absolute; object-fit: cover; border-radius: 10px; }
+  .s6 .i1 { top: 39px; inset-inline-start: 40px; width: 620px; height: 448px; }
+  .s6 .i2 { top: 500px; inset-inline-start: 40px; width: 304px; height: 181px; }
+  .s6 .i3 { top: 500px; inset-inline-start: 357px; width: 303px; height: 181px; }
+  .s6 .ttl { top: 60px; inset-inline-start: 762px; font-size: 43px; line-height: 47px; }
+  html[lang="ar"] .s6 .ttl { font-size: 44px; line-height: 58px; top: 52px; }
+  .s6 .sub { top: 173px; inset-inline-start: 762px; font-size: 23px; }
+  .s6 .p0 { position: absolute; top: 240px; inset-inline-start: 762px; width: 430px; }
+  .s6 .dl { position: absolute; top: 556px; inset-inline-start: 763px; width: 427px; height: 70px; border-radius: 10px; background: var(--orange); color: #FFFFFF; display: flex; align-items: center; gap: 30px; padding-inline-start: 28px; margin: 0; font-size: 23px; font-weight: 700; }
+  .s6 .dl svg { width: 30px; height: 30px; flex: none; }
+
+  /* 7 المواصفات */
+  .s7 .box { position: absolute; top: 226px; width: 563px; height: 422px; border: 2px solid var(--line); border-radius: 16px; background: #FFFFFF; }
+  .s7 .k1 { inset-inline-start: 66px; } .s7 .k2 { inset-inline-start: 666px; }
+  .s7 .pill { position: absolute; top: 242px; width: 484px; height: 68px; border-radius: 10px; color: #FFFFFF; display: flex; align-items: center; padding-inline-start: 47px; margin: 0; font-size: 22.5px; font-weight: 400; white-space: nowrap; }
+  .s7 .pl1 { inset-inline-start: 51px; background: var(--navy); } .s7 .pl2 { inset-inline-start: 651px; background: var(--teal); width: 485px; }
+  .s7 .bp { position: absolute; top: 335px; width: 480px; font-size: 22.5px; line-height: 29px; }
+  .s7 .bp1 { inset-inline-start: 98px; } .s7 .bp2 { inset-inline-start: 698px; }
+  .s7 ul { position: absolute; top: 420px; margin: 0; padding: 0; list-style: none; }
+  .s7 .u1 { inset-inline-start: 98px; } .s7 .u2 { inset-inline-start: 698px; }
+  .s7 li { position: relative; padding-inline-start: 30px; font-size: 20.5px; line-height: 29px; margin-bottom: 12.5px; color: var(--gray); white-space: nowrap; }
+  .s7 li::before { content: '\2726'; position: absolute; inset-inline-start: 0; top: 0; font-size: 15px; color: var(--navy); }
+  .s7 .u2 li::before { color: var(--teal); }
+
+  /* 8 قصة العلامة */
+  .s8 .deco { fill: #EAF4F3; }
+  .s8 .pan { position: absolute; top: 72px; inset-inline-start: 575px; width: 705px; height: 648px; border: 2px solid transparent; border-inline-end: 0; border-bottom: 0; border-start-start-radius: 30px;
+             background: linear-gradient(#FFFFFF, #FFFFFF) padding-box, linear-gradient(180deg, #1A8277 0%, #8EC3B9 45%, rgb(255 255 255 / 0) 100%) border-box; }
+  .s8 .ttl { top: 138px; font-size: 53.5px; line-height: 63px; color: #000000; }
+  html[lang="ar"] .s8 .ttl { font-size: 50px; line-height: 70px; top: 128px; }
+  .s8 .sub { top: 286px; font-size: 23px; }
+  .s8 .p0 { position: absolute; top: 530px; inset-inline-start: 98px; width: 400px; }
+  .s8 .one { position: absolute; top: 102px; inset-inline-start: 604px; width: 647px; height: 241px; border-radius: 16px; background: var(--teal); }
+  .s8 .n { position: absolute; margin: 0; font-size: 53px; line-height: 64px; font-weight: 700; letter-spacing: -1px; color: var(--teal); }
+  .s8 .one .n { top: 40px; inset-inline-start: 47px; color: #FFFFFF; }
+  .s8 .one .p { position: absolute; top: 113px; inset-inline-start: 49px; width: 530px; color: #FFFFFF; }
+  .s8 .n2 { top: 439px; inset-inline-start: 653px; } .s8 .n3 { top: 439px; inset-inline-start: 961px; }
+  .s8 .q2, .s8 .q3 { position: absolute; top: 530px; width: 240px; }
+  .s8 .q2 { inset-inline-start: 653px; } .s8 .q3 { inset-inline-start: 961px; }
+
+  /* 9 فئات المكافآت */
+  .s9 .low { position: absolute; top: 314px; inset-inline-start: 0; width: 1280px; height: 406px; background: #F9FAFC; }
+  .s9 .rule { position: absolute; top: 312px; inset-inline-start: 0; width: 1280px; height: 3px; background: var(--teal); }
+  .s9 .vl { position: absolute; top: 231px; width: 2px; height: 335px; background: #DDE3EA; }
+  .s9 .v1 { inset-inline-start: 366px; } .s9 .v2 { inset-inline-start: 639px; } .s9 .v3 { inset-inline-start: 912px; }
+  .s9 .hl { position: absolute; top: 398px; inset-inline-start: 69px; width: 1142px; height: 85px; border-radius: 14px; background: var(--teal); }
+  .s9 .hl i { position: absolute; top: 0; width: 2px; height: 85px; background: rgb(255 255 255 / .28); }
+  .s9 .row { position: absolute; inset-inline-start: 0; width: 1280px; display: flex; align-items: center; margin: 0; font-size: 19.5px; color: var(--navy); }
+  .s9 .row span { flex: none; width: 273px; text-align: center; white-space: nowrap; }
+  .s9 .row span:first-child { width: 367px; text-align: start; padding-inline-start: 103px; }
+  .s9 .hdr { top: 231px; height: 82px; font-size: 21.5px; font-weight: 700; }
+  .s9 .r1 { top: 316px; height: 82px; } .s9 .r2 { top: 398px; height: 85px; font-weight: 700; color: #FFFFFF; } .s9 .r3 { top: 483px; height: 82px; }
+  .s9 .note { position: absolute; top: 636px; inset-inline-start: 98px; margin: 0; font-size: 19.5px; line-height: 28px; color: var(--gray); white-space: nowrap; }
+  .s9 .note b { font-weight: 700; }
+
+  /* 10 أهداف الحملة */
+  .s10 .low { position: absolute; top: 238px; inset-inline-start: 0; width: 1280px; height: 482px; background: var(--light); border-radius: 40px 40px 0 0; }
+  .s10 .bar { position: absolute; top: 205px; inset-inline-start: 36px; width: 1208px; height: 173px; border-radius: 18px; background: var(--navy); }
+  .s10 .g { position: absolute; top: 247px; margin: 0; white-space: nowrap; }
+  .s10 .g span { display: block; font-size: 19.5px; line-height: 26px; color: #C6D2DE; }
+  .s10 .g b { display: block; margin-top: 6px; font-size: 37px; line-height: 50px; font-weight: 400; color: #FFFFFF; }
+  html[lang="ar"] .s10 .g b { font-size: 30px; margin-top: 10px; }
+  .s10 .g1 b, .s10 .g2 b { font-weight: 700; color: var(--teal-2); } .s10 .g3 b { color: var(--orange); }
+  .s10 .g1 { inset-inline-start: 98px; } .s10 .g2 { inset-inline-start: 374px; } .s10 .g3 { inset-inline-start: 650px; } .s10 .g4 { inset-inline-start: 971px; }
+  .s10 .dv { position: absolute; top: 243px; width: 2px; height: 91px; background: #3A526A; }
+  .s10 .d1 { inset-inline-start: 312px; } .s10 .d2 { inset-inline-start: 588px; } .s10 .d3 { inset-inline-start: 909px; }
+  .s10 .dt { position: absolute; top: 415px; inset-inline-start: 98px; margin: 0; font-size: 21.5px; line-height: 30px; font-weight: 700; color: var(--navy); }
+  .s10 .hbar { position: absolute; top: 472px; inset-inline-start: 0; width: 1280px; height: 192px; direction: ltr; }
+  .s10 .hbar rect { fill: var(--teal); }
+  .s10 .hbar .v { font-size: 21.5px; font-weight: 700; fill: var(--teal); }
+  .s10 .bt { position: absolute; margin: 0; font-size: 17.5px; line-height: 24px; color: var(--navy); white-space: nowrap; }
+  .s10 .bt1 { top: 480px; } .s10 .bt2 { top: 530px; } .s10 .bt3 { top: 581px; } .s10 .bt4 { top: 632px; }
+
+  /* 11 آراء العملاء */
+  .s11 .ttl, .s11 .sub { color: #FFFFFF; }
+  .s11 .rv { position: absolute; top: 228px; height: 406px; border-radius: 16px; background: #FFFFFF; }
+  .s11 .r1 { inset-inline-start: 88px; width: 502px; } .s11 .r2 { inset-inline-start: 609px; width: 334px; } .s11 .r3 { inset-inline-start: 962px; width: 334px; }
+  .s11 .rv .p { position: absolute; top: 58px; inset-inline-start: 40px; width: 238px; font-size: 20px; line-height: 25.6px; }
+  .s11 .r1 .p { inset-inline-start: 41px; width: 400px; font-size: 25.3px; line-height: 32px; top: 57px; }
+  .s11 .stars { position: absolute; top: 267px; inset-inline-start: 38px; width: 102px; height: 20px; color: var(--orange); }
+  .s11 .r1 .stars { inset-inline-start: 39px; }
+  .s11 .av { position: absolute; top: 296px; inset-inline-start: 35px; width: 64px; height: 64px; border-radius: 50%; background: #E3F2F0; color: #044740; display: grid; place-items: center; }
+  .s11 .av svg { width: 36px; height: 36px; }
+  .s11 .who { position: absolute; top: 300px; inset-inline-start: 40px; margin: 0; }
+  .s11 .r1 .who { inset-inline-start: 114px; }
+  .s11 .who b { display: block; font-size: 20.5px; line-height: 28px; color: #121816; }
+  .s11 .who span { display: block; font-size: 19.5px; line-height: 30px; color: #7A7A7A; }
+
+  /* 12 الأسئلة الشائعة */
+  .s12 .faq { position: absolute; top: 116px; inset-inline-start: 95px; margin: 0; font-size: 154px; line-height: 170px; font-weight: 800; letter-spacing: -3.5px; color: var(--navy); }
+  html[lang="ar"] .s12 .faq { font-size: 120px; line-height: 170px; letter-spacing: 0; inset-inline-start: 98px; top: 112px; }
+  .s12 .sub { top: 292px; font-size: 23px; }
+  .s12 .p0 { position: absolute; top: 528px; inset-inline-start: 98px; width: 350px; }
+  .s12 .qa { position: absolute; inset-inline-start: 563px; width: 659px; border-radius: 12px; background: #FFFFFF; border-bottom: 2px solid #1E9C8F; }
+  .s12 .qa h3 { position: absolute; inset-inline-start: 33px; margin: 0; font-size: 20px; line-height: 28px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .s12 .qa .ic { position: absolute; inset-inline-end: 21px; width: 26px; height: 26px; color: #C9D1DC; }
+  .s12 .qa .ic svg { width: 100%; height: 100%; }
+  .s12 .q1 { top: 107px; height: 146px; background: var(--teal); border-bottom: 0; border-radius: 14px; }
+  .s12 .q1 h3 { top: 27px; color: #FFFFFF; font-size: 22px; }
+  .s12 .q1 .p { position: absolute; top: 69px; inset-inline-start: 33px; width: 560px; color: #FFFFFF; font-size: 19.5px; line-height: 25.5px; }
+  .s12 .q1 .ic { top: 19px; width: 22px; height: 22px; inset-inline-end: 22px; color: var(--orange); }
+  .s12 .q2, .s12 .q3, .s12 .q4, .s12 .q5 { height: 77px; } .s12 .qa h3 { top: 23px; } .s12 .qa .ic { top: 25px; }
+  .s12 .q1 h3 { top: 27px; } .s12 .q1 .ic { top: 20px; }
+  .s12 .q2 { top: 266px; } .s12 .q3 { top: 355px; } .s12 .q4 { top: 444px; } .s12 .q5 { top: 533px; }
+
+  /* 13 التواصل */
+  .s13 .logo { top: 66px; inset-inline-start: 141px; }
+  .s13 .co { top: 73px; inset-inline-start: 221px; }
+  .s13 .band { position: absolute; top: 200px; inset-inline-start: 0; width: 1123px; height: 520px; background: var(--teal); border-start-end-radius: 85px; }
+  .s13 .foot { position: absolute; top: 548px; inset-inline-start: 64px; width: 1059px; height: 172px; background: var(--teal-d); border-start-start-radius: 30px; }
+  .s13 .t1 { position: absolute; top: 290px; inset-inline-start: 137px; margin: 0; font-size: 63px; line-height: 86px; font-weight: 700; color: #FFFFFF; white-space: nowrap; letter-spacing: -.5px; }
+  .s13 .t2 { position: absolute; top: 402px; inset-inline-start: 141px; margin: 0; font-size: 36px; line-height: 50px; font-weight: 400; color: #FFFFFF; white-space: nowrap; }
+  html[lang="ar"] .s13 .t1 { font-weight: 800; letter-spacing: 0; }
+  .s13 .qr { position: absolute; top: 233px; inset-inline-start: 779px; width: 289px; height: 289px; }
+  .s13 .ct { position: absolute; top: 605px; margin: 0; color: #FFFFFF; white-space: nowrap; }
+  .s13 .ct span { display: block; font-size: 19.5px; line-height: 30px; }
+  .s13 .ct b { display: block; margin-top: 7px; font-size: 19.5px; line-height: 28px; font-weight: 700; }
+  .s13 .ct1 { inset-inline-start: 141px; } .s13 .ct2 { inset-inline-start: 419px; } .s13 .ct3 { inset-inline-start: 684px; }
+  .bgfill { position: absolute; inset: 0; }
+  .bgfill.nv { background: var(--navy); } .bgfill.tl { background: var(--teal); } .bgfill.lt { background: var(--light); }
+  .bgfill.lt2 { background: #F9FAFC; } .bgfill.wh { background: #FFFFFF; }
+  .s5 .deco, .s11 .deco { fill: #0F9386; } .s2 .deco { fill: #0D2D44; } .s7 .deco { fill: #EBF5F7; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><div class="bgfill nv"></div><div class="panel"></div><img class="photo" src="/templates/freeform/sl-crowdfunding-media-kit/assets/cover.jpg" alt="Team working at desks in a bright office"><div class="logo"><svg viewBox="0 0 53 60" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M8 6C20 2 40 0 48 4c5 4 5 16 4 30-1 12-2 18-10 21-12 4-28 5-35 2-6-3-7-12-6-25C2 18 2 9 8 6zM12.5 15.5c9-3 25-4 31.5-1.5 2 8 1 20-1 28-7 2-21 3-30 4-3-8-3-22-.5-30.5z"/></svg></div><p class="co">YOUR COMPANY<br>LOGO HERE</p><h1 class="t1">CROWDFUNDING</h1><p class="t2">MEDIA KIT</p><div class="ln ln1"></div><div class="ln ln2"></div><div class="launch"></div><p class="l1">TARGET LAUNCH</p><p class="l2">OCT 15, 2035</p></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><div class="bgfill tl"></div><div class="box"><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M963 27H1055C1040 100 1035 180 1060 220C1100 282 1180 312 1257 320V430C1150 400 1050 350 1000 290C970 250 960 150 963 27Z"/><path d="M23 370C150 355 240 385 262 470C278 560 288 640 290 693H362C360 620 350 560 320 515C270 450 130 452 23 478Z"/></svg></div><p class="hd">THE HEADLINE</p><p class="big">This is a sample text. Insert your desired text here. This is a sample text. Add your text here. This is a sample text.</p><p class="btn">Add text here</p></div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><div class="bgfill lt"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M80 0H140C134 42 110 56 78 66C42 78 16 126 0 166V86C34 74 72 54 80 0Z"/></svg><h1 class="ttl">PRODUCT IN 60 SECONDS</h1><p class="sub">You can add a subheading here</p><div class="cd c1"><div class="ci"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c2.8 0 4.6 2 4.6 4.6S14.8 11.8 12 11.8 7.4 9.7 7.4 7.1c0-.5.1-1 .2-1.4 1.6.5 3.6.4 5.6-.6 1 .6 2 .9 3 .9-.4-2-2.1-3.5-4.2-3.5z"/><path d="M4 21.5v-3.2c0-2.7 2.2-4.8 4.9-4.8h6.2c2.7 0 4.9 2.1 4.9 4.8v3.2z"/></svg></div><h2>WHO IT IS FOR</h2><p class="p">This is a sample text. Insert your desired text here.</p></div><div class="cd c2"><div class="ci"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9h3.2a2 2 0 1 1 3.6 0H11v3.2a2 2 0 1 1 0 3.6V19H3z"/><path d="M12.5 3.5l3.6-1.2.9 2.6a2 2 0 1 1 3.4-1.1l2.6.9-1.2 3.6-2.3-.8a2 2 0 1 0-1.3 3.7l2.3.8-1 3-3.2-1.1a2 2 0 1 0-1.2 3.4z" transform="translate(-1.5 2.5) scale(.95)"/><path d="M12.5 12.5H20V20h-3a2 2 0 1 0-3.4 0h-1.1z" opacity=".95"/></svg></div><h2>WHO IT HELPS</h2><p class="p">This is a sample text. Insert your desired text here.</p></div><div class="cd c3"><div class="ci"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 4.2c1.2-.6 2.2.6 2 1.8-.2 1.3.9 2 1.9 1.3 1.1-.8 2.7-.2 2.6 1.1-.1 1.1.9 1.6 1.9 1.4 1.6-.3 2.2 1.6 1 2.4-1 .7-.8 1.8.3 2.3 1.4.6.6 2.6-.9 2.2-1.2-.3-2 .5-1.6 1.6.5 1.4-1.2 2.1-2 1-.7-1-1.9-.9-2.3.2-.5 1.4-2.4 1.1-2.4-.4 0-1.2-1.1-1.7-2-1-1.1.8-2.6-.3-2-1.6.5-1-.2-2-1.3-1.9-1.5.1-1.9-1.8-.6-2.4 1-.5 1-1.6.1-2.2-1.2-.8-.4-2.6 1-2.2 1.1.3 1.9-.4 1.7-1.5-.2-1.1.9-1.8 1.9-1.2.9.6 1.9.1 2-1 .1-.6.3-1 .7-1.2z"/><circle cx="4" cy="6.5" r="1.4"/><circle cx="20.5" cy="5" r="1.1"/><circle cx="3" cy="17" r="1"/><circle cx="19" cy="21" r="1.2"/><circle cx="7.5" cy="21.5" r=".8"/></svg></div><h2>PRODUCT UI</h2><p class="p">This is a sample text. Insert your desired text here.</p></div><div class="cd c4"><div class="ci"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M8.6 9.2c0-2 1.5-3.4 3.5-3.4s3.5 1.3 3.5 3.1c0 1.5-.8 2.3-1.9 3-1 .6-1.3 1-1.3 2v.5h-2.3v-.7c0-1.5.6-2.3 1.7-3 .9-.6 1.4-1 1.4-1.8 0-.8-.6-1.3-1.2-1.3-.8 0-1.3.6-1.3 1.6z" fill="#fff"/><circle cx="12" cy="17.6" r="1.4" fill="#fff"/></svg></div><h2>USER PERSONAS</h2><p class="p">This is a sample text. Insert your desired text here.</p></div></div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><div class="bgfill lt"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M80 0H140C134 42 110 56 78 66C42 78 16 126 0 166V86C34 74 72 54 80 0Z"/></svg><h1 class="ttl">WHY IT<br>MATTERS NOW</h1><p class="sub">You can add a subheading here</p><p class="p p0">This is a sample text. Insert your desired text here. Add text here. This is a sample text.</p><div class="bl b1"><h3>Market Growth</h3><p class="p">42% YoY. This is a sample text. Insert your desired text here. This is a sample text.</p></div><div class="bl b2"><h3>The Deadline</h3><p class="p">Q4 This is a sample text. Insert your desired text here. This is a sample text.</p></div><div class="card"><div class="oc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="3.3" r="2.3"/><path d="M8.6 6.6h6.8c1.4 0 2.4 1 2.4 2.4v6.2c0 .7-.5 1.2-1.1 1.2s-1.1-.5-1.1-1.2V9.6h-.5V23h-2.4v-7.2h-1.4V23H8.9V9.6h-.5v5.6c0 .7-.5 1.2-1.1 1.2s-1.1-.5-1.1-1.2V9c0-1.4 1-2.4 2.4-2.4z"/></svg></div><p class="num">68%</p><p class="lab">User Friction</p><p class="cp">This is a sample text. Insert your desired text here. This is a sample text. Add your text</p></div></div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><div class="bgfill tl"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M935 0H1280V225C1180 215 1060 175 1020 125C1000 100 1000 75 995 60C965 45 940 20 935 0Z"/><path d="M490 720C510 700 540 690 560 680C570 640 590 605 640 598C760 595 880 620 940 670C960 690 975 710 980 720Z"/></svg><img class="ph" src="/templates/freeform/sl-crowdfunding-media-kit/assets/portrait.jpg" alt="Portrait of Sarah Wilson"><div class="qb"><svg viewBox="0 0 50 30" fill="currentColor" aria-hidden="true"><path d="M12 0h12L13 30H1zM34 0h12L35 30H23z"/></svg></div><p class="nm">Sarah Wilson</p><p class="tag">CEO ABC Company</p><p class="q">This is a sample text. Insert your desired text here. This is a sample text. Add your text here.</p></div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><div class="bgfill lt"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M1050 0H1135C1140 50 1170 90 1230 105L1280 112V210C1200 210 1130 180 1095 130C1065 90 1052 40 1050 0Z"/></svg><img class="im i1" src="/templates/freeform/sl-crowdfunding-media-kit/assets/team-main.jpg" alt="Team collaborating around a laptop"><img class="im i2" src="/templates/freeform/sl-crowdfunding-media-kit/assets/team-pair.jpg" alt="Two colleagues reviewing work"><img class="im i3" src="/templates/freeform/sl-crowdfunding-media-kit/assets/team-meeting.jpg" alt="Team meeting around a table"><h1 class="ttl">HIGH-RESOLUTION<br>IMAGES</h1><p class="sub">You can add a subheading here</p><p class="p p0">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text here. Add text here. This is a sample text.</p><p class="dl"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 2h2.8v9.6l3.3-3.3 2 2-6.7 6.7-6.7-6.7 2-2 3.3 3.3z"/><path d="M2 14.5h2.6v4.9h14.8v-4.9H22V22H2z"/></svg><span>Download Hi-Res Assets</span></p></div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><div class="bgfill lt2"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M80 0H140C134 42 110 56 78 66C42 78 16 126 0 166V86C34 74 72 54 80 0Z"/></svg><h1 class="ttl nvy">KEY SPECS &amp; FACTS</h1><p class="sub">You can add a subheading here</p><div class="box k1"></div><div class="box k2"></div><p class="pill pl1">PHYSICAL &amp; TECHNICAL SPECS</p><p class="pill pl2">QUICK FACTS FOR MEDIA CITATION</p><p class="p bp bp1">This is a sample text. Insert your desired text here. Add text here. This is a sample text.</p><p class="p bp bp2">This is a sample text. Insert your desired text here. Add text here. This is a sample text.</p><ul class="u1"><li>Add product dimension here</li><li>Add product weight here</li><li>Add product specs here</li><li>Add text here</li></ul><ul class="u2"><li>Add patent here</li><li>Add text here</li><li>Add text here</li><li>Add text here</li></ul></div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><div class="bgfill lt"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M340 0H420C415 90 405 170 370 230C320 310 200 345 0 350V215C150 215 300 205 335 140C345 110 342 40 340 0Z"/></svg><div class="pan"></div><h1 class="ttl">STORY BEHIND<br>THE BRAND</h1><p class="sub">You can add a subheading here</p><p class="p p0">This is a sample text. Insert your desired text here. Add your text. This is a sample text. Insert your desired text here</p><div class="one"><p class="n">01.</p><p class="p">This is a sample text. Insert your desired text here. Add your text. This is a sample text. Insert your desired text here. This is a sample text.</p></div><p class="n n2">02.</p><p class="n n3">03.</p><p class="p q2">This is a sample text. Insert your desired text here. Add your text.</p><p class="p q3">This is a sample text. Insert your desired text here. Add your text.</p></div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><div class="bgfill wh"></div><div class="low"></div><div class="hl"><i style="inset-inline-start:297px"></i><i style="inset-inline-start:570px"></i><i style="inset-inline-start:843px"></i></div><div class="vl v1"></div><div class="vl v2"></div><div class="vl v3"></div><div class="rule"></div><h1 class="ttl nvy">REWARD TIERS &amp; PRICING</h1><p class="sub">You can add a subheading here</p><p class="row hdr"><span>Campaign Package</span><span>Pre-Launch Price</span><span>Retail Price Est.</span><span>Discount</span></p><p class="row r1"><span>Super Early Bird</span><span>$99</span><span>$159</span><span>40% Off (48hrs limit)</span></p><p class="row r2"><span>Early Bird</span><span>$119</span><span>$159</span><span>25% Off (campaign)</span></p><p class="row r3"><span>Double Pack Booster</span><span>$189</span><span>$318</span><span>45% Off (Team)</span></p><p class="note"><b>Note:</b> This is a sample text. Insert your desired text here. Add your text. This is a sample text</p></div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><div class="bgfill wh"></div><div class="low"></div><div class="bar"></div><h1 class="ttl nvy">CAMPAIGN &amp; STRETCH GOALS</h1><p class="sub">You can add a subheading here</p><p class="g g1"><span>Stretch Goal 01</span><b>$1M</b></p><p class="g g2"><span>Stretch Goal 02</span><b>$1.5M</b></p><p class="g g3"><span>Multi-Language</span><b>AI Agent</b></p><p class="g g4"><span>Global Expansion</span><b>Mobile App</b></p><div class="dv d1"></div><div class="dv d2"></div><div class="dv d3"></div><p class="dt">Add data title</p><svg class="hbar" viewBox="0 0 1280 192" data-chart="chart-data" aria-hidden="true"></svg><p class="bt bt1">This is sample text.</p><p class="bt bt2">This is sample text.</p><p class="bt bt3">This is sample text.</p><p class="bt bt4">This is sample text.</p></div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><div class="bgfill tl"></div><svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M962 0H1080C1050 30 1035 80 1035 260H975C965 160 962 80 962 0Z"/></svg><h1 class="ttl">WHAT OUR CUSTOMER ARE SAYING</h1><p class="sub">You can add a subheading here</p><div class="rv r1"><p class="p">This is a sample text. Insert your desired text here. Add your text. This is a sample text. Insert your desired text here.</p><svg class="stars" viewBox="0 0 120 24" fill="currentColor" aria-hidden="true"><g transform="translate(0 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(24 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(48 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(72 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(96 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g></svg><div class="av"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3c2.6 0 4.3 1.9 4.3 4.3S14.6 11.8 12 11.8 7.7 9.8 7.7 7.3c0-.5.1-.9.2-1.3 1.5.4 3.3.3 5.1-.5 1 .6 1.9.8 2.8.8C15.4 4.4 13.9 3 12 3z"/><path d="M5 21v-2.8c0-2.4 2-4.3 4.4-4.3h5.2c2.4 0 4.4 1.9 4.4 4.3V21z"/></svg></div><p class="who"><b>Sarah Wilson</b><span>1 day ago</span></p></div><div class="rv r2"><p class="p">This is a sample text. Insert your desired text here. Add your text. This is a sample text. This is a sample text. Insert your desired text here.</p><svg class="stars" viewBox="0 0 120 24" fill="currentColor" aria-hidden="true"><g transform="translate(0 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(24 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(48 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(72 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(96 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g></svg><p class="who"><b>Adam Smith</b><span>5 day ago</span></p></div><div class="rv r3"><p class="p">Insert your desired text here. Add your text. This is a sample text. This is a sample text. Insert your desired text here. This is a sample text.</p><svg class="stars" viewBox="0 0 120 24" fill="currentColor" aria-hidden="true"><g transform="translate(0 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(24 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(48 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(72 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g><g transform="translate(96 0)"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5L7 14l-5.3-5 7.2-.9z"/></g></svg><p class="who"><b>Samantha</b><span>7 day ago</span></p></div></div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><div class="bgfill lt"></div><h1 class="faq">FAQ</h1><p class="sub">Frequently Asked Questions</p><p class="p p0">This is a sample text. Insert your desired text here. Add your text. This is a sample text. Add text here</p><div class="qa q1"><h3>What makes us different?</h3><p class="p">This is a sample text. Insert your desired text here.<br>Add your text. This is a sample text. Add your text here</p><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l18 18M21 3L3 21"/></svg></span></div><div class="qa q2"><h3>How much funding are you seeking?</h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 0v24M0 12h24"/></svg></span></div><div class="qa q3"><h3>How many customers using the product?</h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 0v24M0 12h24"/></svg></span></div><div class="qa q4"><h3>When will rewards be delivered?</h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 0v24M0 12h24"/></svg></span></div><div class="qa q5"><h3>What markets are you targeting?</h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 0v24M0 12h24"/></svg></span></div></div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13"><div class="bgfill nv"></div><div class="logo"><svg viewBox="0 0 53 60" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M8 6C20 2 40 0 48 4c5 4 5 16 4 30-1 12-2 18-10 21-12 4-28 5-35 2-6-3-7-12-6-25C2 18 2 9 8 6zM12.5 15.5c9-3 25-4 31.5-1.5 2 8 1 20-1 28-7 2-21 3-30 4-3-8-3-22-.5-30.5z"/></svg></div><p class="co">YOUR COMPANY<br>LOGO HERE</p><div class="band"></div><div class="foot"></div><h1 class="t1">HAVE QUESTIONS?</h1><p class="t2">CONTACT US TODAY</p><svg class="qr" viewBox="-1.3 -1.3 27.6 27.6" aria-hidden="true"><rect x="-1.3" y="-1.3" width="27.6" height="27.6" fill="#000"/><path fill="#fff" d="M0 0h7v1h-7zM8 0h5v1h-5zM14 0h2v1h-2zM18 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h3v1h-3zM12 1h2v1h-2zM15 1h2v1h-2zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM11 2h1v1h-1zM15 2h1v1h-1zM18 2h1v1h-1zM20 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM9 3h3v1h-3zM13 3h2v1h-2zM18 3h1v1h-1zM20 3h3v1h-3zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM15 4h1v1h-1zM18 4h1v1h-1zM20 4h3v1h-3zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h2v1h-2zM12 5h5v1h-5zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h7v1h-7zM12 6h3v1h-3zM18 6h7v1h-7zM10 7h1v1h-1zM14 7h3v1h-3zM0 8h1v1h-1zM5 8h2v1h-2zM8 8h1v1h-1zM11 8h2v1h-2zM15 8h3v1h-3zM20 8h1v1h-1zM24 8h1v1h-1zM1 9h2v1h-2zM7 9h1v1h-1zM10 9h4v1h-4zM15 9h3v1h-3zM19 9h2v1h-2zM23 9h1v1h-1zM3 10h4v1h-4zM8 10h2v1h-2zM12 10h1v1h-1zM16 10h1v1h-1zM18 10h2v1h-2zM0 11h1v1h-1zM5 11h1v1h-1zM7 11h1v1h-1zM12 11h1v1h-1zM16 11h6v1h-6zM0 12h1v1h-1zM3 12h1v1h-1zM6 12h1v1h-1zM8 12h2v1h-2zM12 12h2v1h-2zM15 12h3v1h-3zM19 12h1v1h-1zM21 12h3v1h-3zM1 13h1v1h-1zM5 13h3v1h-3zM9 13h3v1h-3zM14 13h2v1h-2zM19 13h2v1h-2zM22 13h2v1h-2zM2 14h1v1h-1zM4 14h1v1h-1zM6 14h2v1h-2zM10 14h2v1h-2zM13 14h7v1h-7zM21 14h1v1h-1zM23 14h2v1h-2zM0 15h3v1h-3zM5 15h2v1h-2zM8 15h1v1h-1zM10 15h2v1h-2zM13 15h1v1h-1zM17 15h1v1h-1zM21 15h4v1h-4zM0 16h1v1h-1zM2 16h3v1h-3zM8 16h7v1h-7zM16 16h9v1h-9zM8 17h3v1h-3zM16 17h1v1h-1zM20 17h1v1h-1zM23 17h1v1h-1zM0 18h7v1h-7zM14 18h3v1h-3zM18 18h1v1h-1zM20 18h1v1h-1zM24 18h1v1h-1zM0 19h1v1h-1zM6 19h1v1h-1zM8 19h3v1h-3zM12 19h1v1h-1zM15 19h2v1h-2zM20 19h1v1h-1zM22 19h3v1h-3zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM9 20h1v1h-1zM11 20h3v1h-3zM15 20h6v1h-6zM22 20h3v1h-3zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM11 21h1v1h-1zM13 21h9v1h-9zM23 21h1v1h-1zM0 22h1v1h-1zM2 22h3v1h-3zM6 22h1v1h-1zM10 22h5v1h-5zM16 22h1v1h-1zM18 22h2v1h-2zM21 22h2v1h-2zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h1v1h-1zM11 23h2v1h-2zM14 23h4v1h-4zM20 23h1v1h-1zM22 23h1v1h-1zM24 23h1v1h-1zM0 24h7v1h-7zM8 24h8v1h-8zM19 24h2v1h-2zM22 24h3v1h-3z"/></svg><p class="ct ct1"><span>Phone</span><b>+1 (123) 456-7890</b></p><p class="ct ct2"><span>Email</span><b>Add your email</b></p><p class="ct ct3"><span>Website</span><b>Add website address</b></p></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"max": 32, "values": [14, 18, 24, 32]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- الأشرطة الأفقية: عرض كل شريط بنسبة القيمة إلى القيمة القصوى، والقيمة ثم النص بعد طرفه (يبدأ من جهة البداية) -----
+  var NS = 'http://www.w3.org/2000/svg';
+  Array.prototype.forEach.call(document.querySelectorAll('svg[data-chart]'), function (s) {
+    var d = JSON.parse(document.getElementById(s.getAttribute('data-chart')).textContent), W = 1280, x0 = 96, full = 863, h = 42, gap = 50;
+    while (s.firstChild) s.removeChild(s.firstChild);
+    var frame = s.closest('.frame'), labels = frame.querySelectorAll('.bt');
+    d.values.forEach(function (v, i) {
+      var w = Math.max(0, v) / d.max * full, y = i * gap;
+      var r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', RTL ? W - x0 - w : x0); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h); s.appendChild(r);
+      var t = document.createElementNS(NS, 'text'), tx = x0 + w + 28;
+      t.setAttribute('x', RTL ? W - tx : tx); t.setAttribute('y', y + h / 2 + 8); t.setAttribute('text-anchor', RTL ? 'end' : 'start'); t.setAttribute('class', 'v');
+      t.textContent = v + '%'; s.appendChild(t);
+      if (labels[i]) labels[i].style.insetInlineStart = (tx + 60) + 'px';
+    });
+  });
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

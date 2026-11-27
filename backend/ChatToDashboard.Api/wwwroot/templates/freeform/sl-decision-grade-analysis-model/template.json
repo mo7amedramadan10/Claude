@@ -1,0 +1,21 @@
+{
+  "key": "sl-decision-grade-analysis-model",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🅰️",
+  "name": "نموذج غريد لتحليل القرار",
+  "nameEn": "Decision GRADE Analysis Model",
+  "description": "شريحتان لمراحل غريد الخمس: أعمدة بالحروف والأيقونات، وصفوف أفقية بالتفاصيل",
+  "descriptionEn": "Two slides of the five GRADE steps: letter-and-icon columns, then detailed rows",
+  "sections": [
+    {
+      "title": "المراحل الخمس أعمدة",
+      "titleEn": "Five Steps as Columns"
+    },
+    {
+      "title": "المراحل الخمس صفوفًا",
+      "titleEn": "Five Steps as Rows"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان الخمسة وغيّر النصوص فقط؛ الحروف G/R/A/D/E تبقى كما هي، والأيقونات رسوم SVG."
+}

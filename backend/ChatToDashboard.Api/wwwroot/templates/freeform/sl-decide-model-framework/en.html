@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DECIDE Model Framework</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «إطار ديسايد»: ست مراحل بستة ألوان (كحلي داكن، كحلي، أزرق، برتقالي، أخضر، رمادي) ولكل لون درجة أغمق للشريط الأوسط والدوائر وخانات الحروف. الشريحتان الأوليان أعمدة، والثالثة صفوف أفقية تنعكس تلقائيًا في العربية. */
+  :root { --font: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #1F2328; --accent: #3598DB; --bg: #FFFFFF; --tx: #F2F2F2; --c1: #333E50; --d1: #232A34; --k1: #56657A; --c2: #44546B; --d2: #333E50; --k2: #2A3344; --c3: #3598DB; --d3: #1F74AD; --k3: #1F74AD; --c4: #EC7D35; --d4: #C25B16; --k4: #C25B16; --c5: #70AD46; --d5: #538234; --k5: #538234; --c6: #A5A5A5; --d6: #7C7C7C; --k6: #7C7C7C; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* ألوان كل مرحلة: c = اللون الأساسي، d = الدرجة الأغمق، k = دائرة علامة الصح */
+  .p1 { --c: var(--c1); --d: var(--d1); --k: var(--k1); } .p2 { --c: var(--c2); --d: var(--d2); --k: var(--k2); }
+  .p3 { --c: var(--c3); --d: var(--d3); --k: var(--k3); } .p4 { --c: var(--c4); --d: var(--d4); --k: var(--k4); }
+  .p5 { --c: var(--c5); --d: var(--d5); --k: var(--k5); } .p6 { --c: var(--c6); --d: var(--d6); --k: var(--k6); }
+  .ico { color: #fff; } .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.15; stroke-linecap: round; stroke-linejoin: round; }
+  /* النقاط بعلامة صح داخل دائرة */
+  .bl { list-style: none; margin: 0; padding: 0; }
+  .bl li { position: relative; padding-inline-start: 32px; font-size: 18px; line-height: 24.6px; color: var(--tx); }
+  .bl li::before { content: ""; position: absolute; inset-inline-start: 0; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--k); }
+  .bl li::after { content: ""; position: absolute; inset-inline-start: 5.5px; top: 7.6px; width: 3.4px; height: 6.4px; border: solid #fff; border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
+  /* الشريحتان 1 و2: ستة أعمدة */
+  .cols { position: absolute; top: 45px; inset-inline-start: 51px; width: 1178px; height: 630px; display: flex; gap: 3px; }
+  .col { position: relative; flex: 1 1 0; min-width: 0; background: var(--c); }
+  .col .band { position: absolute; inset-inline: 0; background: var(--d); }
+  /* الحروف اللاتينية بخط Inter في الصفحتين حتى يتطابق موضعها */
+  .lt { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+  .col .lt { position: absolute; inset-inline: 0; margin: 0; text-align: center; font-weight: 700; line-height: 1; color: #fff; }
+  .col h2 { position: absolute; inset-inline: 12px; margin: 0; text-align: center; font-size: 20px; font-weight: 700; line-height: 25.5px; color: #fff; }
+  .col .ico { position: absolute; inset-inline-start: 50%; transform: translateX(-50%); }
+  html[dir="rtl"] .col .ico { transform: translateX(50%); }
+  .s1 .band { top: 130px; height: 188px; }
+  .s1 .lt { top: 22px; font-size: 92px; }
+  .s1 h2 { top: 130px; height: 188px; display: flex; align-items: center; justify-content: center; }
+  .s1 .ico { top: 329px; width: 76px; height: 76px; }
+  .s1 .p1 h2 { inset-inline: 30px; }
+  .s1 .bl { position: absolute; top: 425px; inset-inline-start: 22px; width: 160px; }
+  .s1 .bl li + li { margin-top: 14px; }
+  .s2 .band { top: 190px; height: 127px; }
+  .s2 .lt { top: 55px; font-size: 110px; }
+  .s2 .ico { top: 207px; width: 92px; height: 92px; }
+  .s2 h2 { top: 356px; }
+  /* الشريحة 3: ستة صفوف */
+  .rows { position: absolute; top: 54px; inset-inline-start: 53px; width: 1167px; height: 621px; display: flex; flex-direction: column; gap: 3px; }
+  .row { position: relative; flex: 1 1 0; }
+  .row .bar { position: absolute; top: 0; bottom: 0; inset-inline-start: 52px; inset-inline-end: 0; background: var(--c); }
+  .row .cir { position: absolute; top: 50%; inset-inline-start: 0; width: 104px; height: 104px; margin-top: -52px; border-radius: 50%; background: var(--d); z-index: 1; display: grid; place-items: center; }
+  .row .cir .ico { width: 70px; height: 70px; }
+  .row .cell { position: absolute; top: 0; bottom: 0; inset-inline-start: 437px; width: 137px; background: var(--d); display: grid; place-items: center; }
+  .row .lt { margin: 0; font-size: 76px; font-weight: 700; line-height: 1; color: #fff; }
+  .row h2 { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-start: 122px; width: 290px; margin: 0; font-size: 20px; font-weight: 700; line-height: 25.5px; color: #fff; }
+  .row .bl { position: absolute; top: 50%; transform: translateY(-50%); width: 215px; }
+  .row .b1 { inset-inline-start: 630px; } .row .b2 { inset-inline-start: 914px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="cols"><div class="col p1"><div class="band"></div><p class="lt">D</p><h2>Define the real decision</h2><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12C13 18 19 21 19 27L13 42M40 12C35 18 29 21 29 27L35 42"/><path d="M24 29V42" stroke-dasharray="2.2 2.2"/><path d="M24 5V24M24 7.5H29L31 9.5L29 11.5H24M24 13H19L17 15L19 17H24"/></svg></div><ul class="bl"><li>Insert your desired text here.</li><li>Insert your desired text here.</li></ul></div><div class="col p2"><div class="band"></div><p class="lt">E</p><h2>Examine your thinking process for cognitive biases</h2><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 43V35C12 32 9 27 9 20C9 12 15 6 23 6C31 6 37 12 37 19L40 25L37 26V31C37 33 35 34 33 34H30V43"/><circle cx="18" cy="22" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="18" cy="22" r="3.0"/><circle cx="18" cy="22" r="1.2"/><circle cx="25" cy="13.5" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="25" cy="13.5" r="3.0"/><circle cx="25" cy="13.5" r="1.2"/></svg></div><ul class="bl"><li>Insert your desired text here.</li><li>Insert your desired text here.</li></ul></div><div class="col p3"><div class="band"></div><p class="lt">C</p><h2>Challenge your assumptions systematically</h2><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="31" cy="7" r="2.6"/><path d="M28 12L23 20L29 23L32 28M23 20L16 24H9M17 15L23 12.5L29 16L35 14.5M30 19L38 19"/><circle cx="18.5" cy="37" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="18.5" cy="37" r="3.0"/><circle cx="18.5" cy="37" r="1.2"/><circle cx="27" cy="34" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="27" cy="34" r="3.0"/><circle cx="27" cy="34" r="1.2"/></svg></div><ul class="bl"><li>Insert your desired text here.</li><li>Insert your desired text here.</li></ul></div><div class="col p4"><div class="band"></div><p class="lt">I</p><h2>Identify decision traps specific to innovation contexts</h2><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 7H40M10 7V43M10 7L38 10M10 7L30 25M10 7L18 40M40 7C33 19 25 31 10 43"/><path d="M19 8C18 12 15 14 10 14.5M28 8.5C25 17 19 21 10 23M35 9.5C30 21 22 28 10.5 33"/><path d="M33 23V28"/><circle cx="33" cy="32.5" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="33" cy="32.5" r="3.0"/><circle cx="33" cy="32.5" r="1.2"/></svg></div><ul class="bl"><li>Insert your desired text here.</li><li>Insert your desired text here.</li></ul></div><div class="col p5"><div class="band"></div><p class="lt">D</p><h2>Design multiple genuinely different options</h2><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10L40 18L24 26L8 18Z"/><path d="M14 22.5L8 25.5L24 33.5L40 25.5L34 22.5"/></svg></div><ul class="bl"><li>Insert your desired text here.</li><li>Insert your desired text here.</li></ul></div><div class="col p6"><div class="band"></div><p class="lt">E</p><h2>Evaluate with evidence frameworks</h2><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="9" width="24" height="34" rx="2"/><path d="M19 9V5.5H29V9"/><circle cx="24" cy="7.2" r="1"/><path d="M16 17L17.5 18.5L20.5 15.5M16 24L17.5 25.5L20.5 22.5M16 31L17.5 32.5L20.5 29.5M16 38L17.5 39.5L20.5 36.5M24 17.5H32M24 24.5H32M24 31.5H32M24 38.5H32"/></svg></div><ul class="bl"><li>Insert your desired text here.</li><li>Insert your desired text here.</li></ul></div></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <div class="cols"><div class="col p1"><div class="band"></div><p class="lt">D</p><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12C13 18 19 21 19 27L13 42M40 12C35 18 29 21 29 27L35 42"/><path d="M24 29V42" stroke-dasharray="2.2 2.2"/><path d="M24 5V24M24 7.5H29L31 9.5L29 11.5H24M24 13H19L17 15L19 17H24"/></svg></div><h2>Define the real decision</h2></div><div class="col p2"><div class="band"></div><p class="lt">E</p><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 43V35C12 32 9 27 9 20C9 12 15 6 23 6C31 6 37 12 37 19L40 25L37 26V31C37 33 35 34 33 34H30V43"/><circle cx="18" cy="22" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="18" cy="22" r="3.0"/><circle cx="18" cy="22" r="1.2"/><circle cx="25" cy="13.5" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="25" cy="13.5" r="3.0"/><circle cx="25" cy="13.5" r="1.2"/></svg></div><h2>Examine your thinking process for cognitive biases</h2></div><div class="col p3"><div class="band"></div><p class="lt">C</p><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="31" cy="7" r="2.6"/><path d="M28 12L23 20L29 23L32 28M23 20L16 24H9M17 15L23 12.5L29 16L35 14.5M30 19L38 19"/><circle cx="18.5" cy="37" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="18.5" cy="37" r="3.0"/><circle cx="18.5" cy="37" r="1.2"/><circle cx="27" cy="34" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="27" cy="34" r="3.0"/><circle cx="27" cy="34" r="1.2"/></svg></div><h2>Challenge your assumptions systematically</h2></div><div class="col p4"><div class="band"></div><p class="lt">I</p><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 7H40M10 7V43M10 7L38 10M10 7L30 25M10 7L18 40M40 7C33 19 25 31 10 43"/><path d="M19 8C18 12 15 14 10 14.5M28 8.5C25 17 19 21 10 23M35 9.5C30 21 22 28 10.5 33"/><path d="M33 23V28"/><circle cx="33" cy="32.5" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="33" cy="32.5" r="3.0"/><circle cx="33" cy="32.5" r="1.2"/></svg></div><h2>Identify decision traps specific to innovation contexts</h2></div><div class="col p5"><div class="band"></div><p class="lt">D</p><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10L40 18L24 26L8 18Z"/><path d="M14 22.5L8 25.5L24 33.5L40 25.5L34 22.5"/></svg></div><h2>Design multiple genuinely different options</h2></div><div class="col p6"><div class="band"></div><p class="lt">E</p><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="9" width="24" height="34" rx="2"/><path d="M19 9V5.5H29V9"/><circle cx="24" cy="7.2" r="1"/><path d="M16 17L17.5 18.5L20.5 15.5M16 24L17.5 25.5L20.5 22.5M16 31L17.5 32.5L20.5 29.5M16 38L17.5 39.5L20.5 36.5M24 17.5H32M24 24.5H32M24 31.5H32M24 38.5H32"/></svg></div><h2>Evaluate with evidence frameworks</h2></div></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <div class="rows"><div class="row p1"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12C13 18 19 21 19 27L13 42M40 12C35 18 29 21 29 27L35 42"/><path d="M24 29V42" stroke-dasharray="2.2 2.2"/><path d="M24 5V24M24 7.5H29L31 9.5L29 11.5H24M24 13H19L17 15L19 17H24"/></svg></div></div><h2>Define the real decision</h2><div class="cell"><p class="lt">D</p></div><ul class="bl b1"><li>Insert your desired text here.</li></ul><ul class="bl b2"><li>Insert your desired text here.</li></ul></div><div class="row p2"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 43V35C12 32 9 27 9 20C9 12 15 6 23 6C31 6 37 12 37 19L40 25L37 26V31C37 33 35 34 33 34H30V43"/><circle cx="18" cy="22" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="18" cy="22" r="3.0"/><circle cx="18" cy="22" r="1.2"/><circle cx="25" cy="13.5" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="25" cy="13.5" r="3.0"/><circle cx="25" cy="13.5" r="1.2"/></svg></div></div><h2>Examine your thinking process for cognitive biases</h2><div class="cell"><p class="lt">E</p></div><ul class="bl b1"><li>Insert your desired text here.</li></ul><ul class="bl b2"><li>Insert your desired text here.</li></ul></div><div class="row p3"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="31" cy="7" r="2.6"/><path d="M28 12L23 20L29 23L32 28M23 20L16 24H9M17 15L23 12.5L29 16L35 14.5M30 19L38 19"/><circle cx="18.5" cy="37" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="18.5" cy="37" r="3.0"/><circle cx="18.5" cy="37" r="1.2"/><circle cx="27" cy="34" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="27" cy="34" r="3.0"/><circle cx="27" cy="34" r="1.2"/></svg></div></div><h2>Challenge your assumptions systematically</h2><div class="cell"><p class="lt">C</p></div><ul class="bl b1"><li>Insert your desired text here.</li></ul><ul class="bl b2"><li>Insert your desired text here.</li></ul></div><div class="row p4"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 7H40M10 7V43M10 7L38 10M10 7L30 25M10 7L18 40M40 7C33 19 25 31 10 43"/><path d="M19 8C18 12 15 14 10 14.5M28 8.5C25 17 19 21 10 23M35 9.5C30 21 22 28 10.5 33"/><path d="M33 23V28"/><circle cx="33" cy="32.5" r="4.2" stroke-width="2.4" stroke-dasharray="1.65 1.65"/><circle cx="33" cy="32.5" r="3.0"/><circle cx="33" cy="32.5" r="1.2"/></svg></div></div><h2>Identify decision traps specific to innovation contexts</h2><div class="cell"><p class="lt">I</p></div><ul class="bl b1"><li>Insert your desired text here.</li></ul><ul class="bl b2"><li>Insert your desired text here.</li></ul></div><div class="row p5"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10L40 18L24 26L8 18Z"/><path d="M14 22.5L8 25.5L24 33.5L40 25.5L34 22.5"/></svg></div></div><h2>Design multiple genuinely different options</h2><div class="cell"><p class="lt">D</p></div><ul class="bl b1"><li>Insert your desired text here.</li></ul><ul class="bl b2"><li>Insert your desired text here.</li></ul></div><div class="row p6"><div class="bar"></div><div class="cir"><div class="ico"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="9" width="24" height="34" rx="2"/><path d="M19 9V5.5H29V9"/><circle cx="24" cy="7.2" r="1"/><path d="M16 17L17.5 18.5L20.5 15.5M16 24L17.5 25.5L20.5 22.5M16 31L17.5 32.5L20.5 29.5M16 38L17.5 39.5L20.5 36.5M24 17.5H32M24 24.5H32M24 31.5H32M24 38.5H32"/></svg></div></div><h2>Evaluate with evidence frameworks</h2><div class="cell"><p class="lt">E</p></div><ul class="bl b1"><li>Insert your desired text here.</li></ul><ul class="bl b2"><li>Insert your desired text here.</li></ul></div></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 3</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

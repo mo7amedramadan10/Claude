@@ -1,0 +1,68 @@
+{
+  "key": "sl-crowdfunding-media-kit",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "📣",
+  "name": "الحقيبة الإعلامية للتمويل الجماعي",
+  "nameEn": "Crowdfunding Media Kit",
+  "description": "13 شريحة: غلاف، المنتج، لماذا الآن، اقتباس، صور، مواصفات، قصة العلامة، المكافآت، الأهداف، الآراء، الأسئلة، التواصل",
+  "descriptionEn": "Thirteen slides: cover, product, why now, quote, images, specs, brand story, rewards, goals, reviews, FAQ, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "العنوان الرئيسي",
+      "titleEn": "The Headline"
+    },
+    {
+      "title": "المنتج في 60 ثانية",
+      "titleEn": "Product in 60 Seconds"
+    },
+    {
+      "title": "لماذا يهمّ الآن",
+      "titleEn": "Why It Matters Now",
+      "needsData": true
+    },
+    {
+      "title": "اقتباس",
+      "titleEn": "Quote"
+    },
+    {
+      "title": "صور عالية الدقة",
+      "titleEn": "High-Resolution Images"
+    },
+    {
+      "title": "المواصفات والحقائق الرئيسية",
+      "titleEn": "Key Specs & Facts"
+    },
+    {
+      "title": "القصة وراء العلامة التجارية",
+      "titleEn": "Story Behind the Brand"
+    },
+    {
+      "title": "فئات المكافآت والأسعار",
+      "titleEn": "Reward Tiers & Pricing",
+      "needsData": true
+    },
+    {
+      "title": "أهداف الحملة والأهداف الإضافية",
+      "titleEn": "Campaign & Stretch Goals",
+      "needsData": true
+    },
+    {
+      "title": "آراء العملاء",
+      "titleEn": "Customer Reviews"
+    },
+    {
+      "title": "الأسئلة الشائعة",
+      "titleEn": "FAQ"
+    },
+    {
+      "title": "التواصل",
+      "titleEn": "Contact Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أطوال أشرطة أهداف الحملة من كتلة JSON بالمعرّف chart-data (values بالنسبة المئوية وmax للقيمة القصوى)."
+}

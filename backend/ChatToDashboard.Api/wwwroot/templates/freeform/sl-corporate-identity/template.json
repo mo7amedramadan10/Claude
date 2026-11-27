@@ -1,0 +1,75 @@
+{
+  "key": "sl-corporate-identity",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏛️",
+  "name": "هوية الشركة",
+  "nameEn": "Corporate Identity",
+  "description": "خمس عشرة شريحة للتعريف بالشركة: الترحيب، من نحن، الأهداف، الخدمات، الرسالة والرؤية، الفريق، المنتجات والسوق",
+  "descriptionEn": "15 company profile slides: welcome, about, objectives, services, mission, vision, team, products, market",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "كلمة الترحيب",
+      "titleEn": "Welcome Message"
+    },
+    {
+      "title": "من نحن",
+      "titleEn": "About Us"
+    },
+    {
+      "title": "هدفنا",
+      "titleEn": "Our Objective"
+    },
+    {
+      "title": "خدماتنا",
+      "titleEn": "Our Services"
+    },
+    {
+      "title": "ما نقدّمه",
+      "titleEn": "What We Offer"
+    },
+    {
+      "title": "رسالتنا",
+      "titleEn": "Our Mission"
+    },
+    {
+      "title": "رؤيتنا",
+      "titleEn": "Our Vision"
+    },
+    {
+      "title": "فريق العمل",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "منتجاتنا",
+      "titleEn": "Our Products"
+    },
+    {
+      "title": "تحليل المنافسين",
+      "titleEn": "Competitor Analysis"
+    },
+    {
+      "title": "المشكلة والحل",
+      "titleEn": "The Problem"
+    },
+    {
+      "title": "حجم السوق",
+      "titleEn": "Market Size",
+      "needsData": true
+    },
+    {
+      "title": "الحصة السوقية العالمية",
+      "titleEn": "Global Market Share",
+      "needsData": true
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ الحلقات والصور داخل طبقات .lay، ومصغّرات الغلاف نسخ حيّة من الشرائح 3 و2 و9."
+}
