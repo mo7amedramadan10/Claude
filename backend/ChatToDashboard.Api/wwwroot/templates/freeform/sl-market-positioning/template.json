@@ -1,0 +1,73 @@
+{
+  "key": "sl-market-positioning",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🎯",
+  "name": "التموضع في السوق",
+  "nameEn": "Market Positioning",
+  "description": "أربع عشرة شريحة للتموضع: جدول أعمال، ملخص، حجم السوق، الجمهور، المشكلة والحل، المنافسون، خريطة التموضع والخلاصة",
+  "descriptionEn": "Fourteen positioning slides: agenda, summary, market size, audience, problem, solution, competitors, map, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "حجم السوق: الكلي والمتاح والممكن",
+      "titleEn": "TAM-SAM-SOM Market Size"
+    },
+    {
+      "title": "ملف الجمهور المستهدف",
+      "titleEn": "Target Audience Profile"
+    },
+    {
+      "title": "بيان المشكلة الجوهرية",
+      "titleEn": "Core Problem Statement"
+    },
+    {
+      "title": "حلّنا",
+      "titleEn": "Our Solution",
+      "needsData": true
+    },
+    {
+      "title": "أبرز المنافسين",
+      "titleEn": "Key Competitors"
+    },
+    {
+      "title": "عرض القيمة الفريد",
+      "titleEn": "Unique Value Proposition",
+      "needsData": true
+    },
+    {
+      "title": "خريطة التموضع المرئية",
+      "titleEn": "Visual Positioning Map",
+      "needsData": true
+    },
+    {
+      "title": "الرسائل الجوهرية",
+      "titleEn": "Core Messaging"
+    },
+    {
+      "title": "نظرة عامة على الدخول إلى السوق",
+      "titleEn": "Go-To-Market Overview"
+    },
+    {
+      "title": "الخلاصة والخطوات التالية",
+      "titleEn": "Conclusion & Next Steps"
+    },
+    {
+      "title": "شكرًا لكم وتواصلوا معنا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ فقاعات خريطة التموضع تُقرأ من كتلة chart-data (الموضع والقطر واللون)، وعلامات جدول المنافسين خلايا ثابتة."
+}
