@@ -1,0 +1,95 @@
+{
+  "key": "sl-management-consulting",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "💼",
+  "name": "الاستشارات الإدارية",
+  "nameEn": "Management Consulting",
+  "description": "19 شريحة استشارية: الملخص، الشركة، المشكلة، الأهداف، المنهجية، السوق، سوات، التوصيات، الخارطة، الأثر المالي، المخاطر",
+  "descriptionEn": "19 consulting slides: summary, company, problem, goals, method, market, SWOT, recommendations, roadmap, ROI, risks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover",
+      "needsData": true
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary"
+    },
+    {
+      "title": "نظرة عامة على الشركة",
+      "titleEn": "Company Overview"
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "أهداف المشروع",
+      "titleEn": "Project Objectives"
+    },
+    {
+      "title": "المنهجية",
+      "titleEn": "Methodology",
+      "needsData": true
+    },
+    {
+      "title": "تحليل السوق والقطاع",
+      "titleEn": "Market & Industry Analysis",
+      "needsData": true
+    },
+    {
+      "title": "التحليل الداخلي",
+      "titleEn": "Internal Analysis"
+    },
+    {
+      "title": "سوات: نقاط القوة",
+      "titleEn": "SWOT: Strengths"
+    },
+    {
+      "title": "سوات: نقاط الضعف",
+      "titleEn": "SWOT: Weaknesses"
+    },
+    {
+      "title": "سوات: الفرص",
+      "titleEn": "SWOT: Opportunities"
+    },
+    {
+      "title": "سوات: التهديدات",
+      "titleEn": "SWOT: Threats"
+    },
+    {
+      "title": "أبرز النتائج والرؤى",
+      "titleEn": "Key Findings & Insights",
+      "needsData": true
+    },
+    {
+      "title": "التوصيات الاستراتيجية",
+      "titleEn": "Strategic Recommendations",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق التنفيذ",
+      "titleEn": "Implementation Roadmap"
+    },
+    {
+      "title": "الأثر المالي والعائد على الاستثمار",
+      "titleEn": "Financial Impact & ROI",
+      "needsData": true
+    },
+    {
+      "title": "تقييم المخاطر والحد منها",
+      "titleEn": "Risk Assessment & Mitigation"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ رسم الخطين في شريحة تحليل السوق من كتلة chart-data والحلقة من chart-data-2، فعدّل القيم فيهما لا في الرسم."
+}
