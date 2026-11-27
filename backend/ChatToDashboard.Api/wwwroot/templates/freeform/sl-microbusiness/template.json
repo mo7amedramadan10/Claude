@@ -1,0 +1,67 @@
+{
+  "key": "sl-microbusiness",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧼",
+  "name": "استراتيجية المشاريع الصغيرة",
+  "nameEn": "Micro Business Strategy",
+  "description": "13 شريحة ترابية لاستراتيجية مشروع صغير: الرؤية والنموذج والتسويق والتشغيل والتوقعات المالية وخطة العمل",
+  "descriptionEn": "13 earthy slides for a micro business strategy: vision, model, marketing, operations, forecast and action plan",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على الأعمال",
+      "titleEn": "Business Overview"
+    },
+    {
+      "title": "الرؤية والرسالة",
+      "titleEn": "Vision & Mission"
+    },
+    {
+      "title": "المشكلة والفرصة",
+      "titleEn": "Problem & Opportunity"
+    },
+    {
+      "title": "المنتجات والخدمات",
+      "titleEn": "Products & Services"
+    },
+    {
+      "title": "العميل المستهدف",
+      "titleEn": "Target Customer"
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model"
+    },
+    {
+      "title": "الميزة التنافسية",
+      "titleEn": "Competitive Advantage"
+    },
+    {
+      "title": "خطة التسويق والمبيعات",
+      "titleEn": "Marketing & Sales Plan"
+    },
+    {
+      "title": "خطة التشغيل",
+      "titleEn": "Operations Plan"
+    },
+    {
+      "title": "التوقعات المالية",
+      "titleEn": "Financial Forecast",
+      "needsData": true
+    },
+    {
+      "title": "خارطة طريق النمو",
+      "titleEn": "Growth Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "خطة العمل",
+      "titleEn": "Action Plan"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ رسم الأعمدة في الشريحة 11 يُرسم من كتلة chart-data فعدّل قيمها (من query_data عند طلب بيانات حقيقية) لا عناصر SVG."
+}
