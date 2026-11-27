@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heinrich's Safety Triangle</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «مثلث هاينريش للسلامة»: عنوان أعلى، هرم SVG بخمس طبقات مدوّرة الزوايا، شريطان مائلان بتدرّج ونص مُدار، وتعليقات بخط واصل. الصنف on على الطبقة يلوّنها ويُظهر تعليقها. */
+  :root { --font: 'Open Sans', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #262626; --ink-2: #404040; --accent: #E45A35; --bg: #FFFFFF; --off: #F2F2F2; --line: #F3CFC5; --c1: #E45A35; --c2: #EDB247; --c3: #8CB74C; --c4: #5FB7A1; --c5: #558ED5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .ttl { position: absolute; top: 38px; inset-inline-start: 64px; margin: 0; font-size: 41px; font-weight: 400; line-height: 1.3; color: var(--ink); white-space: nowrap; }
+  .deco, .pyr { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .deco { transform: scaleX(-1); }
+  .ln { stroke: var(--line); stroke-width: 2.5; display: none; }
+  .ly { fill: var(--off); stroke: var(--off); stroke-linejoin: round; }
+  .ly1.on { fill: var(--c1); stroke: var(--c1); } .ly2.on { fill: var(--c2); stroke: var(--c2); } .ly3.on { fill: var(--c3); stroke: var(--c3); }
+  .ly4.on { fill: var(--c4); stroke: var(--c4); } .ly5.on { fill: var(--c5); stroke: var(--c5); }
+  /* نص الشريطين: يُدار بزاوية الشريط، وتنعكس الزاوية في العربية مع انعكاس الموضع */
+  .rib { position: absolute; width: 440px; height: 26px; margin: 0; line-height: 26px; text-align: center; font-size: 20px; font-weight: 400; color: #111; white-space: nowrap; letter-spacing: .1px; }
+  .rib-lag { top: 349px; inset-inline-start: 225px; transform: rotate(-61deg); }
+  .rib-lead { top: 373px; inset-inline-start: 631px; transform: rotate(61deg); }
+  html[dir="rtl"] .rib-lag { transform: rotate(61deg); } html[dir="rtl"] .rib-lead { transform: rotate(-61deg); }
+  html[lang="ar"] .rib { font-size: 19px; font-weight: 500; padding-top: 3px; }
+  /* تسميات الطبقات */
+  .lab { position: absolute; inset-inline-start: 490px; width: 300px; margin: 0; text-align: center; font-size: 22px; font-weight: 700; line-height: 29px; color: var(--ink-2); }
+  .lab.on { color: #fff; }
+  .lab1 { top: 205px; } .lab2 { top: 282px; } .lab3 { top: 399px; } .lab4 { top: 502px; } .lab5 { top: 604px; }
+  html[lang="ar"] .lab { font-size: 23px; padding-top: 4px; }
+  /* التعليقات */
+  .co { position: absolute; margin: 0; font-size: 17.5px; line-height: 23px; color: var(--ink-2); white-space: nowrap; display: none; }
+  .co.on, .ln.on { display: block; }
+  .co1 { top: 167px; inset-inline-start: 825px; } .co3 { top: 391px; inset-inline-start: 944px; } .co5 { top: 593px; inset-inline-start: 1034px; }
+  .co2 { top: 288px; inset-inline-end: 897px; text-align: end; } .co4 { top: 488px; inset-inline-end: 991px; text-align: end; }
+  html[lang="ar"] .co { font-size: 18px; line-height: 24px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="hg-lag" gradientUnits="userSpaceOnUse" x1="0" y1="105" x2="0" y2="650"><stop offset="0" stop-color="#F3BBAB"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient><linearGradient id="hg-lead" gradientUnits="userSpaceOnUse" x1="0" y1="100" x2="0" y2="460"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#BAD2EE"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">Heinrich's Safety Triangle PowerPoint Template</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#hg-lag)" points="562,109 591,102 597,129 297,669 263,650"/><polygon fill="url(#hg-lead)" points="677,112 709,94 1008,631 1000,658 974,651"/><line class="ln ln1 on" x1="693" y1="186" x2="808" y2="186"/><line class="ln ln2 on" x1="415" y1="311" x2="530" y2="311"/><line class="ln ln3 on" x1="805" y1="412" x2="922" y2="412"/><line class="ln ln4 on" x1="318" y1="516" x2="420" y2="516"/><line class="ln ln5 on" x1="918" y1="619" x2="1010" y2="619"/></svg>
+    <svg class="pyr" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="ly ly1 on" points="639.5,144.2 695.8,242.0 583.2,242.0" stroke-width="28"/><polygon class="ly ly2 on" points="564.2,271.0 714.8,271.0 759.6,349.0 519.4,349.0" stroke-width="20"/><polygon class="ly ly3 on" points="508.1,373.0 770.9,373.0 816.3,452.0 462.7,452.0" stroke-width="20"/><polygon class="ly ly4 on" points="452.5,476.0 826.5,476.0 871.9,555.0 407.1,555.0" stroke-width="20"/><polygon class="ly ly5 on" points="396.5,578.0 882.5,578.0 928.5,658.0 350.5,658.0" stroke-width="20"/></svg>
+    <p class="rib rib-lag">LAGGING INDICATORS OF SAFETY RISKS</p>
+    <p class="rib rib-lead">LEADING INDICATORS OF SAFETY RISK</p>
+    <p class="lab lab1 on">Fatality</p>
+    <p class="lab lab2 on">Lost Time/<br>Serious Injury</p>
+    <p class="lab lab3 on">Minor Injury</p>
+    <p class="lab lab4 on">Near Miss</p>
+    <p class="lab lab5 on">Unsafe Acts</p>
+    <p class="co co1 on">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co2 on">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co3 on">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co4 on">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co5 on">You can edit this text.<br>This text can be edited.</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">Heinrich's Safety Triangle PowerPoint Template</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#hg-lag)" points="562,109 591,102 597,129 297,669 263,650"/><polygon fill="url(#hg-lead)" points="677,112 709,94 1008,631 1000,658 974,651"/><line class="ln ln1 on" x1="693" y1="186" x2="808" y2="186"/><line class="ln ln2" x1="415" y1="311" x2="530" y2="311"/><line class="ln ln3" x1="805" y1="412" x2="922" y2="412"/><line class="ln ln4" x1="318" y1="516" x2="420" y2="516"/><line class="ln ln5" x1="918" y1="619" x2="1010" y2="619"/></svg>
+    <svg class="pyr" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="ly ly1 on" points="639.5,144.2 695.8,242.0 583.2,242.0" stroke-width="28"/><polygon class="ly ly2" points="564.2,271.0 714.8,271.0 759.6,349.0 519.4,349.0" stroke-width="20"/><polygon class="ly ly3" points="508.1,373.0 770.9,373.0 816.3,452.0 462.7,452.0" stroke-width="20"/><polygon class="ly ly4" points="452.5,476.0 826.5,476.0 871.9,555.0 407.1,555.0" stroke-width="20"/><polygon class="ly ly5" points="396.5,578.0 882.5,578.0 928.5,658.0 350.5,658.0" stroke-width="20"/></svg>
+    <p class="rib rib-lag">LAGGING INDICATORS OF SAFETY RISKS</p>
+    <p class="rib rib-lead">LEADING INDICATORS OF SAFETY RISK</p>
+    <p class="lab lab1 on">Fatality</p>
+    <p class="lab lab2">Lost Time/<br>Serious Injury</p>
+    <p class="lab lab3">Minor Injury</p>
+    <p class="lab lab4">Near Miss</p>
+    <p class="lab lab5">Unsafe Acts</p>
+    <p class="co co1 on">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co2">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co3">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co4">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co5">You can edit this text.<br>This text can be edited.</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">Heinrich's Safety Triangle PowerPoint Template</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#hg-lag)" points="562,109 591,102 597,129 297,669 263,650"/><polygon fill="url(#hg-lead)" points="677,112 709,94 1008,631 1000,658 974,651"/><line class="ln ln1" x1="693" y1="186" x2="808" y2="186"/><line class="ln ln2 on" x1="415" y1="311" x2="530" y2="311"/><line class="ln ln3" x1="805" y1="412" x2="922" y2="412"/><line class="ln ln4" x1="318" y1="516" x2="420" y2="516"/><line class="ln ln5" x1="918" y1="619" x2="1010" y2="619"/></svg>
+    <svg class="pyr" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="ly ly1" points="639.5,144.2 695.8,242.0 583.2,242.0" stroke-width="28"/><polygon class="ly ly2 on" points="564.2,271.0 714.8,271.0 759.6,349.0 519.4,349.0" stroke-width="20"/><polygon class="ly ly3" points="508.1,373.0 770.9,373.0 816.3,452.0 462.7,452.0" stroke-width="20"/><polygon class="ly ly4" points="452.5,476.0 826.5,476.0 871.9,555.0 407.1,555.0" stroke-width="20"/><polygon class="ly ly5" points="396.5,578.0 882.5,578.0 928.5,658.0 350.5,658.0" stroke-width="20"/></svg>
+    <p class="rib rib-lag">LAGGING INDICATORS OF SAFETY RISKS</p>
+    <p class="rib rib-lead">LEADING INDICATORS OF SAFETY RISK</p>
+    <p class="lab lab1">Fatality</p>
+    <p class="lab lab2 on">Lost Time/<br>Serious Injury</p>
+    <p class="lab lab3">Minor Injury</p>
+    <p class="lab lab4">Near Miss</p>
+    <p class="lab lab5">Unsafe Acts</p>
+    <p class="co co1">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co2 on">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co3">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co4">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co5">You can edit this text.<br>This text can be edited.</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">Heinrich's Safety Triangle PowerPoint Template</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#hg-lag)" points="562,109 591,102 597,129 297,669 263,650"/><polygon fill="url(#hg-lead)" points="677,112 709,94 1008,631 1000,658 974,651"/><line class="ln ln1" x1="693" y1="186" x2="808" y2="186"/><line class="ln ln2" x1="415" y1="311" x2="530" y2="311"/><line class="ln ln3 on" x1="805" y1="412" x2="922" y2="412"/><line class="ln ln4" x1="318" y1="516" x2="420" y2="516"/><line class="ln ln5" x1="918" y1="619" x2="1010" y2="619"/></svg>
+    <svg class="pyr" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="ly ly1" points="639.5,144.2 695.8,242.0 583.2,242.0" stroke-width="28"/><polygon class="ly ly2" points="564.2,271.0 714.8,271.0 759.6,349.0 519.4,349.0" stroke-width="20"/><polygon class="ly ly3 on" points="508.1,373.0 770.9,373.0 816.3,452.0 462.7,452.0" stroke-width="20"/><polygon class="ly ly4" points="452.5,476.0 826.5,476.0 871.9,555.0 407.1,555.0" stroke-width="20"/><polygon class="ly ly5" points="396.5,578.0 882.5,578.0 928.5,658.0 350.5,658.0" stroke-width="20"/></svg>
+    <p class="rib rib-lag">LAGGING INDICATORS OF SAFETY RISKS</p>
+    <p class="rib rib-lead">LEADING INDICATORS OF SAFETY RISK</p>
+    <p class="lab lab1">Fatality</p>
+    <p class="lab lab2">Lost Time/<br>Serious Injury</p>
+    <p class="lab lab3 on">Minor Injury</p>
+    <p class="lab lab4">Near Miss</p>
+    <p class="lab lab5">Unsafe Acts</p>
+    <p class="co co1">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co2">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co3 on">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co4">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co5">You can edit this text.<br>This text can be edited.</p>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">Heinrich's Safety Triangle PowerPoint Template</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#hg-lag)" points="562,109 591,102 597,129 297,669 263,650"/><polygon fill="url(#hg-lead)" points="677,112 709,94 1008,631 1000,658 974,651"/><line class="ln ln1" x1="693" y1="186" x2="808" y2="186"/><line class="ln ln2" x1="415" y1="311" x2="530" y2="311"/><line class="ln ln3" x1="805" y1="412" x2="922" y2="412"/><line class="ln ln4 on" x1="318" y1="516" x2="420" y2="516"/><line class="ln ln5" x1="918" y1="619" x2="1010" y2="619"/></svg>
+    <svg class="pyr" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="ly ly1" points="639.5,144.2 695.8,242.0 583.2,242.0" stroke-width="28"/><polygon class="ly ly2" points="564.2,271.0 714.8,271.0 759.6,349.0 519.4,349.0" stroke-width="20"/><polygon class="ly ly3" points="508.1,373.0 770.9,373.0 816.3,452.0 462.7,452.0" stroke-width="20"/><polygon class="ly ly4 on" points="452.5,476.0 826.5,476.0 871.9,555.0 407.1,555.0" stroke-width="20"/><polygon class="ly ly5" points="396.5,578.0 882.5,578.0 928.5,658.0 350.5,658.0" stroke-width="20"/></svg>
+    <p class="rib rib-lag">LAGGING INDICATORS OF SAFETY RISKS</p>
+    <p class="rib rib-lead">LEADING INDICATORS OF SAFETY RISK</p>
+    <p class="lab lab1">Fatality</p>
+    <p class="lab lab2">Lost Time/<br>Serious Injury</p>
+    <p class="lab lab3">Minor Injury</p>
+    <p class="lab lab4 on">Near Miss</p>
+    <p class="lab lab5">Unsafe Acts</p>
+    <p class="co co1">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co2">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co3">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co4 on">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co5">You can edit this text.<br>This text can be edited.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl">Heinrich's Safety Triangle PowerPoint Template</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><polygon fill="url(#hg-lag)" points="562,109 591,102 597,129 297,669 263,650"/><polygon fill="url(#hg-lead)" points="677,112 709,94 1008,631 1000,658 974,651"/><line class="ln ln1" x1="693" y1="186" x2="808" y2="186"/><line class="ln ln2" x1="415" y1="311" x2="530" y2="311"/><line class="ln ln3" x1="805" y1="412" x2="922" y2="412"/><line class="ln ln4" x1="318" y1="516" x2="420" y2="516"/><line class="ln ln5 on" x1="918" y1="619" x2="1010" y2="619"/></svg>
+    <svg class="pyr" viewBox="0 0 1280 720" aria-hidden="true"><polygon class="ly ly1" points="639.5,144.2 695.8,242.0 583.2,242.0" stroke-width="28"/><polygon class="ly ly2" points="564.2,271.0 714.8,271.0 759.6,349.0 519.4,349.0" stroke-width="20"/><polygon class="ly ly3" points="508.1,373.0 770.9,373.0 816.3,452.0 462.7,452.0" stroke-width="20"/><polygon class="ly ly4" points="452.5,476.0 826.5,476.0 871.9,555.0 407.1,555.0" stroke-width="20"/><polygon class="ly ly5 on" points="396.5,578.0 882.5,578.0 928.5,658.0 350.5,658.0" stroke-width="20"/></svg>
+    <p class="rib rib-lag">LAGGING INDICATORS OF SAFETY RISKS</p>
+    <p class="rib rib-lead">LEADING INDICATORS OF SAFETY RISK</p>
+    <p class="lab lab1">Fatality</p>
+    <p class="lab lab2">Lost Time/<br>Serious Injury</p>
+    <p class="lab lab3">Minor Injury</p>
+    <p class="lab lab4">Near Miss</p>
+    <p class="lab lab5 on">Unsafe Acts</p>
+    <p class="co co1">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co2">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co3">You can edit this text.<br>This text can be edited.</p>
+    <p class="co co4">You can edit this text. This<br>text can be edited.</p>
+    <p class="co co5 on">You can edit this text.<br>This text can be edited.</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 6</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

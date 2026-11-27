@@ -1,0 +1,43 @@
+{
+  "key": "sl-heinrichs-safety-triangle",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "⚠️",
+  "name": "مثلث هاينريش للسلامة",
+  "nameEn": "Heinrich's Safety Triangle",
+  "description": "ست شرائح لهرم هاينريش للسلامة بخمس طبقات ومؤشرات متأخرة واستباقية: نظرة عامة ثم إبراز كل طبقة",
+  "descriptionEn": "Six slides of Heinrich's 5-level safety pyramid with lagging/leading indicators: overview, then each level",
+  "sections": [
+    {
+      "title": "المثلث كاملًا",
+      "titleEn": "Full Triangle",
+      "needsData": false
+    },
+    {
+      "title": "وفاة",
+      "titleEn": "Fatality",
+      "needsData": false
+    },
+    {
+      "title": "انقطاع عن العمل / إصابة جسيمة",
+      "titleEn": "Lost Time / Serious Injury",
+      "needsData": false
+    },
+    {
+      "title": "إصابة طفيفة",
+      "titleEn": "Minor Injury",
+      "needsData": false
+    },
+    {
+      "title": "حادث وشيك",
+      "titleEn": "Near Miss",
+      "needsData": false
+    },
+    {
+      "title": "تصرفات غير آمنة",
+      "titleEn": "Unsafe Acts",
+      "needsData": false
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الهرم والشريطان رسوم SVG، والصنف on يحدد الطبقة المُبرزة وتعليقها وخطها في كل شريحة."
+}
