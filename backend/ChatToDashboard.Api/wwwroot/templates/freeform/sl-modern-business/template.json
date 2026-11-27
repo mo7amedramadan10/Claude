@@ -1,0 +1,73 @@
+{
+  "key": "sl-modern-business",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "أعمال عصرية",
+  "nameEn": "Modern Business",
+  "description": "اثنتا عشرة شريحة أعمال بهوية زرقاء: نظرة تنفيذية وأرقام وأولويات وجداول ورسم أداء وخارطة طريق وتواصل",
+  "descriptionEn": "Twelve blue business slides: overview, KPIs, priorities, tables, performance chart, roadmap and contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover",
+      "needsData": false
+    },
+    {
+      "title": "نظرة تنفيذية عامة",
+      "titleEn": "Executive Overview",
+      "needsData": true
+    },
+    {
+      "title": "لمحة عن الأعمال",
+      "titleEn": "Business Snapshot",
+      "needsData": true
+    },
+    {
+      "title": "الأولويات الاستراتيجية",
+      "titleEn": "Strategic Priorities",
+      "needsData": false
+    },
+    {
+      "title": "منظور السوق",
+      "titleEn": "Market Perspective",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الأداء",
+      "titleEn": "Performance Overview",
+      "needsData": true
+    },
+    {
+      "title": "محرّكات نمو الأعمال",
+      "titleEn": "Business Growth Drivers",
+      "needsData": false
+    },
+    {
+      "title": "نموذج التشغيل",
+      "titleEn": "Operating Model",
+      "needsData": false
+    },
+    {
+      "title": "المبادرات الرئيسة",
+      "titleEn": "Key Initiatives",
+      "needsData": true
+    },
+    {
+      "title": "خارطة الطريق الاستراتيجية",
+      "titleEn": "Strategic Roadmap",
+      "needsData": false
+    },
+    {
+      "title": "أبرز الخلاصات",
+      "titleEn": "Key Takeaways",
+      "needsData": false
+    },
+    {
+      "title": "تواصل معنا",
+      "titleEn": "Contact Us",
+      "needsData": false
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والأشكال المائلة والصور، وغيّر النصوص والأرقام فقط؛ أرقام رسم الأداء في كتلة chart-data (من query_data عند طلب بيانات)."
+}
