@@ -1,0 +1,62 @@
+{
+  "key": "sl-insurance-agency",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🛡️",
+  "name": "وكالة التأمين",
+  "nameEn": "Insurance Agency",
+  "description": "اثنتا عشرة شريحة لوكالة تأمين: غلاف، محتويات، من نحن، الفريق، الخدمات والحلول، رحلة العميل، المطالبات، الآراء والختام",
+  "descriptionEn": "12 insurance agency slides: cover, contents, about, team, offerings, solutions, process, claims, testimonials, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "من نحن ورسالتنا",
+      "titleEn": "Who We Are & Our Mission",
+      "needsData": true
+    },
+    {
+      "title": "فريقنا المحترف",
+      "titleEn": "Professional Team"
+    },
+    {
+      "title": "عروض التأمين الأساسية",
+      "titleEn": "Core Insurance Offerings"
+    },
+    {
+      "title": "حلول التأمين الشخصية",
+      "titleEn": "Personal Insurance Solutions"
+    },
+    {
+      "title": "حلول تأمين الأعمال",
+      "titleEn": "Business Insurance Solutions"
+    },
+    {
+      "title": "تجربة العميل: منهجيتنا",
+      "titleEn": "The Client Experience: Our Process"
+    },
+    {
+      "title": "ميزة مطالبات التأمين",
+      "titleEn": "The Insurance Claims Advantage"
+    },
+    {
+      "title": "التقنية وسهولة الوصول",
+      "titleEn": "Technology & Accessibility"
+    },
+    {
+      "title": "آراء العملاء والدليل الاجتماعي",
+      "titleEn": "Client Testimonials & Social Proof"
+    },
+    {
+      "title": "شكرًا لكم — تواصل معنا",
+      "titleEn": "Thank You — Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف (طبقات SVG والفقاعات) وغيّر النصوص والأرقام والصور فقط."
+}
