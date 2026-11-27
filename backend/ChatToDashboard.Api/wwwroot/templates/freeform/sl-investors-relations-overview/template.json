@@ -1,0 +1,92 @@
+{
+  "key": "sl-investors-relations-overview",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💼",
+  "name": "نظرة عامة على علاقات المستثمرين",
+  "nameEn": "Investors Relations Overview",
+  "description": "18 شريحة لعرض المستثمرين: الملخص، المشكلة والحل، السوق، نموذج العمل، المالية، الفريق، خارطة الطريق",
+  "descriptionEn": "18 investor slides: summary, problem and solution, market, business model, financials, team, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل القسم",
+      "titleEn": "Section Divider"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "الرسالة والرؤية",
+      "titleEn": "Mission & Vision"
+    },
+    {
+      "title": "المشكلة",
+      "titleEn": "The Problem",
+      "needsData": true
+    },
+    {
+      "title": "فرصة السوق",
+      "titleEn": "Market Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "حلّنا",
+      "titleEn": "Our Solution"
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model"
+    },
+    {
+      "title": "زخم السوق والنمو",
+      "titleEn": "Market Traction & Growth",
+      "needsData": true
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape"
+    },
+    {
+      "title": "استراتيجية دخول السوق",
+      "titleEn": "Go-to-Market Strategy",
+      "needsData": true
+    },
+    {
+      "title": "النظرة المالية العامة",
+      "titleEn": "Financial Overview",
+      "needsData": true
+    },
+    {
+      "title": "فريق الخبراء",
+      "titleEn": "Our Expert Team"
+    },
+    {
+      "title": "خارطة الطريق والمحطات",
+      "titleEn": "Roadmap & Milestones"
+    },
+    {
+      "title": "فرصة الاستثمار",
+      "titleEn": "Investment Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والألوان وغيّر النصوص والأرقام فقط؛ الرسوم البيانية في الشرائح 10 و13 و16 تُرسم من كتل chart-data وchart-data-2 وchart-data-3 فعدّل قيمها هناك، وحلقة النسبة في الشريحة 10 تُضبط بقيمة stroke-dasharray."
+}
