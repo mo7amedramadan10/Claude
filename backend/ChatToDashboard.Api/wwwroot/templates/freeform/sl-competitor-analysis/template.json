@@ -1,0 +1,68 @@
+{
+  "key": "sl-competitor-analysis",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🎯",
+  "name": "تحليل المنافسين",
+  "nameEn": "Competitor Analysis",
+  "description": "13 شريحة: جدول أعمال، ملخص، السوق، احتياجات العملاء، جدول تنافسي، ملفات المنافسين، القيمة، الفرص، الخطوات",
+  "descriptionEn": "13 slides: agenda, summary, market, customer needs, landscape table, profiles, value, gaps, next steps",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة عامة على التحليل ونطاقه",
+      "titleEn": "Analysis Overview & Scope"
+    },
+    {
+      "title": "جدول أعمال العرض",
+      "titleEn": "Presentation Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "المشهد السوقي والنمو",
+      "titleEn": "Market Landscape & Growth"
+    },
+    {
+      "title": "احتياجات العملاء والاتجاهات",
+      "titleEn": "Customer Needs & Trends"
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape",
+      "needsData": true
+    },
+    {
+      "title": "ملفات المنافسين",
+      "titleEn": "Competitor Profiles",
+      "needsData": true
+    },
+    {
+      "title": "مقارنة عرض القيمة",
+      "titleEn": "Value Proposition Comparison"
+    },
+    {
+      "title": "نقاط القوة والضعف",
+      "titleEn": "Strengths and Weaknesses"
+    },
+    {
+      "title": "فرص السوق والفجوات",
+      "titleEn": "Market Opportunities & Gaps"
+    },
+    {
+      "title": "الآثار الاستراتيجية",
+      "titleEn": "Strategic Implications"
+    },
+    {
+      "title": "الخطوات الاستراتيجية التالية",
+      "titleEn": "Strategic Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والزخارف وغيّر النصوص والأرقام فقط؛ علامات الجدول التنافسي خلايا td.c، وخريطة العالم رسم SVG ثابت."
+}

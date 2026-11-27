@@ -1,0 +1,21 @@
+{
+  "key": "sl-conflict-of-interest-slide-template-powerpoint",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "⚖️",
+  "name": "تضارب المصالح",
+  "nameEn": "Conflict of Interest",
+  "description": "شريحتان (فاتحة وداكنة) لتضارب مصالح الشركة والمصالح الشخصية مع المخاطر المحتملة والإجراءات والحلول",
+  "descriptionEn": "Two slides (light and dark): company vs personal interests, potential risks, and key actions and solutions",
+  "sections": [
+    {
+      "title": "تضارب المصالح (فاتح)",
+      "titleEn": "Conflict of Interest (Light)"
+    },
+    {
+      "title": "تضارب المصالح (داكن)",
+      "titleEn": "Conflict of Interest (Dark)"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الشريحتان بالتخطيط نفسه والثانية نسختها الداكنة عبر متغيّرات الألوان على .s2، وتبقى البطاقات والمثلث والميزان والأعمدة الأربعة بعددها."
+}

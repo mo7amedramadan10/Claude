@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>شريحة تضارب المصالح</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «شريحة تضارب المصالح»: بطاقة زرقاء (مصالح الشركة) وبطاقة برتقالية (المصالح الشخصية) بترويسة متدرجة وأيقونة دائرية، مثلث تحذير أحمر في المنتصف وميزان رمادي وأسهم (تُعكس في العربية)، بطاقة المخاطر المحتملة، ولوحة إجراءات سفلية بأربعة أعمدة. الشريحة الثانية النسخة الداكنة عبر متغيّرات الألوان على .s2. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #000000; --ink-2: #404040; --accent: #3F78C2; --bg: #FFFFFF; --panel: #F2F2F2; --blue: #3F78C2; --blue-2: #2E5DA3; --orange: #EE8A26; --orange-2: #D46E17; --sky: #82A9DD; --chip: #D6DCE5; --chip-ink: #7F7F7F; --tab: #A6A6A6; --rule: #BFBFBF; --risk-ic: #82A9DD; --chk-b: #3A68A8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame h1, .frame h2, .frame p, .frame ul { margin: 0; padding: 0; }
+  /* النسخة الداكنة: الشريحة الثانية */
+  .frame.s2 { --bg: #0F2340; --ink: #FFFFFF; --ink-2: #FFFFFF; --panel: #163259; --chip: #2E4A70; --chip-ink: #FFFFFF; --tab: #163259; --rule: #4A6184; --risk-ic: #1D4D8C; background: var(--bg); }
+  .ttl { position: absolute; top: 38px; inset-inline-start: 64px; font-size: 42px; font-weight: 400; line-height: 1.3; color: var(--ink); letter-spacing: -0.3px; white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 500; font-size: 42px; top: 34px; letter-spacing: 0; }
+  .deco { position: absolute; inset: 0; width: 1280px; height: 720px; pointer-events: none; z-index: 1; }
+  html[dir="rtl"] .deco { transform: scaleX(-1); }
+  /* بطاقتا المصالح */
+  .ic-card { position: absolute; top: 155px; width: 285px; height: 292px; border-radius: 22px; background: var(--panel); }
+  .ic-card .hd { height: 88px; border-radius: 22px 22px 0 0; display: grid; place-items: center; padding-top: 30px; color: #fff; font-size: 22.5px; font-weight: 700; }
+  html[lang="ar"] .ic-card .hd { font-size: 24px; }
+  .cb { inset-inline-start: 64px; } .cb .hd { background: linear-gradient(180deg, #4381CB, #2F5FA6); }
+  .cp { inset-inline-start: 627px; width: 284px; } .cp .hd { background: linear-gradient(180deg, #F2952F, #D46E17); }
+  .bub { position: absolute; top: -50px; inset-inline-start: 96px; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; }
+  .bub svg { width: 56px; height: 56px; }
+  .cb .bub { background: #DCE6F2; color: #4C8BD8; } .cp .bub { top: -53px; inset-inline-start: 96px; background: #FCE8D6; color: #E27A1E; }
+  .ic-card ul { list-style: none; margin: 25px 0 0; padding-inline-start: 29px; }
+  .ic-card li { display: flex; align-items: center; gap: 10px; height: 39px; font-size: 18px; color: var(--ink-2); }
+  html[lang="ar"] .ic-card li { font-size: 19px; }
+  .ic-card li i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .ic-card li i svg { width: 13px; height: 13px; }
+  .cb li i { background: var(--chk-b); } .cp li i { background: #E6862A; }
+  .cb .acc, .cp .acc, .rk .acc { position: absolute; top: 288px; height: 8px; border-radius: 4px; }
+  .cb .acc { inset-inline-start: 56px; width: 173px; background: var(--blue); }
+  .cp .acc { inset-inline-start: 63px; width: 172px; background: var(--orange); }
+  /* المثلث */
+  .tri { position: absolute; z-index: 2; top: 155px; inset-inline-start: 407px; width: 164px; height: 148px; color: #fff; text-align: center; }
+  .tri b { position: absolute; top: 25px; inset-inline: 0; font-size: 50px; font-weight: 700; line-height: 1; }
+  .tri span { position: absolute; top: 85px; inset-inline: 0; font-size: 19px; font-weight: 700; line-height: 25px; }
+  html[lang="ar"] .tri span { font-size: 20px; top: 92px; }
+  /* المخاطر */
+  .rk { position: absolute; top: 105px; inset-inline-start: 932px; width: 283px; height: 342px; border-radius: 22px; background: var(--panel); }
+  .rk h2 { position: absolute; top: 22px; inset-inline: 0; text-align: center; font-size: 22.5px; font-weight: 700; color: var(--ink); letter-spacing: -0.2px; }
+  html[lang="ar"] .rk h2 { font-size: 24px; }
+  .rk hr { position: absolute; top: 63px; inset-inline-start: 20px; width: 243px; margin: 0; border: 0; border-top: 1px solid var(--rule); }
+  .rk .it { position: absolute; inset-inline-start: 21px; display: flex; align-items: center; gap: 18px; }
+  .rk .it i { flex: none; width: 54px; height: 54px; border-radius: 50%; background: var(--risk-ic); color: #fff; display: grid; place-items: center; }
+  .rk .it i svg { width: 30px; height: 30px; }
+  .rk .it p { font-size: 17.5px; line-height: 23px; color: var(--ink-2); }
+  html[lang="ar"] .rk .it p { font-size: 18.5px; line-height: 24px; }
+  .rk .r1 { top: 84px; } .rk .r2 { top: 157px; } .rk .r3 { top: 229px; }
+  .rk .acc { inset-inline-start: 56px; width: 172px; top: 338px; background: #7EAAE2; }
+  /* لوحة الإجراءات */
+  .kp { position: absolute; top: 490px; inset-inline-start: 65px; width: 1150px; height: 181px; border-radius: 22px; background: var(--panel); }
+  .tab { position: absolute; top: 467px; inset-inline-start: 470px; width: 374px; height: 47px; border-radius: 8px; background: var(--tab); color: #fff; display: grid; place-items: center; font-size: 17.5px; font-weight: 700; }
+  html[lang="ar"] .tab { font-size: 19px; }
+  .col { position: absolute; top: 532px; width: 280px; text-align: center; }
+  .col i { display: grid; place-items: center; width: 68px; height: 68px; margin: 0 auto; border-radius: 50%; background: var(--chip); color: var(--chip-ink); }
+  .col i svg { width: 36px; height: 36px; }
+  .col p { margin-top: 20px; font-size: 20px; color: var(--ink-2); letter-spacing: -0.1px; }
+  html[lang="ar"] .col p { font-size: 21px; font-weight: 500; margin-top: 18px; }
+  .s1 .col p { color: #404040; }
+  .k1 { inset-inline-start: 66px; } .k2 { inset-inline-start: 355px; } .k3 { inset-inline-start: 648px; } .k4 { inset-inline-start: 934px; }
+  .k3 i { transform: translateX(4px); }
+  .sep { position: absolute; top: 531px; height: 110px; border-inline-start: 2px dotted #C9CED6; }
+  .s2 .sep { border-color: #4A6184; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <h1 class="ttl">قالب شريحة تضارب المصالح</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><defs><linearGradient id="ltr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E4612E"/><stop offset="1" stop-color="#8E2C12"/></linearGradient><linearGradient id="lab" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3F78C2" stop-opacity=".05"/><stop offset="1" stop-color="#3F78C2"/></linearGradient><linearGradient id="lao" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#EE8A26" stop-opacity=".05"/><stop offset="1" stop-color="#EE8A26"/></linearGradient><radialGradient id="lsh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#B8B8B8" stop-opacity=".9"/><stop offset="1" stop-color="#B8B8B8" stop-opacity="0"/></radialGradient></defs><path d="M277 140H463" stroke="#4A7FC4" stroke-width="1.3" stroke-dasharray="4 3"/><polygon points="471,140 462,135.5 462,144.5" fill="#4A7FC4"/><path d="M702 140H517" stroke="#EE8A26" stroke-width="1.3" stroke-dasharray="4 3"/><polygon points="508,140 517,135.5 517,144.5" fill="#EE8A26"/><path d="M349 223H384V215L407 234L384 253V245H349Z" fill="url(#lab)"/><path d="M627 223H593V215L570 234L593 253V245H627Z" fill="url(#lao)"/><path d="M489 158C484 158 481 160 478 165L411 279C406 288 412 301 423 301H555C566 301 572 288 567 279L500 165C497 160 494 158 489 158Z" fill="url(#ltr)"/><path d="M488 310V345" stroke="#C8C8C8" stroke-width="3" stroke-dasharray="7 5"/><ellipse cx="489" cy="436" rx="125" ry="12" fill="url(#lsh)"/><path d="M425 385H330" stroke="#3F78C2" stroke-width="2"/><polygon points="321,385 331,380 331,390" fill="#3F78C2"/><path d="M551 385H645" stroke="#EE8A26" stroke-width="2"/><polygon points="654,385 644,380 644,390" fill="#EE8A26"/><g fill="#8C8C8C"><path d="M484 358h9l3 63h-15z"/><rect x="470" y="420" width="37" height="4"/><rect x="465" y="424" width="47" height="4"/><rect x="461" y="428" width="55" height="5"/><path d="M445 372L533 349l1 3.5-88 23z"/><circle cx="489" cy="357" r="6.5"/><circle cx="489" cy="357" r="2.5" fill="#fff"/><path d="M437 401h37c-2 8-9 12-18.5 12S439 409 437 401z"/><path d="M503 381h37c-2 8-9 12-18.5 12S505 389 503 381z"/></g><g stroke="#8C8C8C" stroke-width="1.2" fill="none"><path d="M455.5 373L438 401M455.5 373L473 401M521.5 354L504 381M521.5 354L539 381"/></g></svg>
+    <div class="ic-card cb"><span class="bub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 3h5v19H8z"/><path d="M14 6.5h5v15.5h-5z"/><path d="M3 12.5h4.3V22H3z"/><path d="M8.5 15.5h4v6.5h-4z" opacity=".7"/><g fill="#fff"><rect x="9" y="5" width="1.1" height="1.3"/><rect x="11" y="5" width="1.1" height="1.3"/><rect x="9" y="8" width="1.1" height="1.3"/><rect x="11" y="8" width="1.1" height="1.3"/><rect x="9" y="11" width="1.1" height="1.3"/><rect x="11" y="11" width="1.1" height="1.3"/><rect x="15" y="8.5" width="1.1" height="1.3"/><rect x="17" y="8.5" width="1.1" height="1.3"/><rect x="15" y="11.5" width="1.1" height="1.3"/><rect x="17" y="11.5" width="1.1" height="1.3"/><rect x="15" y="14.5" width="1.1" height="1.3"/><rect x="17" y="14.5" width="1.1" height="1.3"/><rect x="15" y="17.5" width="1.1" height="1.3"/><rect x="17" y="17.5" width="1.1" height="1.3"/><rect x="4" y="14.5" width="1" height="1.3"/><rect x="5.7" y="14.5" width="1" height="1.3"/><rect x="4" y="17.5" width="1" height="1.3"/><rect x="5.7" y="17.5" width="1" height="1.3"/></g></svg></span><h2 class="hd">مصالح الشركة</h2><ul><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>الواجب</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>المسؤولية</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>السياسة</li></ul><span class="acc"></span></div>
+    <div class="ic-card cp"><span class="bub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6.5h7.5l-1.6 15.5h-7.2z"/><path d="M13.6 4.5l4.2-3.5.8.9-3.6 3.1" /><circle cx="7" cy="15.5" r="5"/><path d="M7 10.5c0-2 .9-3.3 2.6-3.8l.4.9C8.7 8 8.1 9 8.1 10.5z"/><path d="M14.5 13.5l2 2.2 4.2-5" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 12.6l1.6 1.7 4.8-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0"/></svg></span><h2 class="hd">المصالح الشخصية</h2><ul><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>المكسب المالي</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>الهدايا والمزايا</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>العلاقات</li></ul><span class="acc"></span></div>
+    <div class="tri"><b>!</b><span>مصالح<br>الشركة</span></div>
+    <div class="rk"><h2>المخاطر المحتملة</h2><hr><div class="it r1"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1" y="9" width="2.2" height="6" rx=".8"/><rect x="3.8" y="6" width="3.2" height="12" rx="1"/><rect x="7.5" y="10.8" width="9" height="2.4"/><rect x="17" y="6" width="3.2" height="12" rx="1"/><rect x="20.8" y="9" width="2.2" height="6" rx=".8"/></svg></i><p>قرار<br>متحيّز</p></div><div class="it r2"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5l9 3.5v6c0 5.7-3.8 10-9 11.5C6.8 21 3 16.7 3 11V5z"/><path d="M12 4l6.6 2.6V11c0 4.3-2.7 7.6-6.6 8.9C8.1 18.6 5.4 15.3 5.4 11V6.6z" fill="none" stroke="#fff" stroke-width="1"/><path d="M8.3 11.6l2.7 2.7 5-5.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></i><p>غياب<br>النزاهة</p></div><div class="it r3"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 2.5l6.8 6.8-2.4 2.4L6.1 4.9z"/><path d="M12.6 1.2l5.6 5.6-1.4 1.4L11.2 2.6z"/><path d="M3.4 9l5.6 5.6-1.4 1.4L2 10.4z"/><path d="M11.4 12.2l1.7-1.7 7.2 7.2a1.2 1.2 0 0 1-1.7 1.7z"/><rect x="2" y="20" width="10" height="2.5" rx=".5"/></svg></i><p>مشكلات قانونية<br>وأخلاقية</p></div><span class="acc"></span></div>
+    <div class="kp"></div><p class="tab">الإجراءات الرئيسية والحلول</p><span class="sep" style="inset-inline-start:352px"></span><span class="sep" style="inset-inline-start:641px"></span><span class="sep" style="inset-inline-start:929px"></span>
+    <div class="col k1"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l10 5.2-10 5.2L2 8.2z"/><path d="M4.3 11.4L12 15.4l7.7-4 2.3 1.2-10 5.2-10-5.2z"/><path d="M4.3 15L12 19l7.7-4 2.3 1.2L12 21.4 2 16.2z" opacity=".55"/></svg></i><p>الشفافية</p></div>
+    <div class="col k2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 2.5h11l3 3v16H5z"/><path d="M8 7h8M8 10h8M8 13h8M8 16h3.5"/><path d="M13.5 16.5l2 2M15.5 16.5l-2 2"/></svg></i><p>السياسات والقواعد</p></div>
+    <div class="col k3"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 11.5l13-6.5 2.8 9.6L5.4 16z"/><path d="M5.5 16.4l3-.4 1.5 4.3-2.6.7z"/><path d="M19.5 6.5l2-1.6M20.5 10.5l2.3.2M19.3 3.8l.6-2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></i><p>الإفصاح</p></div>
+    <div class="col k4"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13.5" rx="1.2"/><path d="M12 17v3.5M7.5 21h9"/></svg></i><p>المراقبة</p></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">قالب شريحة تضارب المصالح</h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><defs><linearGradient id="dtr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E4612E"/><stop offset="1" stop-color="#8E2C12"/></linearGradient><linearGradient id="dab" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3F78C2" stop-opacity=".05"/><stop offset="1" stop-color="#3F78C2"/></linearGradient><linearGradient id="dao" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#EE8A26" stop-opacity=".05"/><stop offset="1" stop-color="#EE8A26"/></linearGradient><radialGradient id="dsh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#050E1C" stop-opacity=".9"/><stop offset="1" stop-color="#050E1C" stop-opacity="0"/></radialGradient></defs><path d="M277 140H463" stroke="#4A7FC4" stroke-width="1.3" stroke-dasharray="4 3"/><polygon points="471,140 462,135.5 462,144.5" fill="#4A7FC4"/><path d="M702 140H517" stroke="#EE8A26" stroke-width="1.3" stroke-dasharray="4 3"/><polygon points="508,140 517,135.5 517,144.5" fill="#EE8A26"/><path d="M349 223H384V215L407 234L384 253V245H349Z" fill="url(#dab)"/><path d="M627 223H593V215L570 234L593 253V245H627Z" fill="url(#dao)"/><path d="M489 158C484 158 481 160 478 165L411 279C406 288 412 301 423 301H555C566 301 572 288 567 279L500 165C497 160 494 158 489 158Z" fill="url(#dtr)"/><path d="M488 310V345" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="7 5"/><ellipse cx="489" cy="436" rx="125" ry="12" fill="url(#dsh)"/><path d="M425 385H330" stroke="#3F78C2" stroke-width="2"/><polygon points="321,385 331,380 331,390" fill="#3F78C2"/><path d="M551 385H645" stroke="#EE8A26" stroke-width="2"/><polygon points="654,385 644,380 644,390" fill="#EE8A26"/><g fill="#8C8C8C"><path d="M484 358h9l3 63h-15z"/><rect x="470" y="420" width="37" height="4"/><rect x="465" y="424" width="47" height="4"/><rect x="461" y="428" width="55" height="5"/><path d="M445 372L533 349l1 3.5-88 23z"/><circle cx="489" cy="357" r="6.5"/><circle cx="489" cy="357" r="2.5" fill="#fff"/><path d="M437 401h37c-2 8-9 12-18.5 12S439 409 437 401z"/><path d="M503 381h37c-2 8-9 12-18.5 12S505 389 503 381z"/></g><g stroke="#8C8C8C" stroke-width="1.2" fill="none"><path d="M455.5 373L438 401M455.5 373L473 401M521.5 354L504 381M521.5 354L539 381"/></g></svg>
+    <div class="ic-card cb"><span class="bub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 3h5v19H8z"/><path d="M14 6.5h5v15.5h-5z"/><path d="M3 12.5h4.3V22H3z"/><path d="M8.5 15.5h4v6.5h-4z" opacity=".7"/><g fill="#fff"><rect x="9" y="5" width="1.1" height="1.3"/><rect x="11" y="5" width="1.1" height="1.3"/><rect x="9" y="8" width="1.1" height="1.3"/><rect x="11" y="8" width="1.1" height="1.3"/><rect x="9" y="11" width="1.1" height="1.3"/><rect x="11" y="11" width="1.1" height="1.3"/><rect x="15" y="8.5" width="1.1" height="1.3"/><rect x="17" y="8.5" width="1.1" height="1.3"/><rect x="15" y="11.5" width="1.1" height="1.3"/><rect x="17" y="11.5" width="1.1" height="1.3"/><rect x="15" y="14.5" width="1.1" height="1.3"/><rect x="17" y="14.5" width="1.1" height="1.3"/><rect x="15" y="17.5" width="1.1" height="1.3"/><rect x="17" y="17.5" width="1.1" height="1.3"/><rect x="4" y="14.5" width="1" height="1.3"/><rect x="5.7" y="14.5" width="1" height="1.3"/><rect x="4" y="17.5" width="1" height="1.3"/><rect x="5.7" y="17.5" width="1" height="1.3"/></g></svg></span><h2 class="hd">مصالح الشركة</h2><ul><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>الواجب</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>المسؤولية</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>السياسة</li></ul><span class="acc"></span></div>
+    <div class="ic-card cp"><span class="bub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6.5h7.5l-1.6 15.5h-7.2z"/><path d="M13.6 4.5l4.2-3.5.8.9-3.6 3.1" /><circle cx="7" cy="15.5" r="5"/><path d="M7 10.5c0-2 .9-3.3 2.6-3.8l.4.9C8.7 8 8.1 9 8.1 10.5z"/><path d="M14.5 13.5l2 2.2 4.2-5" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 12.6l1.6 1.7 4.8-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0"/></svg></span><h2 class="hd">المصالح الشخصية</h2><ul><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>المكسب المالي</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>الهدايا والمزايا</li><li><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></i>العلاقات</li></ul><span class="acc"></span></div>
+    <div class="tri"><b>!</b><span>مصالح<br>الشركة</span></div>
+    <div class="rk"><h2>المخاطر المحتملة</h2><hr><div class="it r1"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1" y="9" width="2.2" height="6" rx=".8"/><rect x="3.8" y="6" width="3.2" height="12" rx="1"/><rect x="7.5" y="10.8" width="9" height="2.4"/><rect x="17" y="6" width="3.2" height="12" rx="1"/><rect x="20.8" y="9" width="2.2" height="6" rx=".8"/></svg></i><p>قرار<br>متحيّز</p></div><div class="it r2"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5l9 3.5v6c0 5.7-3.8 10-9 11.5C6.8 21 3 16.7 3 11V5z"/><path d="M12 4l6.6 2.6V11c0 4.3-2.7 7.6-6.6 8.9C8.1 18.6 5.4 15.3 5.4 11V6.6z" fill="none" stroke="#fff" stroke-width="1"/><path d="M8.3 11.6l2.7 2.7 5-5.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></i><p>غياب<br>النزاهة</p></div><div class="it r3"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 2.5l6.8 6.8-2.4 2.4L6.1 4.9z"/><path d="M12.6 1.2l5.6 5.6-1.4 1.4L11.2 2.6z"/><path d="M3.4 9l5.6 5.6-1.4 1.4L2 10.4z"/><path d="M11.4 12.2l1.7-1.7 7.2 7.2a1.2 1.2 0 0 1-1.7 1.7z"/><rect x="2" y="20" width="10" height="2.5" rx=".5"/></svg></i><p>مشكلات قانونية<br>وأخلاقية</p></div><span class="acc"></span></div>
+    <div class="kp"></div><p class="tab">الإجراءات الرئيسية والحلول</p><span class="sep" style="inset-inline-start:352px"></span><span class="sep" style="inset-inline-start:641px"></span><span class="sep" style="inset-inline-start:929px"></span>
+    <div class="col k1"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l10 5.2-10 5.2L2 8.2z"/><path d="M4.3 11.4L12 15.4l7.7-4 2.3 1.2-10 5.2-10-5.2z"/><path d="M4.3 15L12 19l7.7-4 2.3 1.2L12 21.4 2 16.2z" opacity=".55"/></svg></i><p>الشفافية</p></div>
+    <div class="col k2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 2.5h11l3 3v16H5z"/><path d="M8 7h8M8 10h8M8 13h8M8 16h3.5"/><path d="M13.5 16.5l2 2M15.5 16.5l-2 2"/></svg></i><p>السياسات والقواعد</p></div>
+    <div class="col k3"><i><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 11.5l13-6.5 2.8 9.6L5.4 16z"/><path d="M5.5 16.4l3-.4 1.5 4.3-2.6.7z"/><path d="M19.5 6.5l2-1.6M20.5 10.5l2.3.2M19.3 3.8l.6-2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></i><p>الإفصاح</p></div>
+    <div class="col k4"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3.5" width="20" height="13.5" rx="1.2"/><path d="M12 17v3.5M7.5 21h9"/></svg></i><p>المراقبة</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 2</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

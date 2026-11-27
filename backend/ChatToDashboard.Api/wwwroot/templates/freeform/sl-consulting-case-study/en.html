@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consulting Case Study</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «دراسة حالة استشارية»: عناوين داكنة غامقة أعلى اليسار، بطاقات بنفسجية وبرتقالية بزوايا مدوّرة وبطاقات بيضاء بظل ناعم، صور فوتوغرافية مقصوصة من الأصل، ورسمان خطيان صغيران من كتلة chart-data في شريحة تحليل البيانات. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --ink-2: #3A3A3A; --accent: #5054EA; --violet: #5054EA; --violet-2: #6266F0; --orange: #EE7D31; --green: #33997A; --line: #C4C4C4; --bg: #FFFFFF; --shadow: 0 10px 28px rgb(30 30 60 / .10); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عناصر مشتركة */
+  .frame h1, .frame h2, .frame h3, .frame p { margin: 0; }
+  .ttl { position: absolute; top: 96px; inset-inline-start: 89px; font-size: 51px; font-weight: 700; line-height: 1.1; color: var(--ink); letter-spacing: -0.6px; }
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; line-height: 1.15; }
+  .lead { position: absolute; top: 190px; inset-inline-start: 89px; width: 1040px; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  html[lang="ar"] .lead { font-size: 19px; line-height: 27px; }
+  .abs { position: absolute; }
+  .card { position: absolute; border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+  .vio { background: var(--violet); color: #fff; } .org { background: var(--orange); color: #fff; }
+  .ph { position: absolute; display: block; object-fit: cover; }
+  .ic { display: block; } .ic svg, .cc svg, .sq svg, .nd svg, .go svg, i svg { width: 100%; height: 100%; display: block; }
+  .h { font-size: 21px; font-weight: 700; line-height: 1.25; color: var(--ink); }
+  .t { font-size: 17.5px; line-height: 22.5px; color: var(--ink-2); }
+  html[lang="ar"] .t { line-height: 25px; }
+  .w, .w .h, .w .t { color: #fff; }
+  /* 1 الغلاف */
+  .s1 .bg { position: absolute; inset: 0; width: 1280px; height: 720px; object-fit: cover; }
+  html[dir="rtl"] .s1 .bg { transform: scaleX(-1); }
+  .s1 .big { position: absolute; top: 282px; inset-inline-start: 62px; font-size: 78px; line-height: 78px; letter-spacing: 0; color: #262626; text-transform: uppercase; }
+  .s1 .big b { display: block; font-weight: 700; }
+  .s1 .big span { display: block; font-weight: 300; letter-spacing: 1.5px; color: transparent; -webkit-text-stroke: 1.4px #262626; }
+  html[lang="ar"] .s1 .big { top: 266px; font-size: 80px; line-height: 92px; }
+  html[lang="ar"] .s1 .big b { font-weight: 800; }
+  html[lang="ar"] .s1 .big span { font-weight: 500; -webkit-text-stroke: 1.6px #262626; }
+  .s1 .bar { position: absolute; top: 461px; inset-inline-start: 63px; width: 101px; height: 5px; background: #262626; }
+  .s1 .sub { position: absolute; top: 489px; inset-inline-start: 64px; font-size: 22px; letter-spacing: 2.6px; color: #262626; text-transform: uppercase; }
+  html[lang="ar"] .s1 .sub { letter-spacing: 0; font-size: 24px; font-weight: 500; top: 486px; }
+  .s1 .desc { position: absolute; top: 531px; inset-inline-start: 64px; font-size: 19.5px; color: #333; }
+  .s1 .logo { position: absolute; top: 589px; inset-inline-start: 63px; width: 76px; height: 82px; color: #262626; }
+  .s1 .lgt { position: absolute; top: 604px; inset-inline-start: 171px; font-size: 17.5px; line-height: 26px; letter-spacing: 2px; color: #262626; }
+  html[lang="ar"] .s1 .lgt { letter-spacing: 0; font-size: 19px; }
+  /* 2 الملخص التنفيذي */
+  .s2 .lead { width: 600px; }
+  .s2 .box { position: absolute; top: 315px; inset-inline-start: 89px; width: 511px; height: 351px; border-radius: 14px; background: #5F62EE; color: #fff; padding: 33px 22px 0; }
+  .s2 .box .h { font-size: 24px; color: #fff; }
+  .s2 .box .t { margin-top: 14px; color: #fff; width: 450px; }
+  .s2 .pr { position: absolute; inset-inline-start: 21px; width: 445px; }
+  .s2 .pr .lb { display: flex; justify-content: space-between; font-size: 17.5px; color: #F1F1F5; }
+  .s2 .pr .tr { margin-top: 11px; height: 26px; border-radius: 13px; background: #E5E4EA; padding: 3px; }
+  .s2 .pr .fl { height: 20px; border-radius: 10px; background: #4C50E0; }
+  .s2 .pr2 .fl { background: var(--orange); }
+  .s2 .pr1 { top: 166px; } .s2 .pr2 { top: 253px; }
+  .s2 .ph1 { top: 58px; inset-inline-start: 844px; width: 227px; height: 325px; border-radius: 10px; }
+  .s2 .ph2 { top: 440px; inset-inline-start: 844px; width: 378px; height: 226px; border-radius: 10px; }
+  html[dir="rtl"] .s2 .ph1, html[dir="rtl"] .s2 .ph2 { transform: scaleX(-1); }
+  .s2 .k1 { top: 195px; inset-inline-start: 950px; width: 272px; height: 135px; border-radius: 4px; padding: 20px 0 0 50px; padding-inline: 50px 10px; box-shadow: 0 6px 26px rgb(80 84 234 / .16); }
+  .s2 .k1::before { content: ''; position: absolute; top: 29px; inset-inline-start: -11px; width: 22px; height: 76px; background: #4B1BD4; }
+  .s2 .num { font-size: 30px; font-weight: 700; color: #4F53E6; line-height: 1.2; }
+  .s2 .k1 .t { margin-top: 10px; width: 200px; color: #333; }
+  .s2 .k2 { top: 412px; inset-inline-start: 652px; width: 219px; height: 175px; border-radius: 4px; padding: 22px 20px 0; box-shadow: 0 6px 26px rgb(80 84 234 / .14); }
+  .s2 .k2 .t { margin-top: 8px; color: #333; }
+  .s2 .k2 .row { display: flex; align-items: center; gap: 15px; margin-top: 20px; margin-inline-start: -4px; }
+  .s2 .k2 .cc { width: 50px; height: 50px; border-radius: 50%; background: #4F53E6; color: #fff; padding: 13px; flex: none; }
+  .s2 .k2 b { font-size: 19.5px; font-weight: 700; color: #262626; }
+  /* 3 خلفية العميل */
+  .s3 .c1 { top: 306px; inset-inline-start: 89px; width: 358px; height: 355px; padding: 25px 18px 0 22px; padding-inline: 22px 14px; }
+  .s3 .c1 img { display: block; width: 130px; height: 130px; border-radius: 50%; object-fit: cover; }
+  .s3 .c1 .h { margin-top: 36px; font-size: 26px; color: #4F53E6; }
+  .s3 .c1 .t { margin-top: 15px; font-size: 18px; }
+  .s3 .cx { top: 416px; width: 358px; height: 245px; border-radius: 10px; padding: 26px 22px 0; box-shadow: 0 12px 28px rgb(30 30 60 / .14); }
+  .s3 .cx .ic { width: 46px; height: 46px; }
+  .s3 .cx .h { margin-top: 30px; font-size: 26px; }
+  .s3 .cx .t { margin-top: 13px; font-size: 18px; width: 290px; }
+  .s3 .cx2 { inset-inline-start: 461px; } .s3 .cx3 { inset-inline-start: 833px; }
+  /* 4 التحدي */
+  .s4 .li { position: absolute; inset-inline-start: 89px; display: flex; gap: 22px; }
+  .s4 .li .n { width: 78px; flex: none; padding-top: 6px; font-size: 53px; font-weight: 700; color: #4F53E6; line-height: 1; align-self: center; }
+  .s4 .li .t { margin-top: 10px; width: 440px; }
+  .s4 .l1 { top: 310px; } .s4 .l2 { top: 430px; } .s4 .l3 { top: 551px; }
+  .s4 .st { position: absolute; inset-inline-start: 731px; width: 433px; }
+  .s4 .st .big, .s12 .st .big { font-size: 86px; font-weight: 400; line-height: 1; color: var(--orange); letter-spacing: -1px; }
+  .s4 .st .t { margin-top: 18px; }
+  .s4 .st2 .big, .s12 .st2 .big { margin-inline-start: 6px; }
+  .s4 .st1 { top: 283px; } .s4 .st2 { top: 494px; }
+  .s4 .hr { position: absolute; top: 459px; inset-inline-start: 731px; width: 433px; height: 2px; background: #262626; }
+  /* 5 تحليل السبب الجذري */
+  .s5 .rb { position: absolute; inset-inline-start: 89px; width: 522px; }
+  .s5 .rb .h { margin-inline-start: 23px; }
+  .s5 .rb .pill { margin-top: 6px; height: 70px; border-start-end-radius: 35px; border-end-end-radius: 35px; padding: 10px 0 0 22px; padding-inline: 22px 66px; color: #fff; font-size: 17.5px; line-height: 22.5px; position: relative; }
+  .s5 .rb .cc { position: absolute; top: 5px; inset-inline-end: 5px; width: 60px; height: 60px; border-radius: 50%; background: #fff; padding: 14px; }
+  .s5 .r1 { top: 220px; } .s5 .r1 .pill { background: #6366F1; } .s5 .r1 .cc { color: #6366F1; }
+  .s5 .r2 { top: 334px; } .s5 .r2 .pill { background: var(--violet); } .s5 .r2 .cc { color: var(--violet); }
+  .s5 .r3 { top: 447px; } .s5 .r3 .pill { background: var(--orange); } .s5 .r3 .cc { color: var(--orange); }
+  .s5 .r4 { top: 559px; } .s5 .r4 .pill { background: var(--green); } .s5 .r4 .cc { color: var(--green); }
+  .s5 .wires { position: absolute; top: 280px; inset-inline-start: 600px; width: 360px; height: 360px; }
+  html[dir="rtl"] .s5 .wires { transform: scaleX(-1); }
+  .s5 .cir { position: absolute; border-radius: 50%; background: #fff; border: 4px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .s5 .ci1 { top: 366px; inset-inline-start: 735px; width: 174px; height: 174px; padding: 0 14px; }
+  .s5 .ci1 .h { font-size: 21px; } .s5 .ci1 .t { margin-top: 8px; font-size: 17px; }
+  .s5 .ci2 { top: 327px; inset-inline-start: 928px; width: 251px; height: 251px; padding: 0 24px; }
+  .s5 .ci2 .ic { width: 54px; height: 54px; color: var(--orange); }
+  .s5 .ci2 .h { margin-top: 10px; font-size: 25px; } .s5 .ci2 .t { margin-top: 8px; font-size: 17.5px; }
+  /* 6 الأهداف */
+  .s6 .ob { top: 266px; width: 248px; height: 334px; padding: 33px 26px 0 36px; padding-inline: 36px 20px; }
+  .s6 .ob .ic { width: 55px; height: 55px; border-radius: 7px; background: var(--orange); color: #fff; padding: 12px; }
+  .s6 .ob .h { margin-top: 28px; } .s6 .ob .t { margin-top: 16px; width: 186px; font-size: 18px; }
+  .s6 .ob.vio { background: var(--violet); box-shadow: 0 14px 30px rgb(80 84 234 / .28); } .s6 .ob.vio .ic { background: #fff; color: var(--violet); }
+  .s6 .o1 { inset-inline-start: 94px; } .s6 .o2 { inset-inline-start: 375px; } .s6 .o3 { inset-inline-start: 657px; } .s6 .o4 { inset-inline-start: 938px; }
+  .s6 .tl { position: absolute; top: 628px; inset-inline-start: 94px; width: 1092px; height: 1px; background: #D4D4D4; }
+  .s6 .dt { position: absolute; top: 619px; width: 18px; height: 18px; border-radius: 50%; background: var(--orange); }
+  .s6 .dt.v { background: var(--violet); }
+  .s6 .lb { position: absolute; top: 659px; width: 248px; text-align: center; font-size: 20px; }
+  /* 7 المنهجية */
+  .s7 .tp { position: absolute; top: 283px; width: 255px; height: 52px; border-radius: 8px; display: grid; place-items: center; font-size: 22px; font-weight: 700; color: #fff; }
+  .s7 .ar { position: absolute; top: 360px; inset-inline-start: 205px; width: 880px; height: 20px; }
+  html[dir="rtl"] .s7 .ar { transform: scaleX(-1); }
+  .s7 .mc { position: absolute; top: 396px; width: 255px; height: 285px; border-radius: 12px; text-align: center; color: #fff; }
+  .s7 .mc .cc { position: absolute; top: 23px; inset-inline-start: 95px; width: 64px; height: 64px; border-radius: 50%; background: #fff; padding: 15px; box-shadow: 0 8px 22px rgb(0 0 0 / .22); }
+  .s7 .mc.vio .cc { color: var(--violet); } .s7 .mc.org .cc { color: var(--orange); }
+  .s7 .mc .t { position: absolute; top: 112px; inset-inline-start: 22px; width: 211px; font-size: 17.5px; color: #fff; }
+  .s7 .mc hr { position: absolute; top: 200px; inset-inline-start: 34px; width: 187px; margin: 0; border: 0; border-top: 1px solid rgb(255 255 255 / .75); }
+  .s7 .mc .btn { position: absolute; top: 224px; inset-inline-start: 26px; width: 203px; height: 43px; border-radius: 22px; background: #FAFAF2; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 19px; padding-inline: 19px 8px; font-size: 20px; font-weight: 700; color: #262626; }
+  .s7 .mc .btn i { width: 28px; height: 28px; border-radius: 50%; background: #1E1E1E; color: #fff; padding: 5px; display: block; }
+  html[dir="rtl"] .s7 .mc .btn i svg { transform: scaleX(-1); }
+  .s7 .k1 { inset-inline-start: 89px; } .s7 .k2 { inset-inline-start: 374px; } .s7 .k3 { inset-inline-start: 659px; } .s7 .k4 { inset-inline-start: 944px; }
+  /* 8 خطة العمل */
+  .s8 .lead, .s9 .lead, .s11 .lead { top: 250px; width: 472px; }
+  .s8 .lead { width: 398px; }
+  .s8 .ph { top: 366px; inset-inline-start: 89px; width: 342px; height: 311px; border-radius: 14px; }
+  .s8 .zz { position: absolute; top: 0; inset-inline-start: 680px; width: 600px; height: 720px; }
+  html[dir="rtl"] .s8 .zz { transform: scaleX(-1); }
+  .s8 .nd { position: absolute; width: 106px; height: 106px; border-radius: 50%; border: 8px solid; background: #fff; padding: 24px; }
+  .s8 .nd.v { border-color: var(--violet); color: var(--violet); } .s8 .nd.o { border-color: var(--orange); color: var(--orange); }
+  .s8 .n1 { top: 144px; inset-inline-start: 688px; } .s8 .n2 { top: 265px; inset-inline-start: 957px; } .s8 .n3 { top: 377px; inset-inline-start: 688px; } .s8 .n4 { top: 493px; inset-inline-start: 957px; }
+  .s8 .at { position: absolute; font-size: 30px; font-weight: 700; color: var(--ink); line-height: 1; }
+  .s8 .a1 { top: 184px; inset-inline-start: 931px; } .s8 .a3 { top: 416px; inset-inline-start: 931px; }
+  .s8 .a2 { top: 300px; inset-inline-end: 462px; } .s8 .a4 { top: 531px; inset-inline-end: 462px; }
+  .s8 .tx { position: absolute; width: 200px; }
+  .s8 .tx .h { font-size: 22px; } .s8 .tx .t { margin-top: 6px; }
+  .s8 .x1 { top: 151px; inset-inline-end: 616px; text-align: end; } .s8 .x3 { top: 382px; inset-inline-end: 616px; text-align: end; }
+  .s8 .x2 { top: 268px; inset-inline-start: 1086px; width: 190px; } .s8 .x4 { top: 500px; inset-inline-start: 1086px; width: 190px; }
+  /* 9 تحليل البيانات */
+  .s9 .sq { position: absolute; width: 86px; height: 86px; border-radius: 12px; color: #fff; padding: 24px; }
+  .s9 .q1 { top: 374px; inset-inline-start: 89px; background: #6165F0; } .s9 .q2 { top: 475px; inset-inline-start: 90px; background: var(--violet); } .s9 .q3 { top: 582px; inset-inline-start: 93px; background: var(--orange); }
+  .s9 .sv { position: absolute; inset-inline-start: 213px; width: 380px; }
+  .s9 .sv b { display: block; font-size: 35px; font-weight: 700; line-height: 1.1; color: #262626; }
+  .s9 .sv .t { margin-top: 2px; font-size: 17.5px; color: #333; }
+  .s9 .v1 { top: 385px; } .s9 .v2 { top: 491px; } .s9 .v3 { top: 592px; }
+  .s9 .cb { position: absolute; inset-inline-start: 689px; width: 522px; height: 277px; border-radius: 24px; color: #fff; }
+  .s9 .cb1 { top: 100px; } .s9 .cb2 { top: 394px; height: 276px; }
+  .s9 .cb h3 { position: absolute; top: 33px; inset-inline-start: 40px; font-size: 24px; font-weight: 300; color: #fff; }
+  .s9 .cb p { position: absolute; top: 68px; inset-inline-start: 38px; font-size: 39px; font-weight: 400; color: #fff; line-height: 1.2; }
+  html[lang="ar"] .s9 .cb h3 { font-weight: 400; }
+  .s9 .cb svg { position: absolute; top: 120px; inset-inline-start: 0; width: 522px; height: 150px; overflow: visible; }
+  .s9 .cb svg text { font: 400 16.5px var(--font); fill: #fff; }
+  /* 10 الحل المقترح */
+  .s10 .ttl, .s11 .ttl, .s8 .ttl, .s9 .ttl { line-height: 57px; top: 98px; }
+  .s10 .lead { top: 254px; width: 310px; }
+  .s10 .ck { position: absolute; inset-inline-start: 89px; display: flex; gap: 28px; align-items: flex-start; }
+  .s10 .ck i { width: 42px; height: 42px; border-radius: 8px; background: #fff; box-shadow: 0 6px 16px rgb(0 0 0 / .12); color: #2A2AC0; padding: 12px; flex: none; margin-top: 0; }
+  .s10 .ck .t { width: 230px; color: #444; margin-top: -1px; }
+  .s10 .c1 { top: 447px; } .s10 .c2 { top: 525px; } .s10 .c3 { top: 603px; }
+  .s10 .sc { position: absolute; display: flex; align-items: center; border-radius: 22px; }
+  .s10 .sc .n { width: 113px; padding-inline-start: 26px; flex: none; font-size: 51px; font-weight: 700; line-height: 1; }
+  .s10 .sc .t { margin-top: 10px; width: 210px; }
+  .s10 .sc1 { top: 77px; inset-inline-start: 430px; width: 352px; height: 169px; background: linear-gradient(180deg, #5555EE, #1C1FD0); color: #fff; }
+  .s10 .sc1 .t, .s10 .sc1 .h { color: #fff; }
+  .s10 .sc2, .s10 .sc3 { inset-inline-start: 807px; width: 385px; height: 170px; background: #fff; box-shadow: var(--shadow); }
+  .s10 .sc2 .n, .s10 .sc3 .n { color: var(--orange); width: 131px; padding-inline-start: 28px; }
+  .s10 .sc2 { top: 277px; } .s10 .sc3 { top: 478px; }
+  .s10 .p1 { top: 77px; inset-inline-start: 806px; width: 384px; height: 169px; border-radius: 22px; }
+  .s10 .p2 { top: 272px; inset-inline-start: 430px; width: 351px; height: 375px; border-radius: 40px; }
+  /* 11 التنفيذ */
+  .s11 .ph { top: 100px; inset-inline-start: 606px; width: 585px; height: 251px; border-radius: 12px; }
+  .s11 .ic3 { position: absolute; top: 376px; width: 352px; height: 307px; border-radius: 14px; padding: 36px 28px 0; }
+  .s11 .ic3 .n { font-size: 46px; font-weight: 700; line-height: 1.2; color: rgb(255 255 255 / .93); }
+  .s11 .ic3 .h { margin-top: 23px; font-size: 26px; }
+  .s11 .ic3 .t { margin-top: 15px; font-size: 20px; line-height: 25.5px; width: 300px; }
+  html[lang="ar"] .s11 .ic3 .t { line-height: 29px; }
+  .s11 .i1 { inset-inline-start: 89px; } .s11 .i2 { inset-inline-start: 464px; } .s11 .i3 { inset-inline-start: 839px; }
+  /* 12 الأثر والنتائج */
+  .s12 .ib { position: absolute; inset-inline-start: 89px; width: 715px; height: 196px; border-radius: 14px; }
+  .s12 .ib1 { top: 273px; } .s12 .ib2 { top: 487px; }
+  .s12 .ib img { position: absolute; top: 21px; inset-inline-start: 17px; width: 362px; height: 153px; border-radius: 10px; object-fit: cover; }
+  .s12 .ib .h { position: absolute; top: 34px; inset-inline-start: 422px; font-size: 26px; }
+  .s12 .ib .t { position: absolute; top: 85px; inset-inline-start: 422px; width: 270px; font-size: 20px; line-height: 25.5px; }
+  .s12 .st { position: absolute; inset-inline-start: 878px; width: 354px; }
+  .s12 .st .big { color: #4F53E6; } .s12 .st2 .big { color: var(--orange); }
+  .s12 .st .t { margin-top: 18px; width: 340px; }
+  .s12 .st1 { top: 304px; } .s12 .st2 { top: 516px; }
+  .s12 .hr { position: absolute; top: 477px; inset-inline-start: 878px; width: 354px; height: 2px; background: #262626; }
+  /* 13 آراء العملاء */
+  .s13 .tc { position: absolute; width: 538px; height: 213px; border-radius: 22px; }
+  .s13 .tc1 { top: 218px; inset-inline-start: 89px; } .s13 .tc2 { top: 218px; inset-inline-start: 640px; } .s13 .tc3 { top: 444px; inset-inline-start: 89px; } .s13 .tc4 { top: 444px; inset-inline-start: 640px; }
+  .s13 .tc img { position: absolute; top: 25px; inset-inline-start: 22px; width: 166px; height: 163px; border-radius: 8px; object-fit: cover; }
+  .s13 .tc .q { position: absolute; top: 33px; inset-inline-start: 236px; width: 244px; font-size: 22px; font-weight: 300; line-height: 29px; color: #fff; }
+  html[lang="ar"] .s13 .tc .q { font-weight: 400; line-height: 31px; font-size: 21px; }
+  .s13 .tc hr { position: absolute; top: 136px; inset-inline-start: 236px; width: 269px; margin: 0; border: 0; border-top: 2px solid #fff; }
+  .s13 .tc .h { position: absolute; top: 149px; inset-inline-end: 33px; font-size: 25.5px; color: #fff; }
+  .s13 .tc .go { position: absolute; top: 12px; inset-inline-end: 13px; width: 41px; height: 41px; border-radius: 50%; background: #fff; border: 1.5px solid #333; padding: 9px; }
+  .s13 .tc.vio .go { color: var(--violet); } .s13 .tc.org .go { color: var(--orange); }
+  html[dir="rtl"] .s13 .tc .go svg { transform: scaleX(-1); }
+  /* 14 الخطوات التالية */
+  .s14 .ph { top: 78px; inset-inline-start: 90px; width: 526px; height: 262px; border-radius: 22px; }
+  .s14 .ttl { top: 114px; inset-inline-start: 664px; }
+  .s14 .lead { top: 208px; inset-inline-start: 664px; width: 520px; font-size: 20px; }
+  .s14 .ns { position: absolute; top: 381px; width: 261px; height: 276px; padding: 34px 20px 0; }
+  .s14 .ns .n { font-size: 44px; font-weight: 700; line-height: 1.2; color: var(--orange); }
+  .s14 .ns .h { margin-top: 30px; font-size: 26px; }
+  .s14 .ns .t { margin-top: 15px; font-size: 20px; line-height: 25.5px; width: 222px; }
+  html[lang="ar"] .s14 .ns .t { line-height: 29px; }
+  .s14 .ns1 { background: linear-gradient(180deg, #5254EE, #1616CE); box-shadow: none; }
+  .s14 .ns1 .n { color: #7F83F6; }
+  .s14 .ns1 { inset-inline-start: 89px; } .s14 .ns2 { inset-inline-start: 369px; } .s14 .ns3 { inset-inline-start: 649px; } .s14 .ns4 { inset-inline-start: 930px; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <img class="bg" src="/templates/freeform/sl-consulting-case-study/assets/cover-bg.jpg" alt="White desk with a laptop, a plant and a businessman's hands">
+    <h1 class="big"><b>CONSULTING</b><span>CASE STUDY</span></h1>
+    <span class="bar"></span>
+    <p class="sub">PRESENTATION TEMPLATE</p>
+    <p class="desc">This is a sample text. Insert your desired text here.</p>
+    <svg class="logo" style="transform:rotate(-4deg)" viewBox="0 0 76 82" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M14 4C30 0 50 0 64 3c8 2 11 7 11 15 0 16-1 33-4 48-2 9-7 13-16 14-14 2-30 2-44-1C4 77 1 72 1 64 1 47 1 31 3 17 4 9 7 5 14 4zM22 17c-6 0-9 3-9 9 0 10 0 20 1 30 1 6 4 9 10 9 10 0 21 0 31-1 5-1 7-4 8-9 1-10 1-20 1-30-1-5-3-8-9-8-11 0-22 0-33 0z"/></svg>
+    <p class="lgt">YOUR COMPANY<br>LOGO HERE</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <h1 class="ttl">Executive Summary</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text.</p>
+    <div class="box"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p><div class="pr pr1"><div class="lb"><span>Edit Text Here</span><span><bdi dir="ltr">80%</bdi></span></div><div class="tr"><div class="fl" style="width:74.5%"></div></div></div><div class="pr pr2"><div class="lb"><span>Edit Text Here</span><span><bdi dir="ltr">90%</bdi></span></div><div class="tr"><div class="fl" style="width:89.5%"></div></div></div></div>
+    <img class="ph ph1" src="/templates/freeform/sl-consulting-case-study/assets/exec-1.jpg" alt="Two colleagues reviewing data on a tablet in an office">
+    <img class="ph ph2" src="/templates/freeform/sl-consulting-case-study/assets/exec-2.jpg" alt="Three executives standing by a window overlooking the city">
+    <div class="card k1"><p class="num">+78%</p><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="card k2"><p class="num"><bdi dir="ltr">42%</bdi></p><p class="t">Edit Text Here</p><div class="row"><span class="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M6 15l4-5 3 3 5-6"/></svg></span><b>+$514K</b></div></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <h1 class="ttl">Client Background</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p>
+    <div class="card c1"><img src="/templates/freeform/sl-consulting-case-study/assets/client.jpg" alt="Portrait of a businessman"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. You can add sample text. Insert your text here.</p></div>
+    <div class="card cx cx2 vio w"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M15.5 15.5L22 22"/><path d="M5 10.5h2.2l1.3-3 2 6 1.4-3h2.3"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div>
+    <div class="card cx cx3 org w"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2.5" width="18" height="19" rx="1.5"/><path d="M5 2.5v19"/><path d="M8 6.5l2.5 2.5M10.5 6.5L8 9"/><path d="M13.5 15.5l2.5 2.5M16 15.5l-2.5 2.5"/><circle cx="9.3" cy="16.8" r="1.6"/><path d="M14 10.5c1.5-.5 2.5-2 2.5-3.7M15 6l1.5.6.6-1.6"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <h1 class="ttl">Business Challenge</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p>
+    <div class="li l1"><span class="n"><bdi dir="ltr">01.</bdi></span><div><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div></div>
+    <div class="li l2"><span class="n"><bdi dir="ltr">02.</bdi></span><div><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div></div>
+    <div class="li l3"><span class="n"><bdi dir="ltr">03.</bdi></span><div><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div></div>
+    <div class="st st1"><p class="big"><bdi dir="ltr">65%</bdi></p><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div>
+    <span class="hr"></span>
+    <div class="st st2"><p class="big"><bdi dir="ltr">+75K</bdi></p><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <h1 class="ttl">Root Cause Analysis</h1>
+    <svg class="wires" viewBox="0 0 360 360" fill="none" aria-hidden="true"><g stroke="#C8C8C8" stroke-width="1.2"><path d="M11 9H70L120 89"/><path d="M11 127H75L97 142"/><path d="M11 239H70L97 218"/><path d="M11 345H70L131 257"/><path d="M235 63A110 110 0 0 0 235 283"/><path d="M236 51V63M236 283V295"/><path d="M236 51A122 122 0 0 1 345 108M345 238A122 122 0 0 1 236 295"/></g><circle cx="120" cy="89" r="7" fill="#6366F1"/><circle cx="97" cy="142" r="7" fill="#5054EA"/><circle cx="97" cy="218" r="7" fill="#EE7D31"/><circle cx="131" cy="257" r="7" fill="#33997A"/></svg>
+    <div class="rb r1"><h2 class="h">Edit Text Here</h2><div class="pill">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.<span class="cc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.5" r="5"/><path d="M2.5 22c0-5.3 4.2-8.5 9.5-8.5s9.5 3.2 9.5 8.5z"/></svg></span></div></div>
+    <div class="rb r2"><h2 class="h">Edit Text Here</h2><div class="pill">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.<span class="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M15.2 15.2L22 22"/></svg></span></div></div>
+    <div class="rb r3"><h2 class="h">Edit Text Here</h2><div class="pill">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.<span class="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2.5" width="18" height="19" rx="1.5"/><path d="M5 2.5v19"/><path d="M8 6.5l2.5 2.5M10.5 6.5L8 9"/><path d="M13.5 15.5l2.5 2.5M16 15.5l-2.5 2.5"/><circle cx="9.3" cy="16.8" r="1.6"/><path d="M14 10.5c1.5-.5 2.5-2 2.5-3.7M15 6l1.5.6.6-1.6"/></svg></span></div></div>
+    <div class="rb r4"><h2 class="h">Edit Text Here</h2><div class="pill">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here.<span class="cc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21c-1-6 1.5-14 15-18 1 9-3 17-12 17"/><path d="M5 21C8 15 11 11 16 7"/></svg></span></div></div>
+    <div class="cir ci1"><h2 class="h">Add Text</h2><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="cir ci2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M15.5 15.5L22 22"/><path d="M5 10.5h2.2l1.3-3 2 6 1.4-3h2.3"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your text here. You can add text.</p></div>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <h1 class="ttl">Project Objectives</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p>
+    <div class="card ob o1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M15.5 15.5L22 22"/><path d="M5 10.5h2.2l1.3-3 2 6 1.4-3h2.3"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p></div>
+    <div class="card ob o2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2.5" width="18" height="19" rx="1.5"/><path d="M5 2.5v19"/><path d="M8 6.5l2.5 2.5M10.5 6.5L8 9"/><path d="M13.5 15.5l2.5 2.5M16 15.5l-2.5 2.5"/><circle cx="9.3" cy="16.8" r="1.6"/><path d="M14 10.5c1.5-.5 2.5-2 2.5-3.7M15 6l1.5.6.6-1.6"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p></div>
+    <div class="card ob o3 vio w"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.5 2.5c-5.5-.3-10 2.2-13 7.3L5 10l-3 3.5 4.2.6 3.7 3.7.6 4.2 3.5-3-.3-3.5c5.1-3 7.6-7.5 7.3-13zM15.5 10.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/><path d="M5.5 16.5c-1.8.4-2.7 2-3 5 3-.3 4.6-1.2 5-3z"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p></div>
+    <div class="card ob o4"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 2.5h1.6v17.9H21.5V22H3z"/><rect x="7" y="9" width="2.6" height="9.5"/><rect x="11" y="5" width="2.6" height="13.5"/><rect x="15" y="11" width="2.6" height="7.5"/><rect x="19" y="13" width="2.4" height="5.5"/></svg></span><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p></div>
+    <span class="tl"></span><span class="dt" style="inset-inline-start:209px"></span><span class="dt" style="inset-inline-start:490px"></span><span class="dt v" style="inset-inline-start:772px"></span><span class="dt" style="inset-inline-start:1053px"></span>
+    <p class="lb h" style="inset-inline-start:94px">Edit Text Here</p>
+    <p class="lb h" style="inset-inline-start:375px">Edit Text Here</p>
+    <p class="lb h" style="inset-inline-start:657px">Edit Text Here</p>
+    <p class="lb h" style="inset-inline-start:938px">Edit Text Here</p>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <h1 class="ttl">Consulting Methodology</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p>
+    <p class="tp vio" style="inset-inline-start:89px">Edit Text Here</p>
+    <p class="tp org" style="inset-inline-start:374px">Edit Text Here</p>
+    <p class="tp vio" style="inset-inline-start:659px">Edit Text Here</p>
+    <p class="tp org" style="inset-inline-start:944px">Edit Text Here</p>
+    <svg class="ar" viewBox="205 360 880 20" aria-hidden="true"><path d="M210 370H1072" stroke="#262626" stroke-width="1.5"/><polygon points="208,361 226,370 208,379" fill="#262626"/><polygon points="493,361 511,370 493,379" fill="#262626"/><polygon points="779,361 797,370 779,379" fill="#262626"/><polygon points="1063,361 1081,370 1063,379" fill="#262626"/></svg>
+    <div class="mc k1 vio"><span class="cc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.5 2.5L1.5 11l6.3 2.6L19 5.5 9.6 15v6.5l3.6-4.4 4.6 2.4z"/></svg></span><p class="t">This is a sample text. Insert your desired text here. You can add text.</p><hr><span class="btn">Add Text<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg></i></span></div>
+    <div class="mc k2 org"><span class="cc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.2L13.5 2l7.5 4.3-10.5 4.4z"/><path d="M3 7.6l7.5 4.4V22L3 17.6z"/><path d="M21 7.7v9.8L11.8 22V12z" opacity=".85"/></svg></span><p class="t">This is a sample text. Insert your desired text here. You can add text.</p><hr><span class="btn">Add Text<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg></i></span></div>
+    <div class="mc k3 vio"><span class="cc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 8.5l8.5-3.3L23 9.5l-8.6 3.5z"/><path d="M12 8.5L3.5 5.2 1 9.5l8.6 3.5z"/><path d="M3.3 11.6l6.6 2.7L12 11l2.1 3.3 6.6-2.7v6.3L12 22l-8.7-4.1z"/><path d="M12 8.5l-8.5-3.3L12 2l8.5 3.2z" opacity=".7"/></svg></span><p class="t">This is a sample text. Insert your desired text here. You can add text.</p><hr><span class="btn">Add Text<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg></i></span></div>
+    <div class="mc k4 org"><span class="cc"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 10.5h4.8L16 22H8z"/><path d="M12 9.8L4 1.8 2.5 3.3 10.5 11.3zM12 9.8l8-8 1.5 1.5-8 8zM12 9.8l-8 8 1.5 1.5 8-8zM12 9.8l8 8-1.5 1.5-8-8z"/><rect x="10.8" y="16.5" width="2.4" height="5.5" fill="#fff"/></svg></span><p class="t">This is a sample text. Insert your desired text here. You can add text.</p><hr><span class="btn">Add Text<i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg></i></span></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <h1 class="ttl">Work Plan<br>&amp; Timeline</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text.</p>
+    <img class="ph " src="/templates/freeform/sl-consulting-case-study/assets/workplan.jpg" alt="Team reviewing a calendar and charts on a meeting table">
+    <svg class="zz" viewBox="680 0 600 720" fill="none" aria-hidden="true"><path d="M901 0V201L849 318L901 433L849 550V720" stroke="#262626" stroke-width="2"/><path d="M794 201H901M794 433H901" stroke="#5054EA" stroke-width="6"/><path d="M849 318H961M849 550H961" stroke="#EE7D31" stroke-width="6"/><circle cx="901" cy="201" r="9" fill="#5054EA"/><circle cx="901" cy="433" r="9" fill="#5054EA"/><circle cx="849" cy="318" r="9" fill="#EE7D31"/><circle cx="849" cy="550" r="9" fill="#EE7D31"/></svg>
+    <span class="nd v n1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5V3.5A1.5 1.5 0 0 1 10 2h4a1.5 1.5 0 0 1 1.5 1.5V5H21a1.5 1.5 0 0 1 1.5 1.5V11h-21V6.5A1.5 1.5 0 0 1 3 5zm1.8 0h3.4V3.8h-3.4z"/><path d="M1.5 12.5h8.7v1.8h3.6v-1.8h8.7v7A1.5 1.5 0 0 1 21 21H3a1.5 1.5 0 0 1-1.5-1.5z"/></svg></span><span class="nd o n2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="2.5" y="4" width="19" height="17.5" rx="1"/><path d="M2.5 9.5h19M7 2v4M17 2v4"/></svg></span><span class="nd v n3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h5.2l2 2.2h7.8a1.5 1.5 0 0 1 1.5 1.5V9H6.3a2 2 0 0 0-1.9 1.4L2 17.4z"/><path d="M4.8 10.5h18.2l-2.9 9.5H2z"/></svg></span><span class="nd o n4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="19" rx="1"/><path d="M9 2h6v3.5H9z" fill="currentColor"/></svg></span>
+    <p class="at a1">Add Text</p>
+    <p class="at a2">Add Text</p>
+    <p class="at a3">Add Text</p>
+    <p class="at a4">Add Text</p>
+    <div class="tx x1"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="tx x2"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="tx x3"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="tx x4"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your text here.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <h1 class="ttl">Data Analysis<br>&amp; Insights</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your text here.</p>
+    <span class="sq q1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 5.5c3.6-.8 7.2-.3 10.2 1.6v14C8.2 19.3 4.6 18.8 1 19.6z"/><path d="M23 5.5c-3.6-.8-7.2-.3-10.2 1.6v14c3-1.8 6.6-2.3 10.2-1.5z"/><path d="M2.6 9h6.7M2.6 12h6.7M2.6 15h6.7M14.7 9h6.7M14.7 12h6.7M14.7 15h6.7" stroke="currentColor" stroke-width="0" /></svg></span><span class="sq q2"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5.5a6 6 0 0 0-3.6 10.8V18h7.2v-1.7A6 6 0 0 0 12 5.5zm-1.2 7l1.2 1.3 1.2-1.3V17h-2.4z" fill-rule="evenodd"/><path d="M8.6 19.3h6.8v1.3a1.5 1.5 0 0 1-1.5 1.5H10a1.5 1.5 0 0 1-1.4-1.5z"/><path d="M11.2 0h1.6v3.2h-1.6zM3.4 3.8l1.1-1.1 2.3 2.2-1.2 1.2zM20.6 3.8l-1.1-1.1-2.3 2.2 1.2 1.2zM0 10.8h3.2v1.6H0zM20.8 10.8H24v1.6h-3.2z"/></svg></span><span class="sq q3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><ellipse cx="12" cy="12" rx="11" ry="4.3"/><ellipse cx="12" cy="12" rx="11" ry="4.3" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="11" ry="4.3" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg></span>
+    <div class="sv v1"><b><bdi dir="ltr">+8M</bdi></b><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="sv v2"><b><bdi dir="ltr">+107B</bdi></b><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="sv v3"><b><bdi dir="ltr">+107B</bdi></b><p class="t">This is a sample text. Insert your text here.</p></div>
+    <div class="cb cb1 vio"><h3>Edit Text Here</h3><p><bdi dir="ltr">42.7K</bdi></p><svg id="chart-1" viewBox="0 0 522 150" aria-hidden="true"></svg></div>
+    <div class="cb cb2 org"><h3>Edit Text Here</h3><p><bdi dir="ltr">65.7K</bdi></p><svg id="chart-2" viewBox="0 0 522 150" aria-hidden="true"></svg></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <h1 class="ttl">Proposed<br>Solution</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here.</p>
+    <div class="ck c1"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12.5l6 6L21 6"/></svg></i><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="ck c2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12.5l6 6L21 6"/></svg></i><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="ck c3"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12.5l6 6L21 6"/></svg></i><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="sc sc1"><span class="n"><bdi dir="ltr">01</bdi></span><div><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div></div>
+    <img class="ph p1" src="/templates/freeform/sl-consulting-case-study/assets/solution-1.jpg" alt="Businessman explaining an idea on a whiteboard to colleagues">
+    <img class="ph p2" src="/templates/freeform/sl-consulting-case-study/assets/solution-2.jpg" alt="Team closely watching a laptop screen">
+    <div class="sc sc2"><span class="n"><bdi dir="ltr">02</bdi></span><div><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div></div>
+    <div class="sc sc3"><span class="n"><bdi dir="ltr">03</bdi></span><div><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <h1 class="ttl">Implementation<br>Overview</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your text here.</p>
+    <img class="ph " src="/templates/freeform/sl-consulting-case-study/assets/implementation.jpg" alt="Three colleagues walking and talking in an office corridor">
+    <div class="ic3 i1 vio w"><p class="n"><bdi dir="ltr">01.</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. This is a sample text.</p></div>
+    <div class="ic3 i2 org w"><p class="n"><bdi dir="ltr">02.</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. This is a sample text.</p></div>
+    <div class="ic3 i3 vio w"><p class="n"><bdi dir="ltr">03.</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text. Insert your text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <h1 class="ttl">Impact &amp; Results</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p>
+    <div class="ib ib1 vio w"><img src="/templates/freeform/sl-consulting-case-study/assets/impact-1.jpg" alt="Employee analyzing a dashboard on a laptop"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text.</p></div>
+    <div class="ib ib2 org w"><img src="/templates/freeform/sl-consulting-case-study/assets/impact-2.jpg" alt="Team reviewing a calendar and charts on a table"><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add sample text.</p></div>
+    <div class="st st1"><p class="big"><bdi dir="ltr">65%</bdi></p><p class="t">This is a sample text. Insert your desired text here. You can add sample text.</p></div>
+    <span class="hr"></span>
+    <div class="st st2"><p class="big"><bdi dir="ltr">+75K</bdi></p><p class="t">This is a sample text. Insert your desired text here. You can add sample text.</p></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <h1 class="ttl">Client Testimonial</h1>
+    <div class="tc tc1 vio"><img src="/templates/freeform/sl-consulting-case-study/assets/testimonial-1.jpg" alt="Portrait of a client"><p class="q">This is a sample text. Insert your desired text here. You can add text.</p><hr><h2 class="h">Edit Text Here</h2><span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5M8 5h11v11"/></svg></span></div>
+    <div class="tc tc2 org"><img src="/templates/freeform/sl-consulting-case-study/assets/testimonial-2.jpg" alt="Portrait of a client"><p class="q">This is a sample text. Insert your desired text here. You can add text.</p><hr><h2 class="h">Edit Text Here</h2><span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5M8 5h11v11"/></svg></span></div>
+    <div class="tc tc3 org"><img src="/templates/freeform/sl-consulting-case-study/assets/testimonial-3.jpg" alt="Portrait of a client"><p class="q">This is a sample text. Insert your desired text here. You can add text.</p><hr><h2 class="h">Edit Text Here</h2><span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5M8 5h11v11"/></svg></span></div>
+    <div class="tc tc4 vio"><img src="/templates/freeform/sl-consulting-case-study/assets/testimonial-4.jpg" alt="Portrait of a client"><p class="q">This is a sample text. Insert your desired text here. You can add text.</p><hr><h2 class="h">Edit Text Here</h2><span class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5M8 5h11v11"/></svg></span></div>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <img class="ph " src="/templates/freeform/sl-consulting-case-study/assets/next-steps.jpg" alt="Employee working on a dashboard on a laptop">
+    <h1 class="ttl">Next Steps</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here. This is a sample text. Insert your desired text here. You can add sample text. Insert your sample text here.</p>
+    <div class="card ns ns1 w"><p class="n"><bdi dir="ltr">01</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div>
+    <div class="card ns ns2"><p class="n"><bdi dir="ltr">02</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div>
+    <div class="card ns ns3"><p class="n"><bdi dir="ltr">03</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div>
+    <div class="card ns ns4"><p class="n"><bdi dir="ltr">04</bdi></p><h2 class="h">Edit Text Here</h2><p class="t">This is a sample text. Insert your desired text here. You can add text.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 14</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["01", "02", "03", "04", "05"], "series": [{"start": 30, "values": [43, 82, 35, 51, 57], "end": 54}, {"start": 30, "values": [43, 82, 35, 51, 57], "end": 54}]}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // رسم منحنيَي شريحة تحليل البيانات من chart-data، والفئة الأولى في جهة البداية
+  (function () {
+    var d = JSON.parse(document.getElementById('chart-data').textContent), NS = 'http://www.w3.org/2000/svg';
+    function el(t, a) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); return e; }
+    d.series.forEach(function (s, si) {
+      var svg = document.getElementById('chart-' + (si + 1)); if (!svg) return;
+      var n = d.labels.length, x0 = 72, gap = 92, top = 14, h = 89;   // إحداثيات محلية داخل الرسم (أعلاه = 120px من البطاقة)
+      function X(i) { var x = x0 + i * gap; return RTL ? 522 - x : x; }
+      function Y(v) { return top + h - v / 100 * h; }
+      d.labels.forEach(function (lb, i) {
+        svg.appendChild(el('rect', { x: X(i) - 23, y: top, width: 46, height: h, rx: 4, fill: '#fff', 'fill-opacity': .2 }));
+        var t = el('text', { x: X(i), y: top + h + 35, 'text-anchor': 'middle' }); t.textContent = lb; svg.appendChild(t);
+      });
+      var pts = [[RTL ? 522 - 17 : 17, Y(s.start)]];
+      s.values.forEach(function (v, i) { pts.push([X(i), Y(v)]); });
+      pts.push([RTL ? 522 - 496 : 496, Y(s.end)]);
+      var p = 'M' + pts[0][0] + ',' + pts[0][1];
+      for (var i = 0; i < pts.length - 1; i++) {   // منحنى Catmull-Rom ناعم
+        var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+        p += ' C' + (p1[0] + (p2[0] - p0[0]) / 6) + ',' + (p1[1] + (p2[1] - p0[1]) / 6) + ' ' + (p2[0] - (p3[0] - p1[0]) / 6) + ',' + (p2[1] - (p3[1] - p1[1]) / 6) + ' ' + p2[0] + ',' + p2[1];
+      }
+      svg.appendChild(el('path', { d: p, fill: 'none', stroke: '#fff', 'stroke-width': 3.5, 'stroke-linecap': 'round' }));
+    });
+  })();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

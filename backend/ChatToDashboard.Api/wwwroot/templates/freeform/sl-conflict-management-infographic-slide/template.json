@@ -1,0 +1,17 @@
+{
+  "key": "sl-conflict-management-infographic-slide",
+  "kind": "slides",
+  "category": "hr",
+  "icon": "⚖️",
+  "name": "إنفوجرافيك إدارة النزاعات",
+  "nameEn": "Conflict Management Infographic",
+  "description": "شريحة واحدة بأربعة أساليب لإدارة النزاع حول مشهد خلاف، وشريط نص وثلاثة عناصر سفلية",
+  "descriptionEn": "One slide with four conflict-management styles around a dispute scene, a text band and three items",
+  "sections": [
+    {
+      "title": "أساليب إدارة النزاعات",
+      "titleEn": "Conflict Management Styles"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمشهد الأوسط وغيّر النصوص فقط؛ تبقى البطاقات الأربع بألوانها وأسهمها والعناصر الثلاثة السفلية بعددها."
+}

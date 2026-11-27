@@ -1,0 +1,73 @@
+{
+  "key": "sl-consulting-case-study",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "💼",
+  "name": "دراسة حالة استشارية",
+  "nameEn": "Consulting Case Study",
+  "description": "14 شريحة لدراسة حالة: الملخص، العميل، التحدي، السبب الجذري، الأهداف، المنهجية، الخطة، البيانات، الحل، الأثر",
+  "descriptionEn": "14 case-study slides: summary, client, challenge, root cause, objectives, method, plan, data, solution, impact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "خلفية العميل",
+      "titleEn": "Client Background"
+    },
+    {
+      "title": "تحدي الأعمال",
+      "titleEn": "Business Challenge",
+      "needsData": true
+    },
+    {
+      "title": "تحليل السبب الجذري",
+      "titleEn": "Root Cause Analysis"
+    },
+    {
+      "title": "أهداف المشروع",
+      "titleEn": "Project Objectives"
+    },
+    {
+      "title": "منهجية الاستشارة",
+      "titleEn": "Consulting Methodology"
+    },
+    {
+      "title": "خطة العمل والجدول الزمني",
+      "titleEn": "Work Plan & Timeline"
+    },
+    {
+      "title": "تحليل البيانات والرؤى",
+      "titleEn": "Data Analysis & Insights",
+      "needsData": true
+    },
+    {
+      "title": "الحل المقترح",
+      "titleEn": "Proposed Solution"
+    },
+    {
+      "title": "نظرة عامة على التنفيذ",
+      "titleEn": "Implementation Overview"
+    },
+    {
+      "title": "الأثر والنتائج",
+      "titleEn": "Impact & Results",
+      "needsData": true
+    },
+    {
+      "title": "آراء العملاء",
+      "titleEn": "Client Testimonial"
+    },
+    {
+      "title": "الخطوات التالية",
+      "titleEn": "Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ منحنيا شريحة تحليل البيانات يُرسمان من كتلة chart-data (labels وقيم series من 0 إلى 100)."
+}

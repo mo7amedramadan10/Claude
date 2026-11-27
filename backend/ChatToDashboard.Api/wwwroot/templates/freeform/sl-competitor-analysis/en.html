@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Competitor Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تحليل المنافسين»: كحلي وبرتقالي، دوائر زخرفية بتدرّج برتقالي-وردي في الزوايا مع خطوط رفيعة، عناوين بلونين وخط فاصل، بطاقات رمادية بزوايا مدوّرة، جدول المشهد التنافسي، خريطة عالم SVG، وصور مقصوصة من الأصل. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #262626; --ink-2: #333333; --accent: #E28E52; --bg: #FFFFFF; --navy: #394F80; --orange: #E28E52; --dark: #182E5D; --gray: #F2F2F2; --rule: #D8D8D8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .frame h1, .frame h2, .frame h3, .frame p, .frame ul { margin: 0; padding: 0; }
+  .frame ul { list-style: none; }
+  .frame.s1, .frame.s3, .frame.s13 { background: var(--dark); color: #fff; }
+  .deco { position: absolute; inset: 0; width: 1280px; height: 720px; pointer-events: none; }
+  html[dir="rtl"] .deco { transform: scaleX(-1); }
+  /* عنوان الشرائح الفاتحة بلونين + خط فاصل */
+  .ttl { position: absolute; top: 38px; inset-inline-start: 64px; font-size: 46px; font-weight: 700; line-height: 1.3; color: var(--navy); letter-spacing: -0.4px; white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; top: 34px; }
+  .ttl .o { color: var(--orange); }
+  .rule { position: absolute; top: 115px; inset-inline-start: 64px; width: 1152px; height: 1px; background: var(--rule); }
+  .t { font-size: 17.8px; line-height: 23px; color: var(--ink-2); }
+  html[lang="ar"] .t { line-height: 26px; }
+  .h { font-size: 23px; font-weight: 700; line-height: 29px; color: var(--ink); }
+  .box { position: absolute; background: var(--gray); border-radius: 22px; }
+  .ph { position: absolute; display: block; object-fit: cover; }
+  .ok { flex: none; width: 25px; height: 25px; border-radius: 50%; background: var(--orange); color: #fff; display: grid; place-items: center; }
+  .ok svg { width: 14px; height: 14px; }
+  .okn { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; margin-top: 4px; }
+  .okn svg { width: 9px; height: 9px; }
+  .lst li { display: flex; gap: 18px; align-items: flex-start; }
+  .lst li .ok { margin-top: 0; }
+  /* 1 الغلاف */
+  .s1 .cv { position: absolute; top: 70px; inset-inline-start: 64px; font-size: 70px; font-weight: 700; line-height: 85px; color: #fff; text-transform: uppercase; letter-spacing: -0.3px; }
+  html[lang="ar"] .s1 .cv { font-weight: 800; line-height: 96px; top: 60px; }
+  .s1 .sub { position: absolute; top: 249px; inset-inline-start: 65px; font-size: 26.5px; color: #fff; }
+  .s1 .logo { position: absolute; top: 610px; inset-inline-start: 64px; display: flex; align-items: center; gap: 10px; color: #fff; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+  .s1 .logo svg { width: 40px; height: 46px; }
+  /* 2 نظرة عامة */
+  .s2 .t3 { position: absolute; top: 58px; inset-inline-start: 67px; font-size: 45px; font-weight: 700; line-height: 52px; color: var(--orange); letter-spacing: -0.4px; }
+  html[lang="ar"] .s2 .t3 { font-weight: 800; line-height: 58px; top: 52px; }
+  .s2 .t3 .n { color: var(--navy); }
+  .s2 .lead { position: absolute; top: 237px; inset-inline-start: 68px; width: 380px; font-size: 20px; line-height: 25.5px; }
+  .s2 .pn { top: 368px; inset-inline-start: 68px; width: 389px; height: 290px; border-radius: 30px; }
+  .s2 .pn ul { position: absolute; top: 41px; inset-inline-start: 29px; }
+  .s2 .pn li { height: 82px; gap: 25px; } .s2 .pn li .ok { width: 30px; height: 30px; margin-top: 6px; } .s2 .pn li .ok svg { width: 16px; height: 16px; }
+  .s2 .pn .t { width: 262px; font-size: 20px; line-height: 25px; }
+  .s2 .cn { position: absolute; top: 61px; inset-inline-start: 496px; width: 341px; height: 598px; border-radius: 40px; background: var(--navy); overflow: hidden; }
+  .s2 .cn .t { position: absolute; top: 64px; inset-inline: 70px; text-align: center; color: #fff; font-size: 20px; line-height: 25.5px; }
+  .s2 .cn img { position: absolute; top: 220px; inset-inline-start: 0; width: 341px; height: 378px; border-radius: 40px 40px 0 0; object-fit: cover; object-position: 50% 0%; }
+  .s2 .co { position: absolute; top: 61px; inset-inline-start: 876px; width: 340px; height: 598px; border-radius: 40px; background: var(--orange); overflow: hidden; }
+  .s2 .co img { position: absolute; top: 0; inset-inline-start: 0; width: 340px; height: 377px; border-radius: 0 0 40px 40px; object-fit: cover; }
+  .s2 .co .t { position: absolute; top: 441px; inset-inline: 70px; text-align: center; color: #fff; font-size: 20px; line-height: 25.5px; }
+  /* 3 جدول الأعمال */
+  .s3 .t3 { position: absolute; top: 50px; inset-inline-start: 67px; font-size: 45px; font-weight: 700; line-height: 58px; color: #fff; letter-spacing: -0.4px; }
+  html[lang="ar"] .s3 .t3 { font-weight: 800; }
+  .s3 .lead { position: absolute; top: 201px; inset-inline-start: 68px; width: 380px; font-size: 20px; line-height: 25.5px; color: #fff; }
+  .s3 .ag { position: absolute; width: 333px; height: 98px; border-radius: 14px; background: #384D82; display: flex; align-items: center; padding-inline-start: 19px; gap: 16px; }
+  .s3 .ag b { font-size: 45px; font-weight: 300; line-height: 1; color: #fff; width: 52px; flex: none; }
+  .s3 .ag span { font-size: 22.5px; font-weight: 700; line-height: 29px; color: #fff; }
+  html[lang="ar"] .s3 .ag span { font-size: 23px; }
+  /* 4 الملخص */
+  .s4 .big { position: absolute; top: 180px; width: 356px; text-align: center; font-size: 92px; font-weight: 700; line-height: 1; color: var(--orange); letter-spacing: -1px; }
+  .s4 .sm { top: 291px; width: 356px; height: 128px; border-radius: 16px; display: grid; place-items: center; text-align: center; padding: 0 40px; }
+  .s4 .sm .t, .s4 .pi .t { font-size: 20px; line-height: 25px; }
+  .s4 .pi { top: 458px; inset-inline-start: 64px; width: 1152px; height: 178px; text-align: center; padding: 30px 150px 0; }
+  .s4 .pi h2 { font-size: 30px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+  .s4 .pi .t { margin-top: 16px; }
+  /* 5 المشهد السوقي */
+  .s5 .tl { top: 151px; inset-inline-start: 68px; width: 389px; height: 514px; padding: 33px 30px 0 35px; padding-inline: 35px 30px; }
+  .s5 .tl .h { font-size: 25.5px; } .s5 .tl .t { margin-top: 18px; font-size: 18.5px; line-height: 22.5px; width: 325px; }
+  html[lang="ar"] .s5 .tl .t { line-height: 26px; }
+  .s5 .map { position: absolute; top: 440px; inset-inline-start: 95px; width: 337px; height: 172px; }
+  .s5 .tr { inset-inline-start: 544px; width: 672px; height: 156px; padding: 26px 30px 0 87px; padding-inline: 87px 30px; }
+  .s5 .tr .h { font-size: 25.5px; line-height: 34px; } .s5 .tr .t { margin-top: 12px; font-size: 18.5px; line-height: 22.5px; width: 492px; }
+  .s5 .r1 { top: 151px; } .s5 .r2 { top: 330px; } .s5 .r3 { top: 508px; }
+  .s5 .ci { position: absolute; width: 98px; height: 98px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; inset-inline-start: 495px; }
+  .s5 .ci svg { width: 46px; height: 46px; }
+  /* 6 احتياجات العملاء */
+  .s6 .col { position: absolute; top: 165px; width: 268px; height: 459px; border-radius: 30px; overflow: hidden; }
+  .s6 .col.nv { background: var(--navy); } .s6 .col.or { background: var(--orange); }
+  .s6 .col .g { position: absolute; inset-inline: 0; background: var(--gray); border-radius: 30px; text-align: center; padding: 37px 26px 0; }
+  .s6 .col.nv .g { top: 182px; bottom: 0; } .s6 .col.or .g { top: 0; height: 276px; }
+  .s6 .col .t { margin-top: 13px; font-size: 18px; line-height: 22.5px; }
+  .s6 .col .ic { position: absolute; inset-inline-start: 0; width: 268px; display: grid; place-items: center; color: #fff; }
+  .s6 .col.nv .ic { top: 50px; height: 100px; } .s6 .col.or .ic { top: 320px; height: 100px; }
+  .s6 .col .ic svg { width: 92px; height: 92px; }
+  /* 7 المشهد التنافسي */
+  .s7 table { position: absolute; top: 138px; inset-inline-start: 65px; width: 1151px; border-collapse: collapse; table-layout: fixed; font-size: 17.8px; color: var(--ink-2); }
+  .s7 th { height: 67px; padding: 0 10px; text-align: start; font-weight: 400; color: #fff; line-height: 23px; background: var(--orange); border: 1px solid #fff; }
+  .s7 th.nv { background: var(--navy); }
+  .s7 td { height: 55.5px; padding: 0 10px; border: 1px solid #ECECEC; line-height: 23px; }
+  .s7 td.c { text-align: center; color: var(--orange); }
+  .s7 td.c svg { width: 30px; height: 30px; display: inline-block; vertical-align: middle; }
+  .s7 .nt { position: absolute; top: 518px; width: 552px; }
+  .s7 .nt .h { font-size: 25px; line-height: 36px; } .s7 .nt .t { margin-top: 14px; font-size: 18.5px; }
+  /* 8 ملفات المنافسين */
+  .s8 .st { top: 137px; width: 356px; height: 142px; border-radius: 18px; display: flex; align-items: center; gap: 30px; padding-inline-start: 31px; }
+  .s8 .st .ic { width: 84px; height: 84px; color: var(--navy); flex: none; display: grid; place-items: center; }
+  .s8 .st .ic svg { width: 100%; height: 100%; }
+  .s8 .st b { display: block; font-size: 43px; font-weight: 700; line-height: 1.1; color: var(--navy); }
+  .s8 .st .t { margin-top: 6px; width: 165px; }
+  .s8 .hd { position: absolute; top: 315px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .s8 .hd1 { inset-inline-start: 64px; width: 264px; } .s8 .hd2 { inset-inline-start: 366px; width: 454px; }
+  .s8 .l1 { position: absolute; top: 422px; inset-inline-start: 64px; }
+  .s8 .l1 li { height: 66.5px; } .s8 .l1 .t { width: 190px; }
+  .s8 .sw { top: 408px; width: 219px; height: 246px; border-radius: 16px; padding: 16px 17px 0 18px; padding-inline: 18px 17px; }
+  .s8 .sw h3 { font-size: 20px; font-weight: 700; color: var(--ink); padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  .s8 .sw ul { margin-top: 12px; } .s8 .sw li { display: flex; gap: 12px; height: 50.5px; }
+  .s8 .sw .t { font-size: 15.8px; line-height: 19px; width: 150px; }
+  html[lang="ar"] .s8 .sw .t { line-height: 22px; }
+  .s8 .ca { top: 300px; inset-inline-start: 860px; width: 356px; height: 354px; border-radius: 18px; padding: 25px 20px 0 29px; padding-inline: 29px 20px; }
+  .s8 .ca ul { margin-top: 26px; } .s8 .ca li { height: 76px; } .s8 .ca .t { width: 260px; }
+  /* 9 مقارنة القيمة */
+  .s9 .rule { width: 1037px; }
+  .s9 .vc { top: 156px; width: 357px; height: 500px; padding: 0 33px 0 36px; padding-inline: 36px 33px; }
+  .s9 .vc .hh { height: 102px; display: flex; align-items: flex-end; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+  .s9 .vc .h { font-size: 26px; line-height: 31px; }
+  .s9 .vc .p { margin-top: 18px; width: 285px; }
+  .s9 .vc ul { margin-top: 32px; } .s9 .vc li { height: 68px; } .s9 .vc li .t { width: 170px; }
+  .s9 .qt { position: absolute; top: 156px; inset-inline-start: 847px; width: 369px; height: 500px; border-radius: 22px; background: var(--navy); color: #fff; padding: 36px 30px 0 37px; padding-inline: 37px 30px; }
+  .s9 .qt .q { width: 40px; height: 32px; color: #fff; display: block; }
+  html[dir="rtl"] .s9 .qt .q { transform: scaleX(-1); }
+  .s9 .qt .t { color: #fff; margin-top: 18px; width: 280px; }
+  .s9 .qt .t + .t { margin-top: 21px; }
+  .s9 .qt .nm { position: absolute; top: 431px; inset-inline-start: 37px; display: flex; align-items: center; gap: 24px; font-size: 19.5px; }
+  .s9 .qt .nm i { width: 87px; height: 1px; background: #fff; display: block; }
+  /* 10 القوة والضعف */
+  .s10 .ch { position: absolute; top: 137px; height: 58px; display: flex; align-items: flex-end; }
+  .s10 .rw { inset-inline-start: 64px; width: 1152px; height: 216px; }
+  .s10 .rw1 { top: 211px; } .s10 .rw2 { top: 440px; }
+  .s10 .rw .nm { position: absolute; top: 28px; inset-inline-start: 25px; font-size: 20px; color: var(--ink-2); word-spacing: 4px; }
+  .s10 .rw .sep { position: absolute; top: 13px; bottom: 13px; border-inline-start: 1px solid #CFCFCF; }
+  .s10 .rw ul { position: absolute; top: 29px; }
+  .s10 .rw li { display: flex; gap: 12px; height: 57.5px; } .s10 .rw li .t { width: 290px; }
+  /* 11 الفرص والفجوات */
+  .s11 .pn { position: absolute; top: 156px; inset-inline-start: 64px; width: 787px; height: 480px; border-radius: 22px; background: var(--navy); overflow: hidden; }
+  .s11 .pn img { position: absolute; top: 0; inset-inline-start: 0; width: 356px; height: 480px; object-fit: cover; }
+  .s11 .pn h2 { position: absolute; top: 44px; inset-inline-start: 397px; font-size: 30px; font-weight: 700; color: #fff; }
+  .s11 .pn .t { position: absolute; top: 112px; inset-inline-start: 397px; width: 325px; color: #fff; font-size: 19.5px; line-height: 25.5px; }
+  html[lang="ar"] .s11 .pn .t { line-height: 29px; }
+  .s11 .pn .t2 { top: 240px; }
+  .s11 .mo { position: absolute; top: 173px; inset-inline-start: 898px; }
+  .s11 .mo ul { margin-top: 36px; } .s11 .mo li { height: 77px; } .s11 .mo .t { width: 250px; }
+  /* 12 الآثار الاستراتيجية */
+  .s12 .ttl .n { color: #1E2F5D; }
+  .s12 .bar { top: 141px; inset-inline-start: 64px; width: 1138px; height: 141px; }
+  .s12 .sq { position: absolute; top: 139px; inset-inline-start: 64px; width: 153px; height: 142px; border-radius: 18px; background: var(--navy); color: #fff; display: grid; place-items: center; }
+  .s12 .sq svg { width: 72px; height: 66px; }
+  .s12 .bh { position: absolute; top: 162px; inset-inline-start: 247px; width: 220px; text-align: center; font-size: 26px; font-weight: 700; line-height: 32px; color: var(--navy); }
+  .s12 .bt { position: absolute; top: 185px; inset-inline-start: 507px; width: 660px; font-size: 19.5px; line-height: 25px; }
+  .s12 .ring { position: absolute; top: 438px; inset-inline-start: 340px; width: 600px; height: 600px; border-radius: 50%; border: 3px solid #DADADA; }
+  .s12 .ph { top: 481px; inset-inline-start: 386px; width: 508px; height: 239px; clip-path: circle(254px at 254px 255px); }
+  .s12 .dot { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); }
+  .s12 .it { position: absolute; width: 236px; }
+  .s12 .it .t { margin-top: 13px; }
+  .s12 .e { text-align: end; }
+  .s12 .i1 { top: 337px; inset-inline-end: 808px; } .s12 .i2 { top: 337px; inset-inline-start: 792px; }
+  .s12 .i3 { top: 494px; inset-inline-end: 967px; } .s12 .i4 { top: 494px; inset-inline-start: 961px; }
+  /* 13 الخطوات التالية */
+  .s13 .t13 { position: absolute; top: 55px; inset-inline-start: 390px; width: 500px; text-align: center; font-size: 44px; font-weight: 700; line-height: 52px; color: #fff; }
+  html[lang="ar"] .s13 .t13 { font-weight: 800; line-height: 58px; top: 50px; }
+  .s13 .ln { position: absolute; top: 403px; inset-inline-start: 199px; width: 881px; height: 1px; background: #3A5080; }
+  .s13 .q { position: absolute; top: 344px; width: 118px; height: 118px; border-radius: 50%; background: var(--navy); display: grid; place-items: center; font-size: 36px; font-weight: 700; color: #fff; }
+  .s13 .qs { position: absolute; top: 504px; width: 260px; text-align: center; color: #fff; }
+  .s13 .qs .h { color: #fff; } .s13 .qs .t { margin-top: 15px; color: #fff; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gh" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#E3895A"/><stop offset="1" stop-color="#B84469"/></linearGradient><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E3895A"/><stop offset="1" stop-color="#B84469"/></linearGradient><linearGradient id="gs" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E4577"/><stop offset="1" stop-color="#1A3060"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0 375L640 570V720H0Z" fill="url(#gs)"/><circle cx="1212" cy="40" r="254" fill="url(#gd)"/><circle cx="432" cy="776" r="195" fill="url(#gh)" transform="scale(-1 1) translate(-864 0)"/><path d="M1046 332L1280 135M613 494L355 715" stroke="#8C9CC0" stroke-opacity=".75" stroke-width="1"/></svg>
+    <h1 class="cv">COMPETITOR<br>ANALYSIS</h1>
+    <p class="sub">Presentation Template</p>
+    <div class="logo"><svg viewBox="0 0 40 46" aria-hidden="true"><path d="M8 4C17 1 28 1 35 4c3 1.5 4 4 4 8 0 9-.5 18-2 26-.8 4-3 6-7 6.5C22 45.5 13 45.5 6 44c-3.5-.7-5-3-5-6.5C1 29 1 20 2 11.5 2.5 7.5 4.5 5 8 4zM12 13c-1.5 0-2.5 1-2.5 2.5 0 4.5 0 9.5.5 14 .2 1.5 1 2.5 2.5 2.5 5 .2 10.5.2 15.5-.3 1.5-.2 2.3-1 2.5-2.5.5-4.5.5-9.5.3-14-.1-1.5-1-2.3-2.5-2.4-5.3-.2-10.8-.1-16.3.2z" fill="currentColor" fill-rule="evenodd"/></svg><span>Logo</span></div>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="t3">Analysis<br>Overview <span class="n">&amp;</span><br><span class="n">Scope</span></h1>
+    <p class="lead t">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text.</p>
+    <div class="box pn"><ul class="lst"><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li></ul></div>
+    <div class="cn"><p class="t">This is a sample text. Insert your desired text here.</p><img src="/templates/freeform/sl-competitor-analysis/assets/building.jpg" alt="Contemporary building with curved facades and a paved plaza"></div>
+    <div class="co"><img src="/templates/freeform/sl-competitor-analysis/assets/writing.jpg" alt="Hand writing in a notebook on a wooden table next to a coffee cup"><p class="t">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0 375L640 570V720H0Z" fill="url(#gs)"/><circle cx="525" cy="-110" r="200" fill="url(#gd)"/><circle cx="148" cy="748" r="105" fill="url(#gh)" transform="scale(-1 1) translate(-296 0)"/><path d="M392 122L530 0M231 602L98 720" stroke="#8C9CC0" stroke-opacity=".75" stroke-width="1"/></svg>
+    <h1 class="t3">Presentation<br>Agenda</h1>
+    <p class="lead">This is a sample text. Insert your desired text here. This is a sample text. This is a sample text.</p>
+    <div class="ag" style="top:51px;inset-inline-start:524px"><b><bdi dir="ltr">01</bdi></b><span>Executive Summary</span></div>
+    <div class="ag" style="top:181px;inset-inline-start:524px"><b><bdi dir="ltr">02</bdi></b><span>Market Landscape</span></div>
+    <div class="ag" style="top:311px;inset-inline-start:524px"><b><bdi dir="ltr">03</bdi></b><span>Customer Needs<br>and Trends</span></div>
+    <div class="ag" style="top:441px;inset-inline-start:524px"><b><bdi dir="ltr">04</bdi></b><span>Competitive<br>Landscape</span></div>
+    <div class="ag" style="top:571px;inset-inline-start:524px"><b><bdi dir="ltr">05</bdi></b><span>Competitor Profiles</span></div>
+    <div class="ag" style="top:51px;inset-inline-start:886px"><b><bdi dir="ltr">06</bdi></b><span>Value Proposition<br>Comparison</span></div>
+    <div class="ag" style="top:181px;inset-inline-start:886px"><b><bdi dir="ltr">07</bdi></b><span>Strengths and<br>Weaknesses</span></div>
+    <div class="ag" style="top:311px;inset-inline-start:886px"><b><bdi dir="ltr">08</bdi></b><span>Opportunities and<br>Gaps</span></div>
+    <div class="ag" style="top:441px;inset-inline-start:886px"><b><bdi dir="ltr">09</bdi></b><span>Strategic<br>Implications</span></div>
+    <div class="ag" style="top:571px;inset-inline-start:886px"><b><bdi dir="ltr">10</bdi></b><span>Next Steps</span></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Executive</span> <span class="o">Summary</span></h1><span class="rule"></span>
+    <p class="big" style="inset-inline-start:64px"><bdi dir="ltr">15%</bdi></p><div class="box sm" style="inset-inline-start:64px"><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <p class="big" style="inset-inline-start:462px"><bdi dir="ltr">3</bdi></p><div class="box sm" style="inset-inline-start:462px"><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <p class="big" style="inset-inline-start:860px"><bdi dir="ltr">75%</bdi></p><div class="box sm" style="inset-inline-start:860px"><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="box pi"><h2>Primary Insight</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Market Landscape</span> <span class="o">&amp; Growth</span></h1><span class="rule"></span>
+    <div class="box tl"><h2 class="h">Trend Analysis</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p><p class="t" style="margin-top:23px">This is a sample text. This is a sample text. Insert your desired text here.</p></div>
+    <svg class="map" viewBox="95 440 337 172" aria-hidden="true"><path d="M417,583 417,588 411,593 411,595 414,595 417,592 417,590 419,589 420,586ZM195,532 190,536 193,541 193,546 188,555 191,561 196,565 196,575 195,576 194,587 192,593 192,600 193,602 196,604 201,604 199,602 199,598 203,588 204,587 207,587 214,579 217,572 223,569 225,560 228,556 228,551 217,546 211,539 209,539 205,534 198,534ZM189,523 190,524 190,527 191,526 200,526 192,525ZM238,475 238,477 240,478 243,478 246,476 244,475ZM422,472 420,471 397,470 395,468 392,468 390,465 388,464 384,464 384,468 383,469 378,469 376,467 364,467 362,464 356,464 352,462 351,464 340,465 332,468 322,467 321,466 321,463 319,464 312,464 307,468 307,472 306,473 290,472 284,469 279,469 275,471 271,475 265,478 265,486 264,487 260,487 259,486 259,483 256,483 254,484 254,486 251,488 251,490 254,490 256,492 256,498 255,499 258,501 264,501 265,502 265,506 263,508 260,508 260,509 262,510 262,514 261,515 257,515 256,513 256,517 255,518 251,518 250,517 247,517 245,520 244,532 252,541 255,540 264,540 267,541 269,548 274,548 281,554 281,559 280,560 276,560 276,565 273,567 274,575 276,578 276,582 280,582 287,579 289,576 289,573 292,571 292,566 294,564 298,564 299,565 299,572 302,572 303,571 303,568 305,565 305,559 301,562 297,562 296,561 295,550 299,545 303,542 304,538 306,537 306,530 311,527 315,520 318,518 326,517 327,518 327,523 330,523 331,522 343,523 345,526 345,531 348,531 349,532 349,539 346,540 346,541 349,544 350,549 357,554 363,554 363,551 364,550 368,550 369,551 369,555 368,556 374,556 374,554 371,553 371,547 372,546 377,546 380,548 380,550 384,552 384,557 383,558 376,558 377,562 380,566 380,570 378,572 378,575 377,576 373,576 372,575 372,568 371,567 371,574 370,575 365,575 363,576 363,582 364,583 371,583 374,579 378,579 381,582 384,582 388,587 390,587 391,588 391,591 393,592 393,587 395,586 396,583 399,580 399,576 396,568 392,565 391,562 391,558 392,557 395,557 395,555 390,549 386,547 381,547 376,545 376,543 374,542 373,532 370,526 368,528 368,533 370,534 370,538 369,539 365,539 365,540 360,544 355,544 354,543 354,539 359,533 359,526 362,522 369,521 370,510 371,509 375,509 378,511 384,509 387,506 387,501 388,500 391,500 390,498 390,491 389,490 389,484 392,482 399,483 401,488 401,492 407,487 407,483 410,481 415,481 418,479 422,479ZM243,456 242,455 237,455 234,451 219,450 214,453 212,453 211,455 205,455 200,458 199,460 196,462 194,462 194,466 193,467 188,467 187,465 179,465 176,463 169,462 168,461 159,461 157,463 151,463 149,464 145,470 141,470 140,471 117,469 110,471 110,474 108,475 109,477 109,482 111,483 111,487 116,487 118,485 121,485 123,482 126,481 134,482 141,490 143,490 147,495 147,503 149,507 152,509 155,513 156,517 157,517 160,521 163,521 165,523 165,525 169,528 175,529 177,531 180,531 181,534 185,534 185,530 181,527 181,523 180,522 177,524 173,524 172,523 172,511 175,510 171,510 170,509 170,504 175,499 175,497 180,493 184,493 190,495 193,499 196,500 197,499 205,498 206,495 211,495 211,493 209,491 209,488 202,482 202,477 204,475 209,475 213,480 217,482 223,475 226,475 228,473 235,472 235,468 238,467 239,465 239,460 243,458Z" fill="#E6B491"/><circle cx="370" cy="568" r="11" fill="#3A4E81" fill-opacity=".72"/><circle cx="271" cy="558" r="10" fill="#3A4E81" fill-opacity=".72"/><circle cx="184" cy="545" r="11" fill="#3A4E81" fill-opacity=".72"/><circle cx="326" cy="532" r="16" fill="#3A4E81" fill-opacity=".72"/><circle cx="254" cy="509" r="11" fill="#3A4E81" fill-opacity=".72"/><circle cx="184" cy="508" r="15" fill="#3A4E81" fill-opacity=".72"/></svg>
+    <div class="box tr r1"><h2 class="h">Accelerated Digital Transformation</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div><span class="ci" style="top:180px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="1"/><rect x="5" y="14" width="3" height="5"/><rect x="10.5" y="11" width="3" height="8"/><rect x="16" y="7" width="3" height="12"/><path d="M5 11.5L9.5 7.5l3 2L18 4.5M15.5 4.3H18.3V7"/></svg></span>
+    <div class="box tr r2"><h2 class="h">Shifting Regulatory Frameworks</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div><span class="ci" style="top:359px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="2" y="3.5" width="20" height="7.5" rx="3.75"/><circle cx="18" cy="7.25" r="2.4"/><rect x="2" y="13" width="20" height="7.5" rx="3.75"/><circle cx="6" cy="16.75" r="2.4"/></svg></span>
+    <div class="box tr r3"><h2 class="h">AI-Driven Process Automation</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div><span class="ci" style="top:538px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".9" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h9v-2.5H3z"/><path d="M5 18.5v-3h5v3"/><circle cx="7.5" cy="13.5" r="1.4"/><path d="M7 12.2l4.5-6.5 1.3.9-4.4 6.6"/><circle cx="12.3" cy="5.6" r="1.4"/><path d="M13.4 5.2l5.6 3.2-.7 1.2-5.4-3.2"/><path d="M18.4 9.3l1.2 2.6M18.9 9l2.4.8M19.6 11.9l-1 .6M21.3 9.8l.3 1.1"/></svg></span>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Customer Needs &amp;</span> <span class="o">Trends</span></h1><span class="rule"></span>
+    <div class="col nv" style="inset-inline-start:68px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round" aria-hidden="true"><path d="M2.5 18A9.5 9.5 0 0 1 21.5 18"/><path d="M4.4 12.3l1.1.6M7.4 8.9l.6 1M12 7.5v1.2M16.6 8.9l-.6 1M19.6 12.3l-1.1.6M2.9 15.3l1.2.3M21.1 15.3l-1.2.3"/><path d="M11.2 17.3l7.2-7.8.9.8-7.3 7.7z"/><circle cx="11.6" cy="17.4" r="1.1"/></svg></span><div class="g"><h2 class="h">Speed</h2><p class="t">This is a sample text. Insert your desired text here.</p></div></div>
+    <div class="col or" style="inset-inline-start:361px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".7" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l10 5-10 5-10-5z"/><path d="M5.5 11.5L2 13.5l10 5 10-5-3.5-2"/></svg></span><div class="g"><h2 class="h">UX</h2><p class="t">This is a sample text. Insert your desired text here.</p></div></div>
+    <div class="col nv" style="inset-inline-start:654px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" stroke-linejoin="round" aria-hidden="true"><path d="M9.4 4.5h5.2l.6 3.6H8.8z"/><path d="M6.6 8.6h5.2l.6 3.6H6z"/><path d="M12.2 8.6h5.2l.6 3.6h-6.4z"/><path d="M3.8 12.7H9l.6 3.6H3.2z"/><path d="M9.4 12.7h5.2l.6 3.6H8.8z"/><path d="M15 12.7h5.2l.6 3.6h-6.4z"/></svg></span><div class="g"><h2 class="h">Cost</h2><p class="t">This is a sample text. Insert your desired text here.</p></div></div>
+    <div class="col or" style="inset-inline-start:948px"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".7" stroke-linejoin="round" aria-hidden="true"><path d="M12 3L22.5 21h-21z"/><path d="M9 12.5l6.5-2.2 1.2 3.2-6.4 2.3z"/><circle cx="14" cy="12.4" r=".9"/><path d="M10.3 15.8l-1.2 2.4M9 15l-.7 4.2"/></svg></span><div class="g"><h2 class="h">Privacy</h2><p class="t">This is a sample text. Insert your desired text here.</p></div></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Competitive</span> <span class="o">Landscape</span></h1><span class="rule"></span>
+    <table><colgroup><col style="width:236px"><col style="width:153px"><col style="width:153px"><col style="width:153px"><col style="width:153px"><col></colgroup><thead><tr><th class="nv">Competition</th><th>Market<br>Leader</th><th>Challenger</th><th>Niche<br>Competitor</th><th>Market</th><th class="nv">Explanation</th></tr></thead><tbody><tr><td>Own Business</td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td class="c"></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td>Insert your desired text here.</td></tr><tr><td>Competitor 01</td><td class="c"></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td class="c"></td><td class="c"></td><td>This is a sample text. Insert your desired text here</td></tr><tr><td>Competitor 02</td><td class="c"></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td>This is a sample text. Insert your desired text here</td></tr><tr><td>Competitor 03</td><td class="c"></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td class="c"></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td>Insert your desired text here</td></tr><tr><td>Competitor 04</td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5l6 5.5L20.5 6.5"/></svg></td><td>Insert your desired text here</td></tr></tbody></table>
+    <div class="nt" style="inset-inline-start:64px"><h2 class="h">Own Business</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+    <div class="nt" style="inset-inline-start:669px"><h2 class="h">Competitors</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Competitor</span> <span class="o">Profiles</span></h1><span class="rule"></span>
+    <div class="box st" style="inset-inline-start:64px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 9.5h20v11H2zm2 2v7h16v-7z" fill-rule="evenodd"/><circle cx="12" cy="15" r="2"/><circle cx="6.2" cy="15" r=".9"/><circle cx="17.8" cy="15" r=".9"/><path d="M5 8.6l13.5-3.2.5 2-11.6 2.7H5z"/><path d="M4.3 7.2l12.9-4.1.6 1.5L5.6 8.6H4z" opacity=".9"/></svg></span><div><b><bdi dir="ltr">$7.5B</bdi></b><p class="t">Insert your desired text here.</p></div></div>
+    <div class="box st" style="inset-inline-start:462px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.2" cy="8.8" r="2.6"/><circle cx="18.8" cy="8.8" r="2.6"/><circle cx="12" cy="10.6" r="3"/><path d="M.5 17.5c0-2.6 2-4.3 4.7-4.3 1.2 0 2.3.3 3.1.9-1.3 1-2 2.4-2 4v.4H.5z"/><path d="M23.5 17.5c0-2.6-2-4.3-4.7-4.3-1.2 0-2.3.3-3.1.9 1.3 1 2 2.4 2 4v.4h5.8z"/><path d="M6.7 20.5c0-3 2.3-5 5.3-5s5.3 2 5.3 5z"/></svg></span><div><b><bdi dir="ltr">20K+</bdi></b><p class="t">Insert your desired text here.</p></div></div>
+    <div class="box st" style="inset-inline-start:860px"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.22 19.85c-.18.18-.5.21-.71 0a.5.5 0 0 1 0-.71l3.39-3.39-1.41-1.41-3.39 3.39c-.19.2-.51.19-.71 0a.5.5 0 0 1 0-.71l3.39-3.39-1.41-1.41-3.39 3.39c-.18.18-.5.21-.71 0a.51.51 0 0 1 0-.71l3.39-3.39-1.42-1.41-3.39 3.39c-.18.18-.5.21-.71 0a.51.51 0 0 1 0-.71L9.52 8.4l1.87 1.86c.95.95 2.59.94 3.54 0 .98-.98.98-2.56 0-3.54l-1.86-1.86.28-.28c.78-.78 2.05-.78 2.83 0l4.24 4.24c.78.78.78 2.05 0 2.83zm9.61-6.78a4 4 0 0 0 0-5.66l-4.24-4.24a4 4 0 0 0-5.66 0l-.28.28-.28-.28a4 4 0 0 0-5.66 0L2.17 6.71a4 4 0 0 0-.4 5.19l1.45-1.45a2 2 0 0 1 .37-2.33l3.54-3.54c.78-.78 2.05-.78 2.83 0l3.56 3.56c.18.18.21.5 0 .71-.21.21-.53.18-.71 0L9.52 5.57l-5.8 5.79c-.98.97-.98 2.56 0 3.54.39.39.89.63 1.42.7a2.46 2.46 0 0 0 2.8 2.8 2.48 2.48 0 0 0 2.8 2.8c.07.54.31 1.03.7 1.42.47.47 1.1.73 1.77.73s1.3-.26 1.77-.73z"/></svg></span><div><b><bdi dir="ltr">500+</bdi></b><p class="t">Insert your desired text here.</p></div></div>
+    <h2 class="h hd hd1">Products/Services<br>Offered</h2>
+    <h2 class="h hd hd2">Strengths<br>&amp; Weaknesses</h2>
+    <ul class="lst l1"><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li></ul>
+    <div class="box sw" style="inset-inline-start:366px"><h3>Strengths</h3><ul><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li></ul></div>
+    <div class="box sw" style="inset-inline-start:599px"><h3>Weakness</h3><ul><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li></ul></div>
+    <div class="box ca"><h2 class="h">Competitive<br>Advantage</h2><ul class="lst"><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li></ul></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Value Proposition</span> <span class="o">Comparison</span></h1><span class="rule"></span>
+    <div class="box vc" style="inset-inline-start:64px"><div class="hh"><h2 class="h">Our Advantage</h2></div><p class="t p">Insert your desired text here. This is a sample text.</p><ul class="lst"><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li></ul></div>
+    <div class="box vc" style="inset-inline-start:454px"><div class="hh"><h2 class="h">Competitor<br>Commonplace</h2></div><p class="t p">Insert your desired text here. This is a sample text.</p><ul class="lst"><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here.</p></li></ul></div>
+    <div class="qt"><span class="q"><svg viewBox="0 0 40 32" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 30V16C2 8 6 3 14 1.5l1.2 2.8C10.5 5.8 8.4 8.8 8.2 13H16v17z"/><path d="M23 30V16c0-8 4-13 12-14.5l1.2 2.8C31.5 5.8 29.4 8.8 29.2 13H37v17z"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p><p class="t">This is a sample text. Insert your desired text here.</p><p class="nm">Name<i></i></p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Strengths and</span> <span class="o">Weaknesses</span></h1><span class="rule"></span>
+    <h2 class="h ch" style="inset-inline-start:64px">Competitor</h2><h2 class="h ch" style="inset-inline-start:384px">Key Advantages</h2><h2 class="h ch" style="inset-inline-start:816px">Strategic<br>Limitations</h2>
+    <div class="box rw rw1"><p class="nm">Competitor 01</p><span class="sep" style="inset-inline-start:284px"></span><span class="sep" style="inset-inline-start:721px"></span><ul style="inset-inline-start:321px"><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li></ul><ul style="inset-inline-start:752px"><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li></ul></div>
+    <div class="box rw rw2"><p class="nm">Competitor 02</p><span class="sep" style="inset-inline-start:284px"></span><span class="sep" style="inset-inline-start:721px"></span><ul style="inset-inline-start:321px"><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li></ul><ul style="inset-inline-start:752px"><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="okn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li></ul></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Market Opportunities</span> <span class="o">&amp; Gaps</span></h1><span class="rule"></span>
+    <div class="pn"><img src="/templates/freeform/sl-competitor-analysis/assets/building.jpg" alt="Contemporary building with curved facades and a paved plaza"><h2>Placeholder</h2><p class="t">This is a sample text. Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text.</p><p class="t t2">This is a sample text. Insert your desired text here.</p></div>
+    <div class="mo"><h2 class="h">Market<br>Opportunities</h2><ul class="lst"><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">This is a sample text. Insert your desired text here.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li><li><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><p class="t">Insert your desired text here. This is a sample text.</p></li></ul></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1222" cy="-57" r="155" fill="url(#gh)"/><path d="M1060 68L1140 0" stroke="#C8C8C8" stroke-width="1"/><circle cx="40" cy="756" r="100" fill="url(#gh)" transform="scale(-1 1) translate(-80 0)"/><path d="M128 618L40 700" stroke="#C8C8C8" stroke-width="1"/><path d="M74 659L5 720" stroke="#fff" stroke-opacity=".45" stroke-width="1"/><path d="M1140 0L1096 38" stroke="#fff" stroke-opacity=".45" stroke-width="1"/></svg>
+    <h1 class="ttl"><span class="n">Strategic</span> <span class="o">Implications</span></h1><span class="rule"></span>
+    <div class="box bar"></div><span class="sq"><svg viewBox="0 0 36 33" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 31h15v-3H3z"/><path d="M4.5 28v-3h12v3"/><path d="M6 25c0-4 3-6.5 3.5-9.5L6 17.5 3.5 14.5 9 6.5 8.5 3.5l3 1.5c5 .5 7.5 5 7 11-.3 3.5-1.5 6.5-1.5 9"/><circle cx="10" cy="9.5" r=".8" fill="currentColor"/><path d="M20 31h14v-3H20z"/><path d="M21.5 28v-3h11v3"/><path d="M23 25l1-11h8l1 11"/><path d="M22 14V6.5h2.8v2.5h2V6.5h2.4v2.5h2V6.5H34V14z"/></svg></span><p class="bh">Insert your<br>desired text<br>here.</p><p class="t bt">Insert your desired text here. This is a sample text. Insert your desired text here. This is a sample text. This is a sample text.</p>
+    <span class="ring"></span><img class="ph" src="/templates/freeform/sl-competitor-analysis/assets/meeting.jpg" alt="Team meeting around a long table in a room overlooking the city"><span class="dot" style="top:464px;inset-inline-start:485px"></span><span class="dot" style="top:464px;inset-inline-start:772px"></span><span class="dot" style="top:607px;inset-inline-start:355px"></span><span class="dot" style="top:607px;inset-inline-start:903px"></span>
+    <div class="it i1 e"><h2 class="h">Resource Allocation</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="it i2"><h2 class="h">Risk Management</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="it i3 e"><h2 class="h">Enhanced<br>Alignment</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <div class="it i4"><h2 class="h">Performance<br>Monitoring</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0 375L640 570V720H0Z" fill="url(#gs)"/><circle cx="640" cy="0" r="256" fill="url(#gd)"/><path d="M330 128L476 0" stroke="#F2C4A8" stroke-opacity=".8" stroke-width="1"/></svg>
+    <h1 class="t13">Strategic Next<br>Steps</h1>
+    <span class="ln"></span>
+    <span class="q" style="inset-inline-start:140px"><bdi dir="ltr">Q1</bdi></span><div class="qs" style="inset-inline-start:69px"><h2 class="h">Refine</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <span class="q" style="inset-inline-start:434px"><bdi dir="ltr">Q2</bdi></span><div class="qs" style="inset-inline-start:363px"><h2 class="h">Execute</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <span class="q" style="inset-inline-start:728px"><bdi dir="ltr">Q3</bdi></span><div class="qs" style="inset-inline-start:657px"><h2 class="h">Expand</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+    <span class="q" style="inset-inline-start:1021px"><bdi dir="ltr">Q4</bdi></span><div class="qs" style="inset-inline-start:950px"><h2 class="h">Review</h2><p class="t">This is a sample text. Insert your desired text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 13</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
