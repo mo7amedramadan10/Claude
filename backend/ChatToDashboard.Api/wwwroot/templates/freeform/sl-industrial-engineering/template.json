@@ -1,0 +1,65 @@
+{
+  "key": "sl-industrial-engineering",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🏭",
+  "name": "الهندسة الصناعية",
+  "nameEn": "Industrial Engineering",
+  "description": "اثنتا عشرة شريحة لمشروع هندسي: التحدي والغايات والمنهجية وتحليل البيانات وخطة التنفيذ والعائد والمخاطر",
+  "descriptionEn": "Twelve slides for an engineering project: challenge, goals, methodology, data, plan, ROI and risks",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "تحديد التحدي",
+      "titleEn": "Identifying the Challenge",
+      "needsData": true
+    },
+    {
+      "title": "غايات المشروع وأهدافه",
+      "titleEn": "Project Goals & Objectives"
+    },
+    {
+      "title": "المنهجية والأدوات",
+      "titleEn": "Methodology & Tools"
+    },
+    {
+      "title": "تحليل البيانات والنتائج",
+      "titleEn": "Data Analysis & Findings",
+      "needsData": true
+    },
+    {
+      "title": "خطة التنفيذ",
+      "titleEn": "Implementation Plan",
+      "needsData": true
+    },
+    {
+      "title": "النتائج المتوقعة وعائد الاستثمار",
+      "titleEn": "Expected Results & ROI",
+      "needsData": true
+    },
+    {
+      "title": "التحديات وتخفيف المخاطر",
+      "titleEn": "Challenges & Risk Mitigation"
+    },
+    {
+      "title": "الخاتمة والملخص",
+      "titleEn": "Conclusion & Summary"
+    },
+    {
+      "title": "أسئلة وأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف المائلة وغيّر النصوص والأرقام فقط؛ أرقام الرسم الخطي في chart-data والأعمدة المكدّسة في chart-data-2 والحلقة في chart-data-3 والمخطط الزمني في chart-data-4."
+}
