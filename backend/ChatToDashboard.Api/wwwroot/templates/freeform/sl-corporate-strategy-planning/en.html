@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corporate Strategy & Planning</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «استراتيجية الشركات والتخطيط»: عناوين غامقة رمادية داكنة، كتل كحلية (#1B3E50) وبنية فاتحة (#AA8769)، نسيج نقاط خفيف (.dots)، صور مقصوصة، أسهم خارطة الطريق بقصّ مائل ينعكس في العربية، ورسم أعمدة من كتلة chart-data. */
+  :root { --font: 'Open Sans', 'Segoe UI', Arial, sans-serif; --ink: #2B363A; --ink-2: #595959; --navy: #1B3E50; --tan: #AA8769; --gray: #F2F2F2; --light: #D9D9D9; --accent: #AA8769; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  .t { position: absolute; margin: 0; }
+  .blk { position: absolute; }
+  .photo { position: absolute; object-fit: cover; display: block; }
+  html[dir="rtl"] .flip { transform: scaleX(-1); }
+  /* نسيج النقاط الخفيف يتلاشى نحو الداخل */
+  .dots { position: absolute; background-image: radial-gradient(circle, rgb(0 0 0 / .07) 1.1px, transparent 1.5px); background-size: 7px 7px;
+    -webkit-mask-image: linear-gradient(135deg, #000 0%, rgb(0 0 0 / .45) 35%, transparent 70%); mask-image: linear-gradient(135deg, #000 0%, rgb(0 0 0 / .45) 35%, transparent 70%); }
+  html[dir="rtl"] .dots { -webkit-mask-image: linear-gradient(-135deg, #000 0%, rgb(0 0 0 / .45) 35%, transparent 70%); mask-image: linear-gradient(-135deg, #000 0%, rgb(0 0 0 / .45) 35%, transparent 70%); }
+  .dots.lt { background-image: radial-gradient(circle, rgb(255 255 255 / .09) 1.2px, transparent 1.6px); -webkit-mask-image: linear-gradient(180deg, #000, rgb(0 0 0 / .6)); mask-image: linear-gradient(180deg, #000, rgb(0 0 0 / .6)); }
+  /* العنوان والعنوان الفرعي المشتركان */
+  .ttl { position: absolute; top: 50px; inset-inline-start: 83px; margin: 0; font-size: 50px; line-height: 57px; font-weight: 700; color: var(--ink); letter-spacing: -1px; white-space: nowrap; }
+  html[lang="ar"] .ttl { font-size: 50px; line-height: 62px; top: 44px; letter-spacing: 0; font-weight: 800; }
+  .sub { position: absolute; top: 178px; inset-inline-start: 83px; margin: 0; font-size: 26px; line-height: 36px; color: var(--navy); white-space: nowrap; }
+  .sub.one { top: 120px; }
+  .p { font-size: 18.5px; line-height: 25.8px; color: var(--ink-2); letter-spacing: .1px; }
+  html[lang="ar"] .p { letter-spacing: 0; }
+  .h { font-size: 22px; line-height: 29px; font-weight: 700; color: var(--ink); }
+  .w { color: #fff; } .wl { color: var(--light); }
+  .arch { position: absolute; width: 20px; height: 14px; color: var(--navy); }
+  .hl { position: absolute; height: 2px; background: var(--navy); }
+  .logo { position: absolute; color: #fff; }
+  /* 1) الغلاف */
+  .s1 .big { top: 196px; inset-inline-start: 83px; font-size: 64px; line-height: 70px; font-weight: 700; color: #fff; letter-spacing: -1.2px; white-space: nowrap; }
+  html[lang="ar"] .s1 .big { font-size: 62px; line-height: 76px; top: 176px; letter-spacing: 0; font-weight: 800; }
+  .s1 .logot { top: 66px; inset-inline-start: 152px; font-size: 16px; line-height: 23px; letter-spacing: 2px; color: #fff; }
+  html[lang="ar"] .s1 .logot { letter-spacing: 0; font-size: 17px; }
+  .s1 .rule { position: absolute; top: 426px; inset-inline-start: 71px; width: 435px; height: 4px; background: var(--tan); }
+  .s1 .pt { top: 450px; inset-inline-start: 82px; font-size: 30px; line-height: 40px; letter-spacing: 3.6px; color: #fff; white-space: nowrap; }
+  html[lang="ar"] .s1 .pt { letter-spacing: 0; font-size: 32px; }
+  .s1 .pn { top: 597px; inset-inline-start: 82px; font-size: 22px; line-height: 30px; font-weight: 700; color: var(--tan); }
+  .s1 .pd { top: 648px; inset-inline-start: 82px; font-size: 18px; line-height: 26px; color: #767676; }
+  /* 2) نظرة تنفيذية */
+  .s2 .q { top: 92px; inset-inline-start: 706px; font-size: 39px; line-height: 52px; color: var(--navy); white-space: nowrap; letter-spacing: -.3px; }
+  html[lang="ar"] .s2 .q { letter-spacing: 0; font-size: 38px; line-height: 54px; top: 88px; }
+  .s2 .num { top: 380px; font-size: 88px; line-height: 104px; font-weight: 300; color: #fff; letter-spacing: -1px; }
+  .s2 .it { position: absolute; top: 530px; width: 300px; }
+  .s2 .it h2 { margin: 0; } .s2 .it p { margin: 15px 0 0; }
+  /* 3) المشهد الحالي */
+  .s3 .tbl { position: absolute; top: 249px; inset-inline-start: 73px; width: 1134px; border-collapse: collapse; table-layout: fixed; }
+  .s3 .tbl col.c1 { width: 274px; } .s3 .tbl col.c2 { width: 313px; }
+  .s3 .tbl th, .s3 .tbl td { text-align: start; padding: 0; padding-inline-start: 20px; white-space: nowrap; }
+  .s3 .tbl th { height: 81px; font-size: 22px; font-weight: 700; color: #fff; border-bottom: 1px solid rgb(255 255 255 / .55); }
+  .s3 .tbl td { height: 64px; font-size: 18.5px; color: #fff; border-bottom: 1px solid rgb(255 255 255 / .55); }
+  .s3 .tbl tr:last-child td { border-bottom: 0; }
+  .s3 .tbl th:nth-child(2), .s3 .tbl td:nth-child(2) { color: var(--ink-2); padding-inline-start: 37px; border-bottom-color: #D9D9D9; }
+  .s3 .tbl th:nth-child(2) { color: var(--ink); }
+  .s3 .tbl th:nth-child(3), .s3 .tbl td:nth-child(3) { padding-inline-start: 39px; }
+  .s3 .tbl td:nth-child(3) { color: #E6E6E6; }
+  .s3 .foot { top: 653px; inset-inline-start: 669px; font-size: 21px; line-height: 30px; color: var(--ink-2); white-space: nowrap; }
+  /* 4) الأولويات */
+  .s4 .q { top: 64px; inset-inline-start: 923px; width: 320px; font-size: 25px; line-height: 32px; color: var(--navy); letter-spacing: -.3px; }
+  .s4 .q b { font-weight: 700; }
+  .s4 .no { font-size: 23px; line-height: 30px; font-weight: 700; color: var(--navy); }
+  .s4 .no.w { color: #fff; }
+  .s4 .card { position: absolute; top: 290px; inset-inline-start: 567px; width: 353px; height: 344px; background: #fff; padding: 46px 28px 0 40px; }
+  html[dir="rtl"] .s4 .card { padding: 46px 40px 0 28px; }
+  .s4 .card .n3 { margin: 0; font-size: 54px; line-height: 70px; font-weight: 700; color: var(--navy); }
+  .s4 .card h2 { margin: 26px 0 0; font-size: 25px; line-height: 32px; font-weight: 700; color: var(--ink); }
+  .s4 .card p { margin: 18px 0 0; }
+  /* 5) فرص النمو */
+  .s5 .wq { top: 434px; inset-inline-start: 81px; font-size: 34px; line-height: 44px; color: var(--navy); white-space: nowrap; }
+  .s5 .cd { position: absolute; inset-inline-start: 579px; width: 401px; height: 207px; padding: 38px 51px 0; }
+  .s5 .cd p { margin: 17px 0 0; }
+  .s5 .big { top: 495px; inset-inline-start: 630px; font-size: 66px; line-height: 80px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+  /* 6) لمحة الأداء */
+  .s6 .kp { top: 470px; inset-inline-start: 84px; font-size: 62px; line-height: 80px; font-weight: 700; color: var(--navy); letter-spacing: -1px; white-space: nowrap; }
+  .s6 .chart { position: absolute; top: 0; inset-inline-start: 0; width: 1280px; height: 720px; pointer-events: none; }
+  .s6 .co { position: absolute; padding-inline-start: 17px; border-inline-start: 2px solid var(--navy); height: 110px; }
+  .s6 .co b { display: block; font-size: 29px; line-height: 38px; font-weight: 700; color: var(--navy); letter-spacing: -1px; white-space: nowrap; }
+  .s6 .co span { display: block; font-size: 17.5px; line-height: 24px; color: #808080; white-space: nowrap; }
+  .s6 .co.hi { border-inline-start-color: var(--tan); } .s6 .co.hi b { color: var(--tan); }
+  /* 7) منظور العملاء */
+  .s7 .qb { position: absolute; top: 336px; inset-inline-start: 26px; width: 709px; height: 194px; background: var(--tan); }
+  .s7 .bar1 { position: absolute; top: 377px; inset-inline-start: 80px; width: 9px; height: 123px; background: #E3D3C5; }
+  .s7 .bar2 { position: absolute; top: 371px; inset-inline-start: 90px; width: 11px; height: 131px; background: #F6EFE9; }
+  .s7 .qt { top: 383px; inset-inline-start: 129px; font-size: 40px; line-height: 51px; font-weight: 300; color: #fff; white-space: nowrap; letter-spacing: -.4px; }
+  html[lang="ar"] .s7 .qt { font-weight: 400; font-size: 38px; line-height: 54px; top: 378px; letter-spacing: 0; }
+  .s7 .no { font-size: 23px; line-height: 30px; font-weight: 700; color: #fff; }
+  /* 8) نموذج التشغيل */
+  .s8 .tl { position: absolute; top: 40px; inset-inline-start: 204px; width: 2px; height: 640px; background: #A88A70; }
+  .s8 .tdot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #A88A70; inset-inline-start: 201px; }
+  .s8 .chev { position: absolute; inset-inline-start: 197px; width: 18px; height: 10px; color: #A88A70; }
+  .s8 .dt { position: absolute; inset-inline-end: 1110px; text-align: end; }
+  .s8 .dt b { display: block; font-size: 24px; line-height: 32px; font-weight: 700; color: var(--navy); letter-spacing: -.5px; }
+  .s8 .dt span { display: block; margin-top: 7px; font-size: 18.5px; line-height: 25px; color: var(--ink-2); }
+  .s8 .st { position: absolute; inset-inline-start: 234px; width: 360px; }
+  .s8 .st h2 { margin: 0; white-space: nowrap; } .s8 .st p { margin: 10px 0 0; }
+  .s8 .ttl, .s8 .sub { inset-inline-start: 791px; color: #fff; }
+  .s8 .rp { top: 432px; inset-inline-start: 791px; width: 425px; }
+  .s8 .rp p { margin: 0 0 25px; }
+  /* 9) محفظة المبادرات */
+  .s9 .th { position: absolute; top: 243px; }
+  .s9 .th h2 { margin: 0; font-size: 22px; line-height: 32px; font-weight: 700; color: #fff; }
+  .s9 .th p { margin: 6px 0 0; font-size: 18.5px; line-height: 25px; color: #F3EBE3; }
+  .s9 .rl { font-size: 22px; line-height: 29px; font-weight: 700; color: var(--navy); }
+  .s9 .cell { width: 280px; }
+  /* 10) خارطة الطريق */
+  .s10 .tanb { position: absolute; top: 207px; inset-inline-start: 0; width: 1280px; height: 180px; background: var(--tan); clip-path: polygon(0 0, 90.86% 0, 100% 68.3%, 100% 100%, 0 100%); }
+  .s10 .navb { position: absolute; top: 291px; inset-inline-start: 0; width: 1280px; height: 164px; background: var(--navy); clip-path: polygon(0 0, 94% 0, 100% 50%, 94% 100%, 0 100%); }
+  html[dir="rtl"] .s10 .tanb { clip-path: polygon(9.14% 0, 100% 0, 100% 100%, 0 100%, 0 68.3%); }
+  html[dir="rtl"] .s10 .navb { clip-path: polygon(6% 0, 100% 0, 100% 100%, 6% 100%, 0 50%); }
+  .s10 .yr { top: 228px; font-size: 34px; line-height: 46px; font-weight: 700; color: #fff; }
+  .s10 .rh { top: 324px; font-size: 25px; line-height: 32px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .s10 .rv { top: 396px; font-size: 19px; line-height: 26px; font-weight: 700; color: var(--tan); white-space: nowrap; letter-spacing: .3px; }
+  .s10 .rp { top: 477px; width: 215px; }
+  .s10 .ln { position: absolute; top: 645px; inset-inline-start: 0; width: 1280px; height: 1.5px; background: #C9B9AA; }
+  .s10 .foot, .s9 .foot { top: 670px; inset-inline-start: 83px; white-space: nowrap; }
+  .s9 .foot { inset-inline-start: 81px; color: var(--light); }
+  /* 11) النظرة الاستراتيجية */
+  .s11 .cx { position: absolute; top: 194px; inset-inline-start: 582px; width: 698px; height: 2px; background: var(--navy); }
+  .s11 .cy { position: absolute; top: 48px; inset-inline-start: 903px; width: 2px; height: 268px; background: linear-gradient(180deg, transparent, var(--navy) 18%, var(--navy) 82%, transparent); }
+  .s11 .ou { position: absolute; }
+  .s11 .ou i { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--tan); margin-bottom: 15px; }
+  .s11 .ou h2 { margin: 0; font-size: 20.5px; white-space: nowrap; } .s11 .ou p { margin: 4px 0 0; }
+  /* 12) التواصل */
+  .s12 .gt { top: 213px; inset-inline-start: 0; width: 1280px; text-align: center; font-size: 26px; line-height: 36px; font-weight: 400; color: var(--tan); }
+  html[lang="ar"] .s12 .gt { font-weight: 400; }
+  .s12 .end { top: 276px; inset-inline-start: 0; width: 1280px; text-align: center; font-size: 66px; line-height: 84px; font-weight: 700; color: #fff; letter-spacing: -1.4px; white-space: nowrap; }
+  html[lang="ar"] .s12 .end { letter-spacing: 0; font-weight: 800; }
+  .s12 .box { position: absolute; top: 421px; inset-inline-start: 250px; width: 780px; height: 225px; background: var(--tan); }
+  .s12 .dv { position: absolute; top: 470px; inset-inline-start: 639px; width: 2px; height: 155px; background: linear-gradient(180deg, transparent, #3B3F44 50%, transparent); }
+  .s12 .ci { position: absolute; top: 488px; width: 390px; text-align: center; color: #fff; }
+  .s12 .ci svg { width: 46px; height: 46px; margin: 0 auto; }
+  .s12 .ci p { margin: 26px 0 0; font-size: 19px; line-height: 26px; color: #fff; }
+  .s12 .foot { top: 671px; inset-inline-start: 0; width: 1280px; text-align: center; white-space: nowrap; color: #6E6E6E; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <span class="blk" style="top:0px;inset-inline-start:0px;width:1280px;height:543px;background:var(--navy)"></span><span class="dots" style="top:543px;inset-inline-start:0px;width:694px;height:177px"></span><span class="blk" style="top:216px;inset-inline-start:694px;width:586px;height:504px;background:var(--tan)"></span>
+    <img class="photo " src="/templates/freeform/sl-corporate-strategy-planning/assets/building.jpg" alt="مبنى شركات زجاجي حديث" style="top:83px;inset-inline-start:694px;width:513px;height:571px">
+    <svg class="logo" viewBox="0 0 42 46" aria-hidden="true" style="top:66px;inset-inline-start:91px;width:40px;height:44px"><path fill="currentColor" fill-rule="evenodd" d="M8 2c10-3 26 0 31 4 4 3 3 24-2 34-4 6-23 8-32 4C1 42 0 32 1 21 1 11 3 4 8 2zm6 8c-4 1-5 7-5 14 0 7 1 13 3 14 6 2 17 1 19-3 3-5 3-20 1-22-4-3-14-4-18-3z"/></svg>
+    <p class="t logot">YOUR COMPANY<br>LOGO HERE</p>
+    <h1 class="t big">CORPORATE<br>STRATEGY &amp;<br>PLANNING</h1><span class="rule"></span>
+    <p class="t pt">PRESENTATION TEMPLATE</p>
+    <p class="t pn">Add Presenter name</p><p class="t pd">Add date or text here</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <span class="dots" style="top:0px;inset-inline-start:0px;width:1280px;height:360px"></span>
+    <h1 class="ttl">EXECUTIVE<br>OVERVIEW</h1><p class="sub">Add subheading here</p>
+    <p class="t q">A focused view of where<br>the business stands today</p>
+    <svg class="arch" viewBox="0 0 20 14" aria-hidden="true" style="top:240px;inset-inline-start:708px"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M1.5 14V10a8.5 8.5 0 0 1 17 0v4M6.3 14v-4a3.7 3.7 0 0 1 7.4 0v4"/></svg><span class="hl" style="top:246px;inset-inline-start:753px;width:527px"></span>
+    <span class="blk" style="top:360px;inset-inline-start:0px;width:1115px;height:141px;background:var(--navy)"></span><span class="blk" style="top:360px;inset-inline-start:1115px;width:165px;height:141px;background:var(--tan)"></span><span class="blk" style="top:501px;inset-inline-start:0px;width:1280px;height:219px;background:var(--gray)"></span>
+    <p class="t num" style="inset-inline-start:84px">14</p><div class="it" style="inset-inline-start:81px"><h2 class="h">Strategic<br>Priorities</h2><p class="p">Add your desired text here.<br>This is a sample text.</p></div><p class="t num" style="inset-inline-start:442px">35</p><div class="it" style="inset-inline-start:439px"><h2 class="h">Strategic<br>Priorities</h2><p class="p">Add your desired text here.<br>This is a sample text.</p></div><p class="t num" style="inset-inline-start:799px">21</p><div class="it" style="inset-inline-start:796px"><h2 class="h">Strategic<br>Priorities</h2><p class="p">Add your desired text here.<br>This is a sample text.</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <span class="blk" style="top:0px;inset-inline-start:0px;width:1280px;height:720px;background:var(--gray)"></span><span class="dots" style="top:0px;inset-inline-start:0px;width:1280px;height:228px"></span><span class="dots" style="top:626px;inset-inline-start:0px;width:1280px;height:94px"></span>
+    <h1 class="ttl">CURRENT BUSINESS LANDSCAPE</h1><p class="sub one">Add subheading here</p>
+    <span class="blk" style="top:228px;inset-inline-start:0px;width:1280px;height:21px;background:var(--tan)"></span><span class="blk" style="top:249px;inset-inline-start:0px;width:1280px;height:377px;background:var(--navy)"></span><span class="blk" style="top:228px;inset-inline-start:347px;width:313px;height:378px;background:#fff"></span>
+    <table class="tbl"><colgroup><col class="c1"><col class="c2"><col></colgroup><thead><tr><th>Area</th><th>Current Focus</th><th>Strategic Need</th></tr></thead><tbody><tr><td>Customers</td><td>Changing expectations</td><td>Add text here. This is a sample text.</td></tr><tr><td>Operations</td><td>Rising complexity</td><td>This is a sample text. Add your desired text here.</td></tr><tr><td>Technology</td><td>Faster adoption</td><td>Add your desired text here. Add text here.</td></tr><tr><td>Competition</td><td>More market pressure</td><td>This is a sample text. Add your text here.</td></tr></tbody></table>
+    <svg class="arch" viewBox="0 0 20 14" aria-hidden="true" style="top:661px;inset-inline-start:93px"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M1.5 14V10a8.5 8.5 0 0 1 17 0v4M6.3 14v-4a3.7 3.7 0 0 1 7.4 0v4"/></svg><span class="hl" style="top:666px;inset-inline-start:138px;width:472px"></span>
+    <p class="t foot">This is a sample text. Add your desired text here.</p>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <span class="blk" style="top:0px;inset-inline-start:0px;width:1280px;height:720px;background:var(--gray)"></span><span class="dots" style="top:0px;inset-inline-start:0px;width:860px;height:481px"></span><span class="blk" style="top:0px;inset-inline-start:860px;width:420px;height:261px;background:#fff"></span><span class="blk" style="top:481px;inset-inline-start:0px;width:1280px;height:239px;background:var(--navy)"></span>
+    <h1 class="ttl">STRATEGIC PRIORITIES</h1><p class="sub one">Add subheading here</p>
+    <p class="t q">Turning <b>business challenges</b> into <b>focused strategic action</b></p>
+    <span class="hl" style="top:245px;inset-inline-start:0;width:526px"></span><svg class="arch" viewBox="0 0 20 14" aria-hidden="true" style="top:240px;inset-inline-start:567px"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M1.5 14V10a8.5 8.5 0 0 1 17 0v4M6.3 14v-4a3.7 3.7 0 0 1 7.4 0v4"/></svg>
+    <span class="blk" style="top:261px;inset-inline-start:628px;width:232px;height:29px;background:var(--tan)"></span>
+    <img class="photo flip" src="/templates/freeform/sl-corporate-strategy-planning/assets/workshop.jpg" alt="فريق يناقش خطة على طاولة" style="top:261px;inset-inline-start:860px;width:371px;height:403px">
+    <div class="card"><p class="n3"><bdi dir="ltr">03</bdi></p><h2>Improve<br>Customer Value</h2><p class="p">Add your desired text here. This is a sample text. Add text here.</p></div>
+    <p class="t no" style="top:325px;inset-inline-start:81px"><bdi dir="ltr">01</bdi></p><h2 class="t h" style="top:324px;inset-inline-start:139px;white-space:nowrap">Strengthen Core Operations</h2><p class="t p" style="top:366px;inset-inline-start:139px;width:350px">Add your desired text here. This is a sample text. Add your desired text here.</p>
+    <p class="t no w" style="top:545px;inset-inline-start:81px"><bdi dir="ltr">02</bdi></p><h2 class="t h w" style="top:545px;inset-inline-start:139px;white-space:nowrap">Expand Growth Opportunities</h2><p class="t p wl" style="top:586px;inset-inline-start:139px;width:350px">Add your desired text here. This is a sample text. Add your desired text here.</p>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <span class="dots" style="top:0px;inset-inline-start:0px;width:579px;height:720px"></span>
+    <h1 class="ttl">GROWTH<br>OPPORTUNITY</h1><p class="sub">Add subheading here</p>
+    <p class="t wq">Where Growth<br>Can Come From?</p>
+    <p class="t p" style="top:576px;inset-inline-start:81px;width:365px">This is a sample text. Add your desired text here. Add text here. This is a sample text. Add your desired text here.</p>
+    <div class="cd" style="top:37px;background:var(--navy)"><h2 class="h w">Strengthen<br>Core Business</h2><p class="p wl">This is a sample text. Add your desired text here. Add text here.</p></div>
+    <div class="cd" style="top:244px;background:var(--gray)"><h2 class="h">Expand Into<br>New Markets</h2><p class="p">This is a sample text. Add your desired text here. Add text here.</p></div>
+    <img class="photo flip" src="/templates/freeform/sl-corporate-strategy-planning/assets/team-laptop.jpg" alt="فريق مبتسم أمام حاسوب" style="top:37px;inset-inline-start:980px;width:300px;height:414px">
+    <span class="blk" style="top:451px;inset-inline-start:579px;width:701px;height:269px;background:var(--tan)"></span>
+    <p class="t big"><bdi dir="ltr">38+</bdi></p>
+    <h2 class="t h w" style="top:505px;inset-inline-start:793px;font-size:24px;line-height:31px">Develop<br>New Solutions</h2><p class="t p w" style="top:602px;inset-inline-start:630px;width:600px">This is a sample text. Add your desired text here. Add text here. This is a sample text. This is a sample text. Add your desired text here.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <span class="dots" style="top:0px;inset-inline-start:0px;width:579px;height:720px"></span><span class="blk" style="top:0px;inset-inline-start:579px;width:701px;height:720px;background:var(--gray)"></span>
+    <h1 class="ttl">PERFORMANCE<br>SNAPSHOT</h1><p class="sub">Add subheading here</p>
+    <p class="t p" style="top:265px;inset-inline-start:81px;width:380px">This is a sample text. Add your desired text here. Add text here. This is a sample text.</p>
+    <p class="t kp">+15 pts</p>
+    <p class="t p" style="top:567px;inset-inline-start:81px;font-size:20px;color:#595959;white-space:nowrap">Overall performance improvement</p><p class="t p" style="top:616px;inset-inline-start:81px;width:380px">This is a sample text. Add your desired text here. Add text here. This is a sample text.</p>
+    <h2 class="t h" style="top:54px;inset-inline-start:630px;white-space:nowrap">Strengthen Core Operations</h2><p class="t p" style="top:95px;inset-inline-start:630px;white-space:nowrap">Add your desired text here. This is a sample text.</p>
+    <svg class="chart" id="bars" viewBox="0 0 1280 720" aria-hidden="true"></svg>
+    <div class="co" id="co1" style="inset-inline-start:663px;top:180px"><b>$92,2K</b><span>Add text here</span></div><div class="co" id="co2" style="inset-inline-start:808px;top:180px"><b>$81,6K</b><span>Add text here</span></div><div class="co" id="co3" style="inset-inline-start:953px;top:180px"><b>$61,7K</b><span>Add text here</span></div><div class="co hi" id="co4" style="inset-inline-start:1098px;top:180px"><b>$97,1K</b><span>Add text here</span></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <span class="dots" style="top:0px;inset-inline-start:0px;width:711px;height:516px"></span>
+    <img class="photo flip" src="/templates/freeform/sl-corporate-strategy-planning/assets/cafe-meeting.jpg" alt="فريق يعمل في مقهى" style="top:0;inset-inline-start:711px;width:569px;height:516px">
+    <span class="blk" style="top:516px;inset-inline-start:0px;width:1280px;height:204px;background:var(--navy)"></span>
+    <h1 class="ttl">CUSTOMER<br>PERSPECTIVE</h1><p class="sub">Add subheading here</p>
+    <p class="t p" style="top:264px;inset-inline-start:81px;white-space:nowrap">Add your desired text here. This is a sample text. Add text here.</p>
+    <span class="qb"></span><span class="bar1"></span><span class="bar2"></span>
+    <p class="t qt">“Customer value should<br>guide every growth decision”</p>
+    <p class="t no" style="top:575px;inset-inline-start:81px"><bdi dir="ltr">01</bdi></p><h2 class="t h w" style="top:575px;inset-inline-start:139px;white-space:nowrap">Faster Responses</h2><p class="t p wl" style="top:615px;inset-inline-start:139px">Add your desired text here.<br>This is a sample text.</p><p class="t no" style="top:575px;inset-inline-start:476px"><bdi dir="ltr">02</bdi></p><h2 class="t h w" style="top:575px;inset-inline-start:534px;white-space:nowrap">Simpler Experiences</h2><p class="t p wl" style="top:615px;inset-inline-start:534px">Add your desired text here.<br>This is a sample text.</p><p class="t no" style="top:575px;inset-inline-start:871px"><bdi dir="ltr">03</bdi></p><h2 class="t h w" style="top:575px;inset-inline-start:929px;white-space:nowrap">Relevant Solutions</h2><p class="t p wl" style="top:615px;inset-inline-start:929px">Add your desired text here.<br>This is a sample text.</p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <span class="dots" style="top:0px;inset-inline-start:0px;width:694px;height:720px"></span><span class="blk" style="top:0px;inset-inline-start:694px;width:29px;height:720px;background:var(--tan)"></span><span class="blk" style="top:0px;inset-inline-start:723px;width:557px;height:720px;background:var(--navy)"></span><span class="dots lt" style="top:0px;inset-inline-start:723px;width:557px;height:720px"></span>
+    <span class="tl"></span><span class="tdot" style="top:36px"></span><span class="tdot" style="top:675px"></span><svg class="chev" viewBox="0 0 18 10" aria-hidden="true" style="top:179px"><path fill="none" stroke="currentColor" stroke-width="2" d="M1.5 1.5L9 8.5l7.5-7"/></svg><svg class="chev" viewBox="0 0 18 10" aria-hidden="true" style="top:349px"><path fill="none" stroke="currentColor" stroke-width="2" d="M1.5 1.5L9 8.5l7.5-7"/></svg><svg class="chev" viewBox="0 0 18 10" aria-hidden="true" style="top:520px"><path fill="none" stroke="currentColor" stroke-width="2" d="M1.5 1.5L9 8.5l7.5-7"/></svg>
+    <div class="dt" style="top:70px"><b><bdi dir="ltr">01/10</bdi></b><span>2027</span></div><div class="st" style="top:71px"><h2 class="h">Define Strategic Priorities</h2><p class="p">Add your desired text here. This is a sample text. Add your desired text here.</p></div><div class="dt" style="top:233px"><b><bdi dir="ltr">05/02</bdi></b><span>2028</span></div><div class="st" style="top:234px"><h2 class="h">Build Execution Plans</h2><p class="p">Add your desired text here. This is a sample text. Add your desired text here.</p></div><div class="dt" style="top:395px"><b><bdi dir="ltr">08/16</bdi></b><span>2029</span></div><div class="st" style="top:396px"><h2 class="h">Coordinate Team Execution</h2><p class="p">Add your desired text here. This is a sample text. Add your desired text here.</p></div><div class="dt" style="top:558px"><b><bdi dir="ltr">02/01</bdi></b><span>2030</span></div><div class="st" style="top:559px"><h2 class="h">Track Business Results</h2><p class="p">Add your desired text here. This is a sample text. Add your desired text here.</p></div>
+    <h1 class="ttl">OPERATING<br>MODEL</h1><p class="sub">Add subheading here</p>
+    <div class="t rp"><p class="p wl">This is a sample text. Add your desired text here. Add text here. This is a sample text. Add your desired text here.</p><p class="p wl">Add your desired text here. This is a sample text. Add text here. This is a sample text. Add text here. Add your desired text here.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <span class="blk" style="top:0px;inset-inline-start:0px;width:1280px;height:720px;background:var(--gray)"></span><span class="dots" style="top:0px;inset-inline-start:0px;width:1280px;height:294px"></span>
+    <h1 class="ttl">INITIATIVE PORTFOLIO</h1><p class="sub one">Add subheading here</p>
+    <svg class="arch" viewBox="0 0 20 14" aria-hidden="true" style="top:92px;inset-inline-start:892px"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M1.5 14V10a8.5 8.5 0 0 1 17 0v4M6.3 14v-4a3.7 3.7 0 0 1 7.4 0v4"/></svg><span class="hl" style="top:97px;inset-inline-start:940px;width:340px"></span>
+    <span class="blk" style="top:294px;inset-inline-start:0px;width:1280px;height:38px;background:var(--tan)"></span><span class="blk" style="top:332px;inset-inline-start:0px;width:1280px;height:388px;background:var(--navy)"></span><span class="blk" style="top:209px;inset-inline-start:41px;width:1198px;height:123px;background:var(--tan)"></span><span class="blk" style="top:332px;inset-inline-start:41px;width:1198px;height:309px;background:#fff"></span>
+    <div class="th" style="inset-inline-start:291px"><h2>FOCUS</h2><p>Add text here</p></div><div class="th" style="inset-inline-start:604px"><h2>STATUS</h2><p>Add text here</p></div><div class="th" style="inset-inline-start:924px"><h2>NEXT STEP</h2><p>Add text here</p></div>
+    <h2 class="t rl" style="top:380px;inset-inline-start:89px">Process<br>Renewal</h2><h2 class="t rl" style="top:535px;inset-inline-start:89px">Customer<br>Program</h2>
+    <p class="t p cell" style="top:371px;inset-inline-start:291px">Add text here. This is a sample text. Add your desired text here. This is a sample text.</p><p class="t p cell" style="top:371px;inset-inline-start:604px">Add text here. This is a sample text. Add your desired text here. This is a sample text.</p><p class="t p cell" style="top:371px;inset-inline-start:924px">Add text here. This is a sample text. Add your desired text here. This is a sample text.</p><p class="t p cell" style="top:525px;inset-inline-start:291px">Add text here. This is a sample text. Add your desired text here. This is a sample text.</p><p class="t p cell" style="top:525px;inset-inline-start:604px">Add text here. This is a sample text. Add your desired text here. This is a sample text.</p><p class="t p cell" style="top:525px;inset-inline-start:924px">Add text here. This is a sample text. Add your desired text here. This is a sample text.</p>
+    <p class="t p foot">This is a sample text. Add your desired text here. Add text here. This is a sample text. Add your desired text here. Add text here.</p>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <span class="blk" style="top:0px;inset-inline-start:0px;width:1280px;height:455px;background:var(--gray)"></span><span class="dots" style="top:0px;inset-inline-start:0px;width:1280px;height:207px"></span>
+    <h1 class="ttl">GROWTH ROADMAP</h1><p class="sub one">Add subheading here</p>
+    <span class="tanb"></span><span class="navb"></span>
+    <p class="t yr" style="inset-inline-start:83px">2037</p><h2 class="t rh" style="inset-inline-start:83px">Build The<br>Foundation</h2><p class="t rv" style="inset-inline-start:83px">$42M Revenue</p><p class="t p rp" style="inset-inline-start:83px">This is a sample text. Add your desired text here. Add text here</p><p class="t yr" style="inset-inline-start:367px">2038</p><h2 class="t rh" style="inset-inline-start:367px">Expand<br>Market Reach</h2><p class="t rv" style="inset-inline-start:367px">+18% Revenue Growth</p><p class="t p rp" style="inset-inline-start:367px">This is a sample text. Add your desired text here. Add text here</p><p class="t yr" style="inset-inline-start:651px">2039</p><h2 class="t rh" style="inset-inline-start:651px">Scale Business<br>Performance</h2><p class="t rv" style="inset-inline-start:651px">$68M Revenue</p><p class="t p rp" style="inset-inline-start:651px">This is a sample text. Add your desired text here. Add text here</p><p class="t yr" style="inset-inline-start:935px">2040</p><h2 class="t rh" style="inset-inline-start:935px">Reach Sustainable<br>Growth</h2><p class="t rv" style="inset-inline-start:935px">+24% Operating Margin</p><p class="t p rp" style="inset-inline-start:935px">This is a sample text. Add your desired text here. Add text here</p>
+    <span class="ln"></span><p class="t p foot">This is a sample text. Add your desired text here. Add text here. This is a sample text. Add your desired text here.</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <span class="dots" style="top:0px;inset-inline-start:0px;width:1280px;height:371px"></span>
+    <h1 class="ttl">STRATEGIC<br>OUTLOOK</h1><p class="sub">Add subheading here</p>
+    <svg class="arch" viewBox="0 0 20 14" aria-hidden="true" style="top:189px;inset-inline-start:517px"><path fill="none" stroke="currentColor" stroke-width="2.4" d="M1.5 14V10a8.5 8.5 0 0 1 17 0v4M6.3 14v-4a3.7 3.7 0 0 1 7.4 0v4"/></svg>
+    <span class="cx"></span><span class="cy"></span>
+    <div class="ou" style="top:58px;inset-inline-start:602px"><i></i><h2 class="h">Scale What Works</h2><p class="p">This is a sample text.</p></div><div class="ou" style="top:57px;inset-inline-start:977px"><i></i><h2 class="h">Stay Close to Customers</h2><p class="p">This is a sample text.</p></div><div class="ou" style="top:233px;inset-inline-start:602px"><i></i><h2 class="h">Strengthen Capabilities</h2><p class="p">This is a sample text.</p></div><div class="ou" style="top:232px;inset-inline-start:977px"><i></i><h2 class="h">Maintain Execution</h2><p class="p">This is a sample text.</p></div>
+    <span class="blk" style="top:371px;inset-inline-start:0px;width:1280px;height:46px;background:var(--navy)"></span>
+    <img class="photo " src="/templates/freeform/sl-corporate-strategy-planning/assets/meeting-top.jpg" alt="فريق متنوع في اجتماع حول طاولة" style="top:417px;inset-inline-start:0;width:1280px;height:303px">
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <span class="blk" style="top:0px;inset-inline-start:0px;width:1280px;height:625px;background:var(--navy)"></span><span class="dots lt" style="top:0px;inset-inline-start:0px;width:1280px;height:625px"></span>
+    <svg class="logo" viewBox="0 0 42 46" aria-hidden="true" style="top:66px;inset-inline-start:619px;width:42px;height:46px"><path fill="currentColor" fill-rule="evenodd" d="M8 2c10-3 26 0 31 4 4 3 3 24-2 34-4 6-23 8-32 4C1 42 0 32 1 21 1 11 3 4 8 2zm6 8c-4 1-5 7-5 14 0 7 1 13 3 14 6 2 17 1 19-3 3-5 3-20 1-22-4-3-14-4-18-3z"/></svg>
+    <p class="t gt">Get in touch</p>
+    <h1 class="t end">Turning Strategy into Results</h1>
+    <span class="box"></span><span class="dv"></span>
+    <div class="ci" style="inset-inline-start:259px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14"/><path d="M2.5 5.5l9.5 8 9.5-8"/></svg><p>Insert your email here</p></div><div class="ci" style="inset-inline-start:630px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M8 3.5l3 4.2-2 2.3a12 12 0 0 0 5 5l2.3-2 4.2 3-2.3 3.4c-.5.7-1.4 1-2.2.7A19 19 0 0 1 4 8.3c-.3-.8 0-1.7.7-2.2z"/><path d="M14.5 3.5a6 6 0 0 1 6 6M14 6.8a3 3 0 0 1 3.2 3.2"/></svg><p>+1 (234) 567 8901</p></div>
+    <p class="t p foot">This is a sample text. Add your desired text here. Add text here</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 12</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script type="application/json" id="chart-data">{"labels": ["Revenue Index", "Customer Growth", "Operational Efficiency", "Project Delivery"], "values": [90, 82, 62, 100], "max": 120, "step": 20, "highlight": 3}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // ----- رسم الأعمدة (الشريحة 6) من كتلة chart-data — محور قيم واحد، والتعليقات (.co) تُوضع فوق كل عمود -----
+  (function drawBars() {
+    var svg = document.getElementById('bars'); if (!svg) return; svg.innerHTML = '';
+    var d = JSON.parse(document.getElementById('chart-data').textContent), NS = 'http://www.w3.org/2000/svg';
+    var x0 = 663, slot = 145, base = 658, top = 174, max = d.max || 120, step = d.step || 20, k = (base - top) / max;
+    function X(x) { return RTL ? 1280 - x : x; }
+    function el(tag, at, txt) { var e = document.createElementNS(NS, tag); for (var a in at) e.setAttribute(a, at[a]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
+    var n = d.values.length, x1 = x0 + slot * n;
+    for (var i = 0; i <= n; i++) el('line', { x1: X(x0 + slot * i), x2: X(x0 + slot * i), y1: top, y2: base, stroke: '#DADADA', 'stroke-width': 1 });
+    el('line', { x1: X(x0), x2: X(x1), y1: base, y2: base, stroke: '#DADADA', 'stroke-width': 1 });
+    for (var v = 0; v <= max; v += step) el('text', { x: X(x0 - 14), y: base - v * k + 5, 'text-anchor': RTL ? 'start' : 'end', 'font-size': 13.5, fill: '#595959' }, String(v));
+    d.values.forEach(function (val, i) {
+      var bx = x0 + slot * i + 13, bw = slot - 25, by = base - val * k;
+      el('rect', { x: RTL ? X(bx + bw) : bx, y: by, width: bw, height: base - by, fill: i === d.highlight ? '#AA8769' : '#1B3E50' });
+      el('text', { x: X(x0 + slot * i + slot / 2), y: base + 25, 'text-anchor': 'middle', 'font-size': 13.5, fill: '#404040' }, d.labels[i]);
+      var c = document.getElementById('co' + (i + 1)); if (c) c.style.top = Math.max(150, by - 100) + 'px';
+    });
+  })();
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

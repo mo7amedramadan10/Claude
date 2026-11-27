@@ -1,0 +1,63 @@
+{
+  "key": "sl-corporate-pro",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🏢",
+  "name": "العرض المؤسسي الاحترافي",
+  "nameEn": "Corporate Pro",
+  "description": "اثنتا عشرة شريحة مؤسسية زرقاء: غلاف، لمحة، رؤية ورسالة، السوق، المشكلة والحل، الخدمات، المحطات، الفريق، الختام",
+  "descriptionEn": "Twelve blue corporate slides: cover, snapshot, vision, market, problem & solution, services, milestones, team, close",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "لمحة عن الشركة",
+      "titleEn": "Company Snapshot"
+    },
+    {
+      "title": "الرؤية والرسالة",
+      "titleEn": "Vision & Mission"
+    },
+    {
+      "title": "نظرة عامة على السوق (رسم دائري)",
+      "titleEn": "Market Overview (pie chart)",
+      "needsData": true
+    },
+    {
+      "title": "بيان المشكلة",
+      "titleEn": "Problem Statement"
+    },
+    {
+      "title": "الحل والقيمة المقترحة",
+      "titleEn": "Solution & Value Proposition"
+    },
+    {
+      "title": "المنتجات والخدمات",
+      "titleEn": "Products & Services"
+    },
+    {
+      "title": "آلية العمل",
+      "titleEn": "How It Works"
+    },
+    {
+      "title": "المحطات الرئيسية",
+      "titleEn": "Milestones"
+    },
+    {
+      "title": "خارطة الطريق",
+      "titleEn": "Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "الختام وبيانات التواصل",
+      "titleEn": "Conclusion & Contacts"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ قيم الدائري في كتلة chart-data (القيم والوحدة) وتُحدَّث النسب المعروضة منها تلقائيًا."
+}

@@ -1,0 +1,65 @@
+{
+  "key": "sl-corporate-strategy-planning",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "استراتيجية الشركات والتخطيط",
+  "nameEn": "Corporate Strategy & Planning",
+  "description": "اثنتا عشرة شريحة كحلية: نظرة تنفيذية، المشهد، الأولويات، النمو، الأداء، العملاء، التشغيل، المبادرات، خارطة الطريق",
+  "descriptionEn": "Twelve navy slides: overview, landscape, priorities, growth, performance, customers, operating model, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نظرة تنفيذية عامة (مؤشرات)",
+      "titleEn": "Executive Overview (KPIs)",
+      "needsData": true
+    },
+    {
+      "title": "المشهد الحالي للأعمال (جدول)",
+      "titleEn": "Current Business Landscape (table)"
+    },
+    {
+      "title": "الأولويات الاستراتيجية",
+      "titleEn": "Strategic Priorities"
+    },
+    {
+      "title": "فرص النمو",
+      "titleEn": "Growth Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "لمحة عن الأداء (رسم أعمدة)",
+      "titleEn": "Performance Snapshot (bar chart)",
+      "needsData": true
+    },
+    {
+      "title": "منظور العملاء",
+      "titleEn": "Customer Perspective"
+    },
+    {
+      "title": "نموذج التشغيل (خط زمني)",
+      "titleEn": "Operating Model (timeline)"
+    },
+    {
+      "title": "محفظة المبادرات (جدول)",
+      "titleEn": "Initiative Portfolio (table)"
+    },
+    {
+      "title": "خارطة طريق النمو",
+      "titleEn": "Growth Roadmap",
+      "needsData": true
+    },
+    {
+      "title": "النظرة الاستراتيجية",
+      "titleEn": "Strategic Outlook"
+    },
+    {
+      "title": "التواصل والختام",
+      "titleEn": "Get in Touch"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أعمدة رسم الأداء في كتلة chart-data (التسميات والقيم والحد الأعلى والعمود المُبرز) والتعليقات فوقها نصوص في .co."
+}
