@@ -1,0 +1,72 @@
+{
+  "key": "sl-management-review",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🧭",
+  "name": "المراجعة الإدارية",
+  "nameEn": "Management Review",
+  "description": "ثلاث عشرة شريحة لمراجعة إدارية: جدول أعمال، مؤشرات وأهداف، لوحة أداء، مخاطر، قرارات، خطة عمل وملخص",
+  "descriptionEn": "Thirteen slides for a management review: agenda, KPIs and goals, dashboard, risks, decisions, action plan, summary",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "النظرة التنفيذية العامة",
+      "titleEn": "Executive Overview",
+      "needsData": true
+    },
+    {
+      "title": "نظرة على الأهداف الاستراتيجية",
+      "titleEn": "Strategic Goals Overview",
+      "needsData": true
+    },
+    {
+      "title": "لوحة الأداء",
+      "titleEn": "Performance Dashboard",
+      "needsData": true
+    },
+    {
+      "title": "الأداء التشغيلي",
+      "titleEn": "Operational Performance",
+      "needsData": true
+    },
+    {
+      "title": "مراجعة الجودة والامتثال",
+      "titleEn": "Quality and Compliance Review",
+      "needsData": true
+    },
+    {
+      "title": "تقييم المخاطر",
+      "titleEn": "Risk Assessment",
+      "needsData": true
+    },
+    {
+      "title": "فرص التحسين",
+      "titleEn": "Improvement Opportunities",
+      "needsData": true
+    },
+    {
+      "title": "القرارات الإدارية",
+      "titleEn": "Management Decisions"
+    },
+    {
+      "title": "خطة العمل",
+      "titleEn": "Action Plan"
+    },
+    {
+      "title": "الملخص الختامي",
+      "titleEn": "Closing Summary"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You / Connect With Us"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف وغيّر النصوص والأرقام فقط؛ أعمدة لوحة الأداء تُرسم من كتلة chart-data، وأشرطة الجودة عرضها بنسبة القيمة (width بالنسبة المئوية)، وأشرطة التأثير في تقييم المخاطر ثلاثة مقاطع ملوّنة (y متوسط، r مرتفع، g منخفض) مع وصف aria-label."
+}
