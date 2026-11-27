@@ -1,0 +1,75 @@
+{
+  "key": "sl-investment-opportunity-assessment",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💼",
+  "name": "تقييم فرصة الاستثمار",
+  "nameEn": "Investment Opportunity Assessment",
+  "description": "13 شريحة لتقييم فرصة استثمارية: السوق، الأصول، رأس المال، الملكية، خطة القيمة، السيناريوهات، المخاطر والتوصية",
+  "descriptionEn": "13 slides to assess an investment: market, assets, capital, cap table, value plan, scenarios, risk, recommendation",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على الفرصة الاستثمارية",
+      "titleEn": "Investment Opportunity Overview",
+      "needsData": true
+    },
+    {
+      "title": "سياق السوق",
+      "titleEn": "Market Context",
+      "needsData": true
+    },
+    {
+      "title": "ملف الأصول والأعمال",
+      "titleEn": "Asset & Business Profile"
+    },
+    {
+      "title": "المبررات الاستراتيجية للاستثمار",
+      "titleEn": "Strategic Investment Rationale"
+    },
+    {
+      "title": "الوضع الاستثماري الحالي",
+      "titleEn": "Current Investment Position",
+      "needsData": true
+    },
+    {
+      "title": "الاستثمار الرأسمالي المقترح",
+      "titleEn": "Proposed Capital Investment",
+      "needsData": true
+    },
+    {
+      "title": "أثر الاستثمار على جدول الملكية",
+      "titleEn": "Ownership & Cap Table Impact",
+      "needsData": true
+    },
+    {
+      "title": "خطة خلق القيمة",
+      "titleEn": "Value Creation Plan"
+    },
+    {
+      "title": "الإيراد المتوقع والمؤشرات المالية",
+      "titleEn": "Projected ARR & Key Metrics",
+      "needsData": true
+    },
+    {
+      "title": "السيناريوهات والحساسية",
+      "titleEn": "Scenario & Sensitivity",
+      "needsData": true
+    },
+    {
+      "title": "مقارنة المخاطر والبدائل الاستثمارية",
+      "titleEn": "Risk & Alternative Investment Comparison",
+      "needsData": true
+    },
+    {
+      "title": "التوصية الاستثمارية",
+      "titleEn": "Investment Recommendation",
+      "needsData": true
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في كتلة chart-data، وتوزيع رأس المال في chart-data-2، والإيراد المتوقع في chart-data-3 (من query_data عند طلب بيانات حقيقية)، وفقاعات المخاطر والجدول نصوص HTML."
+}
