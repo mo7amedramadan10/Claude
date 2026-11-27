@@ -1,0 +1,74 @@
+{
+  "key": "sl-negotiation",
+  "kind": "slides",
+  "category": "mgmt",
+  "icon": "🤝",
+  "name": "عرض التفاوض",
+  "nameEn": "Negotiation Presentation",
+  "description": "خمس عشرة شريحة عن التفاوض: أهداف بأرقام، أنواع، مراحل، استراتيجيات، تحضير، تواصل، دراسة حالة، أدوات، وخلاصة",
+  "descriptionEn": "15 negotiation slides: objectives with figures, types, stages, strategies, prep, communication, case study, tools",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "مقدمة إلى التفاوض",
+      "titleEn": "Introduction to Negotiation"
+    },
+    {
+      "title": "أهداف التفاوض",
+      "titleEn": "Objectives of Negotiation",
+      "needsData": true
+    },
+    {
+      "title": "أنواع التفاوض",
+      "titleEn": "Types of Negotiation"
+    },
+    {
+      "title": "مراحل التفاوض",
+      "titleEn": "Stages of Negotiation"
+    },
+    {
+      "title": "استراتيجيات التفاوض الرئيسة",
+      "titleEn": "Key Negotiation Strategies"
+    },
+    {
+      "title": "أساليب التحضير",
+      "titleEn": "Preparation Techniques"
+    },
+    {
+      "title": "مهارات التواصل الفعّال",
+      "titleEn": "Effective Communication Skills"
+    },
+    {
+      "title": "ما يجب وما لا يجب في التفاوض",
+      "titleEn": "Negotiation Do’s & Don’ts"
+    },
+    {
+      "title": "دراسة حالة",
+      "titleEn": "Case Study"
+    },
+    {
+      "title": "التحديات الشائعة في التفاوض",
+      "titleEn": "Common Challenges in Negotiation"
+    },
+    {
+      "title": "الأدوات والأطر",
+      "titleEn": "Tools & Frameworks"
+    },
+    {
+      "title": "الخلاصة والنقاط الرئيسة",
+      "titleEn": "Conclusion & Key Takeaways"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والخلفية المتعرجة، وغيّر النصوص والأرقام فقط (مثل 15+ و450+ و10+ في شريحة الأهداف)."
+}

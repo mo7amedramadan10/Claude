@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض التفاوض</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «عرض التفاوض»: خمس عشرة شريحة — غلاف داكن، جدول أعمال، مقدمة، أهداف بأرقام، أنواع، مراحل دائرية، استراتيجيات متدرجة، أساليب التحضير، مهارات التواصل، ما يجب وما لا يجب، دراسة حالة، تحديات، أدوات بنصف دائرة، خلاصة، وشكر بمعلومات التواصل. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #0A0A0A; --ink-2: #1C1C1C; --accent: #D9640D; --o1: #D9640D; --o2: #F08A38; --o3: #F5AB72; --dark: #0D0F1B; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عام */
+  .bg { position: absolute; inset: 0; width: 1280px; height: 720px; pointer-events: none; }
+  .bg path { fill: none; stroke: url(#ngFade); stroke-linejoin: round; stroke-linecap: butt; }
+  html[dir="rtl"] .bg, html[dir="rtl"] .flipx { transform: scaleX(-1); }
+  .ic { display: inline-grid; place-items: center; } .ic svg { width: 100%; height: 100%; }
+  .ttl { position: absolute; top: 96px; inset-inline-start: 73px; margin: 0; font-size: 47px; font-weight: 700; line-height: 53px; color: #000; letter-spacing: -.4px; }
+  .ttl em { font-style: normal; color: var(--o1); }
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; }
+  .lead { position: absolute; margin: 0; font-size: 20px; line-height: 25.5px; color: var(--ink-2); }
+  .h { margin: 0; font-size: 23px; font-weight: 700; line-height: 1.25; color: #000; }
+  .d { margin: 0; font-size: 18.5px; line-height: 23.5px; color: var(--ink-2); }
+  .ab { position: absolute; }
+  .photo { position: absolute; object-fit: cover; display: block; }
+  .logo { position: absolute; top: 52px; inset-inline-start: 73px; width: 60px; height: 62px; color: #F08A38; }
+  .brand { position: absolute; top: 64px; inset-inline-start: 158px; margin: 0; font-size: 14px; line-height: 19.5px; letter-spacing: 1.2px; color: #E58436; text-transform: uppercase; }
+  html[lang="ar"] .brand { letter-spacing: 0; font-size: 15px; }
+
+  /* 1 — الغلاف */
+  .frame.s1, .frame.s15 { background: var(--dark); color: #fff; }
+  .frame.s15 { background: #01030F; }
+  .cover-img { position: absolute; top: 0; inset-inline-end: 0; height: 720px; object-fit: cover;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 130px); mask-image: linear-gradient(to right, transparent 0, #000 130px); }
+  html[dir="rtl"] .cover-img { -webkit-mask-image: linear-gradient(to left, transparent 0, #000 130px); mask-image: linear-gradient(to left, transparent 0, #000 130px); }
+  .s1 .cover-img { width: 670px; } .s15 .cover-img { width: 725px; }
+  .s1 .vline { position: absolute; top: 0; inset-inline-start: 322px; width: 3px; height: 108px; background: #575761; }
+  .s1 .curve { position: absolute; top: 382px; inset-inline-start: 0; width: 312px; height: 34px; }
+  .s1 h1 { position: absolute; top: 208px; inset-inline-start: 64px; margin: 0; font-size: 80px; font-weight: 700; line-height: 100px; letter-spacing: .5px; color: #fff; }
+  html[lang="ar"] .s1 h1 { font-weight: 800; letter-spacing: 0; top: 200px; }
+  .s1 .sub { position: absolute; top: 310px; inset-inline-start: 67px; margin: 0; font-size: 21px; line-height: 28px; letter-spacing: 2.6px; color: #EDEDF2; }
+  html[lang="ar"] .s1 .sub { letter-spacing: 0; font-size: 23px; }
+  .s1 .txt { position: absolute; top: 462px; inset-inline-start: 67px; width: 500px; margin: 0; font-size: 20px; line-height: 25.5px; color: #fff; }
+  .s1 .dash { position: absolute; top: 540px; inset-inline-start: 67px; width: 50px; height: 3px; background: #fff; }
+  .s1 .pill { position: absolute; top: 571px; inset-inline-start: 67px; height: 31px; padding: 0 14px; border-radius: 16px; background: #F08A38; color: #fff; font-size: 18px; line-height: 31px; margin: 0; }
+
+  /* 2 — جدول الأعمال */
+  .s2 .lead, .s9 .lead { top: 186px; inset-inline-start: 73px; width: 1062px; }
+  .s2 .box { position: absolute; top: 276px; inset-inline-start: 73px; width: 523px; height: 402px; border-radius: 10px; background: var(--o1); }
+  .agi { position: absolute; width: 446px; height: 60px; }
+  .agi .ic { position: absolute; top: 2px; inset-inline-start: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--o1); color: #fff; padding: 4px; }
+  .agi .h, .agi .n { position: absolute; top: -1px; inset-inline-start: 49px; font-size: 22px; }
+  .agi .n { inset-inline-start: auto; inset-inline-end: 0; margin: 0; font-weight: 700; line-height: 1.25; }
+  .agi .d { position: absolute; top: 34px; inset-inline-start: 49px; white-space: nowrap; font-size: 18.5px; }
+  .agi.in .ic { background: #fff; color: var(--o1); }
+  .agi.in .h, .agi.in .n { color: #fff; } .agi.in .d { color: #FBE1CD; }
+  html[dir="rtl"] .agi .ic svg { transform: scaleX(-1); }
+
+  /* 3 — المقدمة */
+  .s3 .ttl, .s4 .ttl, .s5 .ttl, .s8 .ttl, .s12 .ttl, .s14 .ttl, .s10 .ttl { width: 560px; }
+  .s3 .ttl { top: 140px; }
+  .s3 .lead { top: 273px; inset-inline-start: 73px; width: 535px; }
+  .s3 .photo { top: 85px; inset-inline-start: 742px; width: 450px; height: 575px; border-radius: 22px; }
+  .s3 .card { position: absolute; top: 421px; inset-inline-start: 73px; width: 958px; height: 200px; border-radius: 18px; background: #fff; box-shadow: 0 8px 34px rgb(0 0 0 / .11); }
+  .s3 .col { position: absolute; top: 33px; width: 270px; }
+  .num { display: grid; place-items: center; border-radius: 50%; color: #fff; font-weight: 700; box-shadow: 0 6px 14px rgb(0 0 0 / .16); }
+  .s3 .num { position: absolute; top: 0; inset-inline-start: 0; width: 48px; height: 48px; font-size: 19px; }
+  .s3 .col .h { position: absolute; top: 9px; inset-inline-start: 68px; white-space: nowrap; }
+  .s3 .col .d { position: absolute; top: 66px; inset-inline-start: 7px; width: 240px; }
+  .bg1 { background: var(--o1); } .bg2 { background: var(--o2); } .bg3 { background: var(--o3); }
+
+  /* 4 — الأهداف */
+  .s4 .lead, .s5 .lead, .s8 .lead { top: 251px; inset-inline-start: 73px; width: 395px; }
+  .s4 .photo { top: 52px; inset-inline-start: 506px; width: 341px; height: 616px; border-radius: 26px; }
+  .obj { position: absolute; inset-inline-start: 73px; width: 390px; height: 100px; }
+  .obj .num { position: absolute; top: 0; inset-inline-start: 0; width: 48px; height: 48px; font-size: 16px; background: var(--o1); }
+  .obj .h { position: absolute; top: -2px; inset-inline-start: 74px; }
+  .obj .d { position: absolute; top: 36px; inset-inline-start: 74px; width: 322px; }
+  .s4 .sep { position: absolute; top: 517px; inset-inline-start: 73px; width: 384px; border-top: 2px dashed #E9CDC4; }
+  .stat { position: absolute; inset-inline-start: 882px; width: 360px; height: 100px; }
+  .stat .big { position: absolute; top: -6px; inset-inline-start: 0; margin: 0; font-size: 50px; font-weight: 700; line-height: 1.2; color: var(--o1); }
+  .stat .lb { position: absolute; top: 60px; inset-inline-start: 0; margin: 0; font-size: 19px; line-height: 1.25; color: #444; white-space: nowrap; }
+  .stat .d { position: absolute; top: 0; inset-inline-start: 149px; width: 172px; font-size: 19.5px; line-height: 25.5px; color: #444; }
+  .s4 .hl { position: absolute; top: 277px; inset-inline-start: 755px; width: 486px; height: 165px; border-radius: 18px; background: var(--o1); box-shadow: 0 10px 34px rgb(0 0 0 / .14); }
+  .s4 .hl .stat { inset-inline-start: 29px; top: 43px; }
+  .s4 .hl .big, .s4 .hl .lb { color: #fff; } .s4 .hl .d { color: #fff; inset-inline-start: 172px; width: 268px; top: 2px; }
+
+  /* 5 — الأنواع */
+  .s5 .photo { top: 377px; inset-inline-start: 0; width: 509px; height: 247px; border-start-end-radius: 12px; border-end-end-radius: 12px; }
+  .s5 .play { position: absolute; top: 406px; inset-inline-start: 483px; width: 52px; height: 52px; border-radius: 50%; background: var(--o1); color: #fff; padding: 13px 12px 13px 15px; }
+  /* الصورة تُعكس في العربية لأن عناصر متراكبة مقصوصة معها، فتُضبط الزوايا قبل العكس لتظهر في جهة النهاية */
+  html[dir="rtl"] .s5 .photo { border-radius: 0 12px 12px 0; }
+  .tc { position: absolute; width: 243px; height: 248px; border: 3px solid var(--o1); border-radius: 14px; background: #fff; }
+  .tc .h { position: absolute; inset-inline-start: 16px; font-size: 22px; }
+  .tc .d { position: absolute; inset-inline-start: 16px; width: 210px; font-size: 18.5px; }
+  .tc .bn { position: absolute; inset-inline-end: 14px; margin: 0; font-size: 56px; font-weight: 700; line-height: 1; color: #F2F2F2; }
+  .tc.top .h { top: 37px; } .tc.top .d { top: 79px; } .tc.top .bn { bottom: 16px; }
+  .tc.btm .h { top: 110px; } .tc.btm .d { top: 152px; } .tc.btm .bn { top: 21px; }
+  .tc.fill { background: var(--o1); box-shadow: 0 10px 26px rgb(0 0 0 / .14); }
+  .tc.fill .h { color: #fff; } .tc.fill .d { color: #FCE3D0; } .tc.fill .bn { color: rgb(255 255 255 / .2); }
+
+  /* 6 — المراحل */
+  .s6 .hub { position: absolute; top: 190px; inset-inline-start: 415px; width: 450px; height: 500px; }
+  .s6 .hn { position: absolute; width: 80px; margin: 0; text-align: center; font-size: 29px; font-weight: 700; line-height: 40px; color: var(--o1); }
+  .st { position: absolute; width: 262px; }
+  .st .h { font-size: 24px; margin-bottom: 9px; } .st .d { font-size: 19.5px; line-height: 25px; }
+  .st.l { inset-inline-start: 83px; text-align: end; } .st.r { inset-inline-start: 936px; }
+
+  /* 7 — الاستراتيجيات */
+  .s7 .bar { position: absolute; display: grid; place-items: center; margin: 0; color: #fff; font-size: 21px; line-height: 1.2; }
+  .s7 .b1 { top: 327px; inset-inline-start: 71px; width: 705px; height: 78px; background: var(--o1); }
+  .s7 .b2 { top: 405px; inset-inline-start: 504px; width: 272px; height: 78px; background: var(--o2); font-size: 24px; font-weight: 700; }
+  .s7 .b3 { top: 483px; inset-inline-start: 504px; width: 705px; height: 78px; background: var(--o3); color: #FFF7F0; }
+  .s7 .an { position: absolute; }
+  .s7 .an .h { font-size: 24px; } .s7 .an .d { font-size: 19.5px; line-height: 25px; }
+  .arr { position: absolute; color: #000; }
+  .s7 .a1 { top: 200px; inset-inline-start: 71px; } .s7 .a1 .d, .s7 .a2 .d { margin-top: 12px; margin-inline-start: 35px; width: 262px; }
+  .s7 .a2 { top: 200px; inset-inline-start: 764px; }
+  .s7 .a3 { top: 349px; inset-inline-start: 840px; width: 395px; text-align: end; } .s7 .a3 .d { margin-top: 12px; }
+  .s7 .a4 { top: 509px; inset-inline-start: 45px; width: 395px; } .s7 .a4 .d { margin-top: 12px; }
+  .s7 .a5 { top: 651px; inset-inline-start: 394px; width: 240px; text-align: center; }
+  .s7 .a6d { top: 598px; inset-inline-start: 791px; width: 395px; text-align: end; }
+  .s7 .a6h { top: 661px; inset-inline-start: 900px; width: 319px; text-align: end; }
+
+  /* 8 — أساليب التحضير */
+  .s8 .photo { top: 96px; inset-inline-start: 711px; width: 505px; height: 528px; border-radius: 12px; }
+  .pc { position: absolute; top: 397px; height: 183px; border-radius: 11px; }
+  .pc .ic { position: absolute; }
+  .pc .h { position: absolute; top: 31px; font-size: 25px; } .pc .d { position: absolute; top: 74px; width: 275px; font-size: 20px; line-height: 25.5px; }
+  .s8 .p1 { inset-inline-start: 64px; width: 459px; background: var(--o1); box-shadow: 0 12px 30px rgb(0 0 0 / .13); }
+  .s8 .p1 .ic { top: 64px; inset-inline-start: 36px; width: 66px; height: 56px; color: #fff; }
+  .s8 .p1 .h, .s8 .p1 .d { inset-inline-start: 138px; color: #fff; } .s8 .p1 .d { color: #FCE0CB; }
+  .s8 .p2 { inset-inline-start: 557px; width: 460px; background: #fff; border: 3px solid var(--o2); }
+  .s8 .p2 .ic { top: 54px; inset-inline-start: 38px; width: 66px; height: 66px; color: var(--o1); }
+  .s8 .p2 .h, .s8 .p2 .d { inset-inline-start: 135px; } .s8 .p2 .h { top: 28px; } .s8 .p2 .d { top: 71px; }
+
+  /* 9 — مهارات التواصل */
+  .s9 .line { position: absolute; top: 483px; inset-inline-start: 222px; width: 835px; height: 2px; background: #000; }
+  .tile { position: absolute; top: 422px; width: 124px; height: 124px; border-radius: 18px; background: #fff; box-shadow: 0 6px 20px rgb(0 0 0 / .13); padding: 12px; }
+  .tile span { display: grid; place-items: center; width: 100px; height: 100px; border-radius: 14px; color: #fff; }
+  .tile svg { width: 46px; height: 46px; }
+  .sk { position: absolute; width: 300px; text-align: center; }
+  .sk .h { font-size: 23px; margin-bottom: 12px; } .sk .d { font-size: 19.5px; line-height: 25px; width: 264px; margin-inline: auto; }
+  .sk.up { top: 290px; } .sk.dn { top: 587px; }
+
+  /* 10 — ما يجب وما لا يجب */
+  .s10 .photo { top: 96px; inset-inline-start: 64px; width: 474px; height: 624px; border-start-start-radius: 14px; border-start-end-radius: 14px; }
+  .s10 .ttl { inset-inline-start: 615px; }
+  .s10 .lead { top: 251px; inset-inline-start: 615px; width: 570px; }
+  .dc { position: absolute; top: 390px; width: 481px; height: 231px; border: 3px solid var(--o2); border-radius: 14px; background: #fff; }
+  .dc .h { position: absolute; top: 28px; inset-inline-start: 31px; font-size: 24px; color: var(--o1); }
+  .dc ul { position: absolute; top: 80px; inset-inline-start: 31px; margin: 0; padding: 0; list-style: none; width: 400px; }
+  .dc li { position: relative; padding-inline-start: 24px; margin-bottom: 13px; font-size: 18.5px; line-height: 23px; color: var(--ink-2); }
+  .dc li .ic { position: absolute; top: 6px; inset-inline-start: 0; width: 13px; height: 13px; color: var(--o1); }
+  html[dir="rtl"] .dc li .ic svg { transform: scaleX(-1); }
+  .s10 .do { inset-inline-start: 233px; } .s10 .dont { inset-inline-start: 735px; }
+
+  /* 11 — دراسة حالة */
+  .s11 .lead { top: 196px; inset-inline-start: 73px; width: 445px; }
+  .cs { position: absolute; inset-inline-start: 41px; width: 518px; height: 150px; border-radius: 10px; }
+  .cs .bn { position: absolute; top: 48px; inset-inline-start: 31px; margin: 0; font-size: 46px; font-weight: 700; line-height: 1.2; color: var(--o1); }
+  .cs .h { position: absolute; top: 25px; inset-inline-start: 137px; } .cs .d { position: absolute; top: 62px; inset-inline-start: 137px; width: 350px; font-size: 19.5px; line-height: 25px; }
+  .s11 .c1 { top: 322px; } .s11 .c2 { top: 471px; background: var(--o1); box-shadow: 0 10px 26px rgb(0 0 0 / .14); }
+  .s11 .c2 .bn, .s11 .c2 .h { color: #fff; } .s11 .c2 .d { color: #FCE3D0; }
+  .cr { position: absolute; inset-inline-start: 709px; width: 470px; height: 120px; }
+  .cr .ic { position: absolute; top: 15px; inset-inline-start: 19px; width: 58px; height: 58px; color: var(--o1); }
+  .cr .h { position: absolute; top: 0; inset-inline-start: 122px; } .cr .d { position: absolute; top: 37px; inset-inline-start: 122px; width: 350px; font-size: 19.5px; line-height: 25px; }
+  .s11 .dl { position: absolute; inset-inline-start: 709px; width: 470px; border-top: 2px dashed #222; }
+
+  /* 12 — التحديات */
+  .s12 .ttl { width: 520px; }
+  .s12 .lead, .s14 .lead { top: 242px; inset-inline-start: 73px; width: 445px; }
+  .s12 .photo { top: 103px; inset-inline-start: 653px; width: 581px; height: 216px; border-radius: 14px; }
+  .ch { position: absolute; top: 401px; width: 290px; height: 240px; }
+  .ch .ic { position: absolute; top: 2px; inset-inline-start: 2px; width: 60px; height: 60px; color: var(--o1); }
+  .ch .h { position: absolute; top: 102px; inset-inline-start: 0; font-size: 24px; } .ch .d { position: absolute; top: 146px; inset-inline-start: 0; width: 260px; font-size: 20px; line-height: 25.5px; }
+  .s12 .vl { position: absolute; top: 401px; width: 2px; height: 240px; background: #111; }
+
+  /* 13 — الأدوات والأطر */
+  .s13 .arc { position: absolute; top: 425px; inset-inline-start: 344px; width: 592px; height: 295px; }
+  .s13 .si { position: absolute; width: 60px; height: 60px; color: #fff; }
+  .bd { position: absolute; width: 92px; height: 92px; border-radius: 50%; background: #fff; box-shadow: 0 4px 16px rgb(0 0 0 / .16); padding: 8px; }
+  .bd span { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; color: #fff; font-size: 25px; line-height: 1; }
+  .tf { position: absolute; width: 260px; text-align: center; }
+  .tf .h { font-size: 23px; margin-bottom: 13px; } .tf .d { font-size: 18.5px; line-height: 23.5px; }
+
+  /* 14 — الخلاصة */
+  .s14 .photo { top: 103px; inset-inline-start: 582px; width: 625px; height: 233px; border-radius: 14px; }
+  .kt { position: absolute; top: 388px; width: 353px; height: 285px; border-radius: 14px; color: #fff; }
+  .kt .h { position: absolute; top: 44px; inset-inline-start: 30px; font-size: 30px; color: #fff; }
+  .kt .ic { position: absolute; top: 40px; inset-inline-end: 32px; width: 48px; height: 48px; }
+  .kt .d { position: absolute; top: 132px; inset-inline-start: 29px; width: 270px; font-size: 20px; line-height: 25.5px; color: #FFF1E6; }
+
+  /* 15 — الشكر */
+  .s15 h1 { position: absolute; top: 152px; inset-inline-start: 70px; margin: 0; font-size: 77px; font-weight: 700; line-height: 96px; color: #fff; letter-spacing: -.5px; }
+  html[lang="ar"] .s15 h1 { font-weight: 800; letter-spacing: 0; }
+  .s15 .txt { position: absolute; top: 244px; inset-inline-start: 73px; width: 500px; margin: 0; font-size: 20px; line-height: 25.5px; color: #fff; }
+  .s15 .frameline { position: absolute; top: 330px; inset-inline-start: 0; width: 388px; height: 390px; }
+  .s15 .panel { position: absolute; top: 378px; inset-inline-start: 350px; width: 67px; height: 312px; border-radius: 10px; background: rgb(255 255 255 / .045); }
+  .s15 .loc { position: absolute; top: 377px; inset-inline-start: 73px; margin: 0; font-size: 23px; font-weight: 700; line-height: 1.25; color: #fff; }
+  .s15 .addr { position: absolute; top: 420px; inset-inline-start: 73px; width: 360px; margin: 0; font-size: 18.5px; line-height: 23.5px; color: #EDEDF1; }
+  .ct { position: absolute; inset-inline-start: 73px; height: 30px; display: flex; align-items: center; }
+  .ct .ic { width: 27px; height: 27px; color: #fff; }
+  .ct p { position: absolute; inset-inline-start: 65px; top: -1px; margin: 0; font-size: 23.5px; line-height: 30px; color: #fff; white-space: nowrap; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="ngFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="700"><stop offset="0" stop-color="#FCF2E9"/><stop offset=".55" stop-color="#FEF8F3"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1"><img class="cover-img" src="/templates/freeform/sl-negotiation/assets/cover-team.jpg" alt="رسم توضيحي لفريق عمل يتفاوض حول طاولة"><svg class="logo" viewBox="0 0 62 64" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 12Q5 3 15 3Q31 0 47 1Q59 1 59 13Q61 33 57 52Q55 60 46 60Q31 62 16 62Q6 63 5 52Q1 32 6 12ZM19 15Q31 12 45 11Q54 11 54 19Q55 32 51 41Q49 47 42 48Q31 50 23 50Q16 50 15 44Q13 29 19 15Z"/></svg><p class="brand">شعار شركتك<br>يوضع هنا</p><span class="vline"></span><svg class="curve flipx" viewBox="0 0 312 34" aria-hidden="true"><path d="M0 32.5 H252 Q285 32.5 310 2" fill="none" stroke="#575761" stroke-width="3"/></svg><h1>التفاوض</h1><p class="sub">قالب عرض تقديمي</p><p class="txt">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي.</p><span class="dash"></span><p class="pill">عدّل النص هنا</p></div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">جدول الأعمال</h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><div class="box"></div><div class="agi in" style="top:311px;inset-inline-start:111px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">01</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi in" style="top:401px;inset-inline-start:111px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">02</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi in" style="top:491px;inset-inline-start:111px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">03</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi in" style="top:581px;inset-inline-start:111px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">04</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi" style="top:311px;inset-inline-start:669px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">05</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi" style="top:401px;inset-inline-start:669px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">06</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi" style="top:491px;inset-inline-start:669px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">07</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div><div class="agi" style="top:581px;inset-inline-start:669px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="n">08</p><p class="d">هذا نص توضيحي. أضف نصك هنا.</p></div></div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">مقدمة<br>إلى <em>التفاوض</em></h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي.</p><img class="photo flipx" src="/templates/freeform/sl-negotiation/assets/intro-meeting.jpg" alt="رجلا أعمال يتفاوضان على طاولة"><div class="card"><div class="col" style="inset-inline-start:34px"><span class="num bg1">01</span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="col" style="inset-inline-start:360px"><span class="num bg2">02</span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي.</p></div><div class="col" style="inset-inline-start:686px"><span class="num bg3">03</span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div></div></div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M232 -40 L50 262 L420 600" stroke-width="140"/><path d="M455 640 L770 120" stroke-width="118"/><path d="M1340 352 L968 78 L955 560" stroke-width="128"/></svg><h1 class="ttl">أهداف<br><em>التفاوض</em></h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا.</p><div class="obj" style="top:406px"><span class="num">01</span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص.</p></div><span class="sep"></span><div class="obj" style="top:547px"><span class="num">02</span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص.</p></div><img class="photo flipx" src="/templates/freeform/sl-negotiation/assets/signing.jpg" alt="شريكان يبتسمان أثناء توقيع اتفاقية"><div class="stat " style="top:139px"><p class="big"><bdi dir="ltr">15+</bdi></p><p class="lb">عدّل النص هنا</p><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="hl"><div class="stat" style="top:43px"><p class="big"><bdi dir="ltr">450+</bdi></p><p class="lb">عدّل النص هنا</p><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div></div><div class="stat " style="top:509px"><p class="big"><bdi dir="ltr">10+</bdi></p><p class="lb">عدّل النص هنا</p><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">أنواع<br><em>التفاوض</em></h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا.</p><img class="photo flipx" src="/templates/freeform/sl-negotiation/assets/handshake.jpg" alt="مصافحة عمل فوق مكتب"><span class="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 6.8l8.2 5.2L9 17.2z"/></svg></span><div class="tc top" style="top:96px;inset-inline-start:678px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص.</p><p class="bn">01</p></div><div class="tc btm" style="top:377px;inset-inline-start:679px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص.</p><p class="bn">02</p></div><div class="tc btm" style="top:96px;inset-inline-start:958px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص.</p><p class="bn">03</p></div><div class="tc top fill" style="top:377px;inset-inline-start:958px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص.</p><p class="bn">04</p></div></div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M232 -40 L50 262 L420 600" stroke-width="140"/><path d="M455 640 L770 120" stroke-width="118"/><path d="M1340 352 L968 78 L955 560" stroke-width="128"/></svg><h1 class="ttl">مراحل <em>التفاوض</em></h1><svg class="hub flipx" viewBox="415 190 450 500" aria-hidden="true"><defs><filter id="ngSh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity=".18"/></filter></defs><line x1="640" y1="437" x2="640" y2="262" stroke="#D9640D" stroke-width="30"/><line x1="640" y1="437" x2="795" y2="350" stroke="#F08A38" stroke-width="30"/><line x1="640" y1="437" x2="795" y2="525" stroke="#F5AB72" stroke-width="30"/><line x1="640" y1="437" x2="640" y2="613" stroke="#D9640D" stroke-width="30"/><line x1="640" y1="437" x2="486" y2="525" stroke="#F08A38" stroke-width="30"/><line x1="640" y1="437" x2="486" y2="350" stroke="#F5AB72" stroke-width="30"/><circle cx="640" cy="262" r="65" fill="#D9640D"/><circle cx="640" cy="262" r="51" fill="#fff" filter="url(#ngSh)"/><circle cx="795" cy="350" r="65" fill="#F08A38"/><circle cx="795" cy="350" r="51" fill="#fff" filter="url(#ngSh)"/><circle cx="795" cy="525" r="65" fill="#F5AB72"/><circle cx="795" cy="525" r="51" fill="#fff" filter="url(#ngSh)"/><circle cx="640" cy="613" r="65" fill="#D9640D"/><circle cx="640" cy="613" r="51" fill="#fff" filter="url(#ngSh)"/><circle cx="486" cy="525" r="65" fill="#F08A38"/><circle cx="486" cy="525" r="51" fill="#fff" filter="url(#ngSh)"/><circle cx="486" cy="350" r="65" fill="#F5AB72"/><circle cx="486" cy="350" r="51" fill="#fff" filter="url(#ngSh)"/><circle cx="640" cy="437" r="64" fill="#fff" stroke="#E6E6E6" stroke-width="2" filter="url(#ngSh)"/><circle cx="640" cy="437" r="55" fill="#D9640D"/></svg><p class="hn" style="top:242px;inset-inline-start:600px">01</p><p class="hn" style="top:330px;inset-inline-start:755px">02</p><p class="hn" style="top:505px;inset-inline-start:755px">03</p><p class="hn" style="top:593px;inset-inline-start:600px">04</p><p class="hn" style="top:505px;inset-inline-start:446px">05</p><p class="hn" style="top:330px;inset-inline-start:446px">06</p><div class="st l" style="top:225px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="st l" style="top:388px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="st l" style="top:551px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="st r" style="top:225px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="st r" style="top:388px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="st r" style="top:551px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">استراتيجيات التفاوض الرئيسة</h1><p class="bar b1">هذا نص توضيحي. أضف النص المطلوب هنا.</p><p class="bar b2">عدّل النص هنا</p><p class="bar b3">هذا نص توضيحي. أضف النص المطلوب هنا.</p><div class="an a1"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><svg class="arr" style="top:247px;inset-inline-start:76px;width:14px;height:70px" viewBox="0 0 14 70" aria-hidden="true"><path d="M7 0 V60" stroke="currentColor" stroke-width="2"/><path d="M1 56 L7 68 L13 56Z" fill="currentColor"/></svg><div class="an a2"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><svg class="arr" style="top:247px;inset-inline-start:767px;width:14px;height:70px" viewBox="0 0 14 70" aria-hidden="true"><path d="M7 0 V60" stroke="currentColor" stroke-width="2"/><path d="M1 56 L7 68 L13 56Z" fill="currentColor"/></svg><svg class="arr flipx" style="top:358px;inset-inline-start:777px;width:268px;height:14px" viewBox="0 0 268 14" aria-hidden="true"><path d="M0 7 H260" stroke="currentColor" stroke-width="2"/><path d="M255 1 L267 7 L255 13Z" fill="currentColor"/></svg><div class="an a3"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><svg class="arr flipx" style="top:518px;inset-inline-start:244px;width:260px;height:14px" viewBox="0 0 260 14" aria-hidden="true"><path d="M8 7 H260" stroke="currentColor" stroke-width="2"/><path d="M13 1 L1 7 L13 13Z" fill="currentColor"/></svg><div class="an a4"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><svg class="arr" style="top:574px;inset-inline-start:507px;width:14px;height:70px" viewBox="0 0 14 70" aria-hidden="true"><path d="M7 70 V10" stroke="currentColor" stroke-width="2"/><path d="M1 14 L7 2 L13 14Z" fill="currentColor"/></svg><div class="an a5"><h2 class="h">عدّل النص هنا</h2></div><svg class="arr" style="top:574px;inset-inline-start:1202px;width:14px;height:70px" viewBox="0 0 14 70" aria-hidden="true"><path d="M7 70 V10" stroke="currentColor" stroke-width="2"/><path d="M1 14 L7 2 L13 14Z" fill="currentColor"/></svg><p class="an a6d d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><div class="an a6h"><h2 class="h">عدّل النص هنا</h2></div></div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M232 -40 L50 262 L420 600" stroke-width="140"/><path d="M455 640 L770 120" stroke-width="118"/><path d="M1340 352 L968 78 L955 560" stroke-width="128"/></svg><h1 class="ttl">أساليب<br>التحضير</h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا.</p><img class="photo flipx" src="/templates/freeform/sl-negotiation/assets/team-smiling.jpg" alt="زملاء مبتسمون يتبادلون التحية في المكتب"><div class="pc p1"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="3.4"/><circle cx="4.9" cy="9" r="2.5"/><circle cx="19.1" cy="9" r="2.5"/><path d="M5.8 19.6c0-3.6 2.8-6.3 6.2-6.3s6.2 2.7 6.2 6.3c0 .8-.6 1.4-1.4 1.4H7.2c-.8 0-1.4-.6-1.4-1.4z"/><path d="M4.3 17.9H1.6c-.6 0-1-.5-1-1 0-2.5 1.8-4.4 4.2-4.4.8 0 1.5.2 2.1.6-1.5 1.2-2.5 2.9-2.6 4.8z"/><path d="M19.7 17.9h2.7c.6 0 1-.5 1-1 0-2.5-1.8-4.4-4.2-4.4-.8 0-1.5.2-2.1.6 1.5 1.2 2.5 2.9 2.6 4.8z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><div class="pc p2"><span class="ic  flipx"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1.5" y="3" width="14" height="4.6" rx="2.3"/><rect x="1.5" y="9.7" width="21" height="4.6" rx="2.3"/><rect x="1.5" y="16.4" width="10" height="4.6" rx="2.3"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div></div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">مهارات التواصل الفعّال</h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p><span class="line"></span><div class="tile" style="inset-inline-start:160px"><span class="bg1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.00 0.50 L15.14 4.42 L20.13 3.87 L19.58 8.86 L23.50 12.00 L19.58 15.14 L20.13 20.13 L15.14 19.58 L12.00 23.50 L8.86 19.58 L3.87 20.13 L4.42 15.14 L0.50 12.00 L4.42 8.86 L3.87 3.87 L8.86 4.42 Z M7.40 12.00 a4.60 4.60 0 1 0 9.20 0 a4.60 4.60 0 1 0 -9.20 0 Z"/><circle cx="12" cy="12" r="2.8"/></svg></span></div><div class="tile" style="inset-inline-start:369px"><span class="bg2"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 2.5h10.5v19H13v-3.6h-3.5v3.6H6zM8.4 5v2.2h2V5zm3.7 0v2.2h2V5zM8.4 9v2.2h2V9zm3.7 0v2.2h2V9zm-3.7 4v2.2h2V13zm3.7 0v2.2h2V13z"/></svg></span></div><div class="tile" style="inset-inline-start:578px"><span class="bg3"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 2.2c4.6 0 8 3.2 8 7.6 0 1.6-.5 3-1.3 4.2v7.8H9.6v-2.6H7.2c-1.1 0-2-.9-2-2v-2.4l-1.8-.6c-.4-.2-.6-.6-.4-1l1.8-3.4C5.1 5.5 7.2 2.2 10.5 2.2z"/><path fill="#F5AB72" fill-rule="evenodd" d="M12.06 4.50 L13.14 4.65 L13.21 5.65 L13.83 6.12 L14.81 5.93 L15.23 6.94 L14.40 7.50 L14.30 8.27 L14.95 9.03 L14.29 9.89 L13.39 9.45 L12.67 9.75 L12.34 10.70 L11.26 10.55 L11.19 9.55 L10.57 9.08 L9.59 9.27 L9.17 8.26 L10.00 7.70 L10.10 6.93 L9.45 6.17 L10.11 5.31 L11.01 5.75 L11.73 5.45 Z M11.20 7.60 a1.00 1.00 0 1 0 2.00 0 a1.00 1.00 0 1 0 -2.00 0 Z"/><path fill="#F5AB72" fill-rule="evenodd" d="M14.49 9.30 L15.36 9.42 L15.43 10.20 L15.93 10.59 L16.71 10.45 L17.04 11.26 L16.40 11.72 L16.32 12.35 L16.82 12.95 L16.28 13.65 L15.57 13.32 L14.99 13.56 L14.71 14.30 L13.84 14.18 L13.77 13.40 L13.27 13.01 L12.49 13.15 L12.16 12.34 L12.80 11.88 L12.88 11.25 L12.38 10.65 L12.92 9.95 L13.63 10.28 L14.21 10.04 Z M13.80 11.80 a0.80 0.80 0 1 0 1.60 0 a0.80 0.80 0 1 0 -1.60 0 Z"/></svg></span></div><div class="tile" style="inset-inline-start:786px"><span class="bg2"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="4" width="3" height="17" rx=".6"/><rect x="8" y="8" width="3" height="13" rx=".6"/><rect x="13" y="11" width="3" height="10" rx=".6"/><rect x="18" y="9.5" width="3" height="11.5" rx=".6"/></svg></span></div><div class="tile" style="inset-inline-start:995px"><span class="bg1"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 3.2a8.8 8.8 0 1 1 0 17.6 8.8 8.8 0 0 1 0-17.6zm0 2.4a6.4 6.4 0 1 0 0 12.8 6.4 6.4 0 0 0 0-12.8z"/><circle cx="12" cy="12" r="3.2"/><rect x="10.9" y="0.5" width="2.2" height="4.4" rx="1"/><rect x="10.9" y="19.1" width="2.2" height="4.4" rx="1"/><rect x="0.5" y="10.9" width="4.4" height="2.2" rx="1"/><rect x="19.1" y="10.9" width="4.4" height="2.2" rx="1"/></svg></span></div><div class="sk up" style="inset-inline-start:72px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="sk up" style="inset-inline-start:490px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="sk up" style="inset-inline-start:907px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="sk dn" style="inset-inline-start:281px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="sk dn" style="inset-inline-start:698px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M232 -40 L50 262 L420 600" stroke-width="140"/><path d="M455 640 L770 120" stroke-width="118"/><path d="M1340 352 L968 78 L955 560" stroke-width="128"/></svg><img class="photo flipx" src="/templates/freeform/sl-negotiation/assets/partners.jpg" alt="شريكا عمل مبتسمان على طاولة"><h1 class="ttl">التفاوض<br><em>ما يجب</em> وما <em>لا يجب</em></h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا.</p><div class="dc do"><h2 class="h">ما يجب فعله</h2><ul><li><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h7l7 7-7 7H3l7-7z"/></svg></span>هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</li><li><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h7l7 7-7 7H3l7-7z"/></svg></span>هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</li></ul></div><div class="dc dont"><h2 class="h">ما يجب تجنّبه</h2><ul><li><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h7l7 7-7 7H3l7-7z"/></svg></span>هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</li><li><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h7l7 7-7 7H3l7-7z"/></svg></span>هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</li></ul></div></div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">دراسة حالة</h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص.</p><div class="cs c1"><p class="bn">01</p><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي.</p></div><div class="cs c2"><p class="bn">02</p><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي.</p></div><div class="cr" style="top:125px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.62 1.01 L14.52 1.29 L14.81 4.51 L16.67 5.50 L19.51 3.96 L21.35 6.21 L19.28 8.69 L19.90 10.71 L22.99 11.62 L22.71 14.52 L19.49 14.81 L18.50 16.67 L20.04 19.51 L17.79 21.35 L15.31 19.28 L13.29 19.90 L12.38 22.99 L9.48 22.71 L9.19 19.49 L7.33 18.50 L4.49 20.04 L2.65 17.79 L4.72 15.31 L4.10 13.29 L1.01 12.38 L1.29 9.48 L4.51 9.19 L5.50 7.33 L3.96 4.49 L6.21 2.65 L8.69 4.72 L10.71 4.10 Z M8.60 12.00 a3.40 3.40 0 1 0 6.80 0 a3.40 3.40 0 1 0 -6.80 0 Z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي.</p></div><span class="dl" style="top:264px"></span><div class="cr" style="top:318px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="3.4"/><circle cx="4.9" cy="9" r="2.5"/><circle cx="19.1" cy="9" r="2.5"/><path d="M5.8 19.6c0-3.6 2.8-6.3 6.2-6.3s6.2 2.7 6.2 6.3c0 .8-.6 1.4-1.4 1.4H7.2c-.8 0-1.4-.6-1.4-1.4z"/><path d="M4.3 17.9H1.6c-.6 0-1-.5-1-1 0-2.5 1.8-4.4 4.2-4.4.8 0 1.5.2 2.1.6-1.5 1.2-2.5 2.9-2.6 4.8z"/><path d="M19.7 17.9h2.7c.6 0 1-.5 1-1 0-2.5-1.8-4.4-4.2-4.4-.8 0-1.5.2-2.1.6 1.5 1.2 2.5 2.9 2.6 4.8z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي.</p></div><span class="dl" style="top:457px"></span><div class="cr" style="top:511px"><span class="ic  flipx"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1.5" y="3" width="14" height="4.6" rx="2.3"/><rect x="1.5" y="9.7" width="21" height="4.6" rx="2.3"/><rect x="1.5" y="16.4" width="10" height="4.6" rx="2.3"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص توضيحي.</p></div></div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M232 -40 L50 262 L420 600" stroke-width="140"/><path d="M455 640 L770 120" stroke-width="118"/><path d="M1340 352 L968 78 L955 560" stroke-width="128"/></svg><h1 class="ttl">التحديات الشائعة<br>في <em>التفاوض</em></h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص.</p><img class="photo" src="/templates/freeform/sl-negotiation/assets/contract.jpg" alt="أيدٍ توقّع أوراق عقد على مكتب"><div class="ch" style="inset-inline-start:75px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.62 1.01 L14.52 1.29 L14.81 4.51 L16.67 5.50 L19.51 3.96 L21.35 6.21 L19.28 8.69 L19.90 10.71 L22.99 11.62 L22.71 14.52 L19.49 14.81 L18.50 16.67 L20.04 19.51 L17.79 21.35 L15.31 19.28 L13.29 19.90 L12.38 22.99 L9.48 22.71 L9.19 19.49 L7.33 18.50 L4.49 20.04 L2.65 17.79 L4.72 15.31 L4.10 13.29 L1.01 12.38 L1.29 9.48 L4.51 9.19 L5.50 7.33 L3.96 4.49 L6.21 2.65 L8.69 4.72 L10.71 4.10 Z M8.60 12.00 a3.40 3.40 0 1 0 6.80 0 a3.40 3.40 0 1 0 -6.80 0 Z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><span class="vl" style="inset-inline-start:411px"></span><div class="ch" style="inset-inline-start:471px"><span class="ic "><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="3.4"/><circle cx="4.9" cy="9" r="2.5"/><circle cx="19.1" cy="9" r="2.5"/><path d="M5.8 19.6c0-3.6 2.8-6.3 6.2-6.3s6.2 2.7 6.2 6.3c0 .8-.6 1.4-1.4 1.4H7.2c-.8 0-1.4-.6-1.4-1.4z"/><path d="M4.3 17.9H1.6c-.6 0-1-.5-1-1 0-2.5 1.8-4.4 4.2-4.4.8 0 1.5.2 2.1.6-1.5 1.2-2.5 2.9-2.6 4.8z"/><path d="M19.7 17.9h2.7c.6 0 1-.5 1-1 0-2.5-1.8-4.4-4.2-4.4-.8 0-1.5.2-2.1.6 1.5 1.2 2.5 2.9 2.6 4.8z"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div><span class="vl" style="inset-inline-start:807px"></span><div class="ch" style="inset-inline-start:867px"><span class="ic  flipx"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1.5" y="3" width="14" height="4.6" rx="2.3"/><rect x="1.5" y="9.7" width="21" height="4.6" rx="2.3"/><rect x="1.5" y="16.4" width="10" height="4.6" rx="2.3"/></svg></span><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي.</p></div></div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M-60 500 L600 -40 L672 455 L1052 212 L995 495 L1340 255" stroke-width="122"/></svg><h1 class="ttl">الأدوات والأطر</h1><svg class="arc" viewBox="344 425 592 295" aria-hidden="true"><path fill="#D9640D" d="M349.0 716.8 A291 291 0 0 1 402.7 551.6 L519.2 636.2 A147 147 0 0 0 493.0 716.8Z"/><path fill="#F08A38" d="M406.5 546.4 A291 291 0 0 1 547.0 444.2 L591.5 581.2 A147 147 0 0 0 523.0 631.0Z"/><path fill="#F5AB72" d="M553.1 442.3 A291 291 0 0 1 726.9 442.3 L682.4 579.2 A147 147 0 0 0 597.6 579.2Z"/><path fill="#F08A38" d="M733.0 444.2 A291 291 0 0 1 873.5 546.4 L757.0 631.0 A147 147 0 0 0 688.5 581.2Z"/><path fill="#D9640D" d="M877.3 551.6 A291 291 0 0 1 931.0 716.8 L787.0 716.8 A147 147 0 0 0 760.8 636.2Z"/></svg><span class="ic si" style="top:622px;inset-inline-start:402px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.5l10.5 9.2-1.4 1.6-1.6-1.4V21.5H4.5V11.9l-1.6 1.4-1.4-1.6zM7 10v9.2h3.6v-4.4h4.6v4.4H17V10l-5-4.4z"/><rect x="12" y="15.8" width="2.2" height="2.4"/></svg></span><span class="ic si" style="top:513px;inset-inline-start:481px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.6" cy="5.4" r="2.9"/><path d="M1 21c0-4.6 1.6-11 4.6-11 1.2 0 2.2.9 2.9 2.4L6.3 21H1z"/><path d="M6.6 21l1.6-8.2c.6 1.6 1 3.4 1 5.2V21z"/><path fill-rule="evenodd" d="M16 5.8a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"/><path d="M16.4 12.4l5.6-5.6.9 1.9 1.1-1.1-.9-1.9-1.9-.9-1.1 1.1 1.9.9-5.6 5.6z"/></svg></span><span class="ic si" style="top:471px;inset-inline-start:610px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 3.2a8.8 8.8 0 1 1 0 17.6 8.8 8.8 0 0 1 0-17.6zm0 2.4a6.4 6.4 0 1 0 0 12.8 6.4 6.4 0 0 0 0-12.8z"/><circle cx="12" cy="12" r="3.2"/><rect x="10.9" y="0.5" width="2.2" height="4.4" rx="1"/><rect x="10.9" y="19.1" width="2.2" height="4.4" rx="1"/><rect x="0.5" y="10.9" width="4.4" height="2.2" rx="1"/><rect x="19.1" y="10.9" width="4.4" height="2.2" rx="1"/></svg></span><span class="ic si" style="top:513px;inset-inline-start:739px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.5a10.5 10.5 0 1 1 0 21 10.5 10.5 0 0 1 0-21zm0 3.8a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2zM5.9 18.2a8 8 0 0 0 12.2 0c-1.1-2.3-3.4-3.8-6.1-3.8s-5 1.5-6.1 3.8z"/></svg></span><span class="ic si" style="top:622px;inset-inline-start:818px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M14.91 6.20 L17.12 6.42 L17.37 8.79 L18.82 9.57 L20.93 8.46 L22.34 10.18 L20.84 12.03 L21.32 13.60 L23.60 14.31 L23.38 16.52 L21.01 16.77 L20.23 18.22 L21.34 20.33 L19.62 21.74 L17.77 20.24 L16.20 20.72 L15.49 23.00 L13.28 22.78 L13.03 20.41 L11.58 19.63 L9.47 20.74 L8.06 19.02 L9.56 17.17 L9.08 15.60 L6.80 14.89 L7.02 12.68 L9.39 12.43 L10.17 10.98 L9.06 8.87 L10.78 7.46 L12.63 8.96 L14.20 8.48 Z M12.40 14.60 a2.80 2.80 0 1 0 5.60 0 a2.80 2.80 0 1 0 -5.60 0 Z"/><path fill-rule="evenodd" d="M5.42 0.80 L6.80 0.96 L6.91 2.37 L7.76 2.90 L9.08 2.39 L9.82 3.57 L8.79 4.54 L8.90 5.53 L10.12 6.25 L9.66 7.56 L8.26 7.35 L7.55 8.06 L7.76 9.46 L6.45 9.92 L5.73 8.70 L4.74 8.59 L3.77 9.62 L2.59 8.88 L3.10 7.56 L2.57 6.71 L1.16 6.60 L1.00 5.22 L2.36 4.79 L2.69 3.85 L1.89 2.68 L2.88 1.69 L4.05 2.49 L4.99 2.16 Z M4.10 5.40 a1.50 1.50 0 1 0 3.00 0 a1.50 1.50 0 1 0 -3.00 0 Z"/></svg></span><div class="bd" style="top:591px;inset-inline-start:261px"><span class="bg1">01</span></div><div class="bd" style="top:409px;inset-inline-start:379px"><span class="bg2">02</span></div><div class="bd" style="top:333px;inset-inline-start:592px"><span class="bg3">03</span></div><div class="bd" style="top:409px;inset-inline-start:803px"><span class="bg2">04</span></div><div class="bd" style="top:591px;inset-inline-start:920px"><span class="bg1">05</span></div><div class="tf" style="top:494px;inset-inline-start:40px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="tf" style="top:314px;inset-inline-start:156px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="tf" style="top:214px;inset-inline-start:509px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="tf" style="top:314px;inset-inline-start:863px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div><div class="tf" style="top:494px;inset-inline-start:980px"><h2 class="h">عدّل النص هنا</h2><p class="d">هذا نص توضيحي. أضف النص المطلوب هنا.</p></div></div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14"><svg class="bg" viewBox="0 0 1280 720" aria-hidden="true"><path d="M232 -40 L50 262 L420 600" stroke-width="140"/><path d="M455 640 L770 120" stroke-width="118"/><path d="M1340 352 L968 78 L955 560" stroke-width="128"/></svg><h1 class="ttl">الخلاصة<br><em>والنقاط الرئيسة</em></h1><p class="lead">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص.</p><img class="photo" src="/templates/freeform/sl-negotiation/assets/tablet.jpg" alt="زميلان يتناقشان حول جهاز لوحي في الهواء الطلق"><div class="kt bg1" style="inset-inline-start:73px"><h2 class="h">عدّل النص هنا</h2><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 11h10M8 11v3a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-3M8 11V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/></svg></span><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص. هذا نص توضيحي. أضف نصك هنا.</p></div><div class="kt bg2" style="inset-inline-start:464px"><h2 class="h">عدّل النص هنا</h2><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M15 3h3a2 2 0 0 1 2 2v3M20 16v3a2 2 0 0 1-2 2h-3M12 2v20"/></svg></span><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص. هذا نص توضيحي. أضف نصك هنا.</p></div><div class="kt bg3" style="inset-inline-start:854px"><h2 class="h">عدّل النص هنا</h2><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3M9 9v6M12 7v10M15 9v6"/></svg></span><p class="d">هذا نص توضيحي. أضف نصك هنا. يمكنك إضافة نص. هذا نص توضيحي. أضف نصك هنا.</p></div></div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15"><img class="cover-img" src="/templates/freeform/sl-negotiation/assets/thanks-team.jpg" alt="رسم توضيحي لثلاثة مهنيين جالسين"><svg class="logo" viewBox="0 0 62 64" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M6 12Q5 3 15 3Q31 0 47 1Q59 1 59 13Q61 33 57 52Q55 60 46 60Q31 62 16 62Q6 63 5 52Q1 32 6 12ZM19 15Q31 12 45 11Q54 11 54 19Q55 32 51 41Q49 47 42 48Q31 50 23 50Q16 50 15 44Q13 29 19 15Z"/></svg><p class="brand">شعار شركتك<br>يوضع هنا</p><h1>شكرًا لكم</h1><p class="txt">هذا نص توضيحي. أضف النص المطلوب هنا. يمكنك إضافة نص توضيحي. هذا نص توضيحي.</p><svg class="frameline flipx" viewBox="0 0 388 390" aria-hidden="true"><path d="M0 2 H352 Q385 2 385 35 V390" fill="none" stroke="#4C4E5A" stroke-width="3"/></svg><span class="panel"></span><p class="loc">الموقع</p><p class="addr">شارع أي مكان <bdi dir="ltr">123</bdi>، أي مدينة، الرمز <bdi dir="ltr">12345</bdi><br>هذا نص توضيحي. عدّل النص هنا.</p><div class="ct" style="top:512px"><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5h3l1.6 4.2-2 1.4a11 11 0 0 0 5.3 5.3l1.4-2 4.2 1.6v3a2 2 0 0 1-2.2 2C10 18.4 4.6 13 3 5.7a2 2 0 0 1 2-2.2z"/><path d="M14.5 3.5a6 6 0 0 1 6 6M14.5 6.6a3 3 0 0 1 2.9 2.9"/></svg></span><p><bdi dir="ltr">+1 (212) 123-4567</bdi></p></div><div class="ct" style="top:566px"><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="1"/><path d="M2.8 5.4l9.2 7.4 9.2-7.4"/></svg></span><p>أدخل بريدك الإلكتروني هنا</p></div><div class="ct" style="top:620px"><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.6 3.9 5.8 3.9 9.5s-1.3 6.9-3.9 9.5M12 2.5C9.4 5.1 8.1 8.3 8.1 12s1.3 6.9 3.9 9.5M4 7h16M4 17h16"/></svg></span><p>أدخل موقعك الإلكتروني هنا</p></div></div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 15</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
