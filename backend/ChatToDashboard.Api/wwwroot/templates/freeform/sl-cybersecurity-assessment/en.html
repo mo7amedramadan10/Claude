@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cybersecurity Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «تقييم الأمن السيبراني»: حلقتان متدرّجتان (بنفسجي↔أحمر) وقوس رفيع زخرفة متكررة (SVG بإطار الشريحة كله يُعكس للعربية)، عناوين بنفسجية غامقة، لوحات بنفسجية داكنة بزاوية مدوّرة، بطاقات وأيقونات SVG مضمّنة، وجدول نتائج بنقاط حالة ملوّنة مع نص. */
+  :root { --font: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif; --ink: #111111; --ink-2: #222222; --accent: #4B286D; --purple: #4B286D; --dark: #381D50; --red: #F2452E; --orange: #F9A050; --yellow: #EED382; --gold: #DDB443; --line: #D5D5D5; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عناصر مشتركة */
+  .deco { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; pointer-events: none; }
+  html[dir="rtl"] .deco, html[dir="rtl"] .flip { transform: scaleX(-1); }
+  .frame p, .frame h1, .frame h2, .frame h3 { margin: 0; }
+  .abs { position: absolute; }
+  .co { position: absolute; top: 74px; inset-inline-start: 44px; font-size: 16.5px; line-height: 20px; letter-spacing: 3.6px; color: var(--ink); white-space: nowrap; }
+  .ttl { position: absolute; top: 110px; inset-inline-start: 43px; font-size: 49px; line-height: 58px; font-weight: 700; letter-spacing: -0.4px; color: var(--purple); white-space: nowrap; }
+  .ttl .lt { font-weight: 300; }
+  html[lang="ar"] .co { letter-spacing: 0; font-size: 19px; font-weight: 500; }
+  html[lang="ar"] .ttl { letter-spacing: 0; font-weight: 800; font-size: 46px; line-height: 60px; }
+  html[lang="ar"] .ttl .lt { font-weight: 400; }
+  .hp { font-size: 22.5px; line-height: 29px; font-weight: 700; color: var(--purple); }
+  .tx { font-size: 17.5px; line-height: 23px; color: var(--ink); }
+  html[lang="ar"] .tx { font-size: 18.5px; line-height: 25px; }
+  .bar { position: absolute; height: 3px; background: var(--red); }
+  .num { position: absolute; width: 38px; height: 38px; border-radius: 50%; background: var(--purple); color: #fff; display: grid; place-items: center; font-size: 20px; line-height: 1; }
+  /* أرقام ورموز داخل العربية */
+  bdi { unicode-bidi: isolate; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* 1) الغلاف */
+  .s1 .logo { position: absolute; top: 60px; inset-inline-start: 40px; display: flex; align-items: center; gap: 32px; color: var(--purple); }
+  .logo-mk { width: 60px; height: 64px; flex: none; }
+  html[dir="rtl"] .logo-mk { transform: scaleX(-1); }
+  .s1 .logo p { font-size: 15px; line-height: 19px; letter-spacing: 2.6px; color: var(--ink); }
+  html[lang="ar"] .logo p { letter-spacing: 0; font-size: 17px; line-height: 22px; }
+  .s1 .big { position: absolute; top: 268px; inset-inline-start: 41px; font-size: 64px; line-height: 76px; font-weight: 800; color: var(--purple); letter-spacing: -0.2px; }
+  .s1 .sub { position: absolute; top: 436px; inset-inline-start: 43px; font-size: 29px; line-height: 36px; letter-spacing: 2.2px; color: var(--red); }
+  html[lang="ar"] .s1 .big { font-size: 66px; line-height: 86px; top: 250px; letter-spacing: 0; }
+  html[lang="ar"] .s1 .sub { letter-spacing: 0; font-size: 32px; top: 440px; }
+  .s1 .ctx { position: absolute; top: 262px; inset-inline-start: 744px; width: 332px; text-align: center; font-size: 21.5px; line-height: 29px; color: var(--ink); }
+  .s1 .ln { position: absolute; top: 399px; inset-inline-start: 873px; width: 75px; height: 3px; background: var(--orange); }
+  .s1 .date { position: absolute; top: 449px; inset-inline-start: 744px; width: 332px; text-align: center; font-size: 22px; line-height: 28px; font-weight: 700; color: var(--purple); }
+
+  /* 2) جدول الأعمال */
+  .s2 .h2a { position: absolute; top: 113px; inset-inline-start: 43px; font-size: 50px; line-height: 64px; font-weight: 700; color: var(--purple); }
+  .s2 .h2a span { display: block; color: var(--red); }
+  html[lang="ar"] .s2 .h2a { font-weight: 800; font-size: 48px; line-height: 66px; top: 106px; }
+  .s2 .intro { position: absolute; top: 305px; inset-inline-start: 45px; width: 330px; font-size: 21.5px; line-height: 29px; color: var(--ink); }
+  .panel { position: absolute; background: var(--dark); border-start-start-radius: 82px; }
+  .s2 .panel { top: 231px; inset-inline-start: 572px; width: 708px; height: 489px; }
+  .s2 .ag { position: absolute; width: 190px; }
+  .s2 .ag b { display: block; font-size: 38px; line-height: 44px; font-weight: 300; color: var(--orange); }
+  .s2 .ag p { margin-top: 4px; font-size: 22px; line-height: 29px; color: #fff; }
+  html[lang="ar"] .s2 .ag p { font-size: 23px; line-height: 31px; }
+
+  /* 3) الملخص التنفيذي */
+  .s3 .band { position: absolute; top: 398px; inset-inline-start: 0; width: 1280px; height: 265px; background: var(--purple); border-start-end-radius: 46px; }
+  .s3 .card { position: absolute; top: 186px; inset-inline-start: 50px; width: 349px; height: 430px; background: #fff; border: 3px solid var(--purple); border-radius: 46px; }
+  .s3 .pc { position: absolute; top: 263px; inset-inline-start: 82px; font-size: 62px; line-height: 70px; font-weight: 700; color: var(--purple); letter-spacing: -1px; }
+  .s3 .pc sup { font-size: 30px; vertical-align: 26px; line-height: 0; margin-inline-start: 2px; }
+  .s3 .ch { position: absolute; top: 364px; inset-inline-start: 88px; width: 280px; font-size: 25px; line-height: 32px; }
+  .s3 .ct { position: absolute; top: 444px; inset-inline-start: 88px; width: 290px; font-size: 20px; line-height: 26px; color: var(--ink); }
+  .s3 .rh { position: absolute; top: 212px; inset-inline-start: 431px; width: 470px; font-size: 30px; line-height: 39px; font-weight: 700; color: var(--red); }
+  .s3 .bar { top: 319px; inset-inline-start: 428px; width: 88px; height: 4px; }
+  .s3 .rt { position: absolute; top: 351px; inset-inline-start: 431px; width: 520px; font-size: 20px; line-height: 26px; color: var(--ink); }
+  html[lang="ar"] .s3 .rh { font-size: 30px; line-height: 42px; top: 206px; font-weight: 800; }
+  .s3 .col { position: absolute; top: 422px; width: 250px; color: #fff; }
+  .s3 .col .ic { width: 31px; height: 31px; display: block; }
+  .s3 .col h2 { margin-top: 32px; font-size: 20px; line-height: 25px; font-weight: 700; }
+  .s3 .col p { margin-top: 17px; font-size: 17.5px; line-height: 23px; }
+
+  /* 4) النطاق والمنهجية */
+  .s4 .cd { position: absolute; top: 223px; width: 295px; height: 432px; }
+  .s4 .cd .top { position: absolute; top: 0; inset-inline-start: 0; width: 295px; height: 76px; border-start-end-radius: 42px; }
+  .s4 .cd .bd { position: absolute; top: 82px; inset-inline-start: 0; width: 295px; height: 350px; background: #F2F2F2; border-radius: 0 0 42px 42px; box-shadow: 0 10px 14px -8px rgb(0 0 0 / .18); }
+  .s4 .cd .ring { position: absolute; top: 20px; inset-inline-start: 92px; width: 111px; height: 111px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .s4 .cd .ring span { width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .s4 .cd .ring .ic { width: 46px; height: 46px; }
+  .s4 .cd h2 { position: absolute; top: 151px; inset-inline-start: 10px; width: 275px; text-align: center; font-size: 22.5px; line-height: 29px; font-weight: 700; }
+  .s4 .cd p { position: absolute; top: 236px; inset-inline-start: 10px; width: 275px; text-align: center; }
+  .s4 .cd .pill { position: absolute; top: 393px; inset-inline-start: 92px; width: 110px; height: 15px; border-radius: 8px; background: #D5D5D5; }
+  .c-pu .top, .c-pu .ring span { background: var(--purple); } .c-pu h2 { color: var(--purple); }
+  .c-ye .top, .c-ye .ring span { background: var(--yellow); } .c-ye h2 { color: var(--gold); }
+  .c-or .top, .c-or .ring span { background: var(--orange); } .c-or h2 { color: #F5A05A; }
+  .c-re .top, .c-re .ring span { background: var(--red); } .c-re h2 { color: #EE4A35; }
+
+  /* 5) مشهد التهديدات */
+  .s5 .st { position: absolute; width: 360px; }
+  .s5 .st b { display: block; font-size: 40px; line-height: 46px; font-weight: 700; color: var(--ink); }
+  .s5 .st p { margin-top: 6px; width: 200px; font-size: 19.5px; line-height: 25px; color: var(--ink); }
+  .s5 .st.e { text-align: end; }
+  .s5 .st.e b, .s5 .st.e p { text-align: start; }
+  .s5 .brk { position: absolute; height: 58px; border-bottom: 1.3px solid #3A3A3A; }
+  .s5 .brk.l { border-inline-start: 1.3px solid #3A3A3A; } .s5 .brk.r { border-inline-end: 1.3px solid #3A3A3A; }
+  .s5 .mid { position: absolute; top: 211px; inset-inline-start: 490px; width: 300px; text-align: center; }
+  .s5 .mid p { margin: 6px auto 0; width: 200px; }
+  .s5 .cen { position: absolute; top: 472px; inset-inline-start: 490px; width: 300px; text-align: center; font-size: 25px; line-height: 31px; font-weight: 700; color: var(--red); }
+  .s5 .bar { top: 565px; inset-inline-start: 597px; width: 87px; }
+  .s5 .cp { position: absolute; top: 585px; inset-inline-start: 490px; width: 300px; text-align: center; font-size: 19px; line-height: 25px; color: var(--ink); }
+
+  /* 6) جدول نتائج الثغرات */
+  .s6 table { position: absolute; top: 208px; inset-inline-start: 43px; width: 1200px; border-collapse: collapse; font-size: 19.5px; line-height: 25px; color: var(--ink); }
+  .s6 th { height: 61px; padding: 0 0 4px; font-weight: 700; text-align: center; border-bottom: 2.5px solid var(--purple); vertical-align: middle; }
+  .s6 td { height: 94.6px; padding: 0; text-align: center; border-bottom: 1px solid #DDDDDD; vertical-align: middle; }
+  .s6 tr:last-child td { border-bottom: 0; }
+  .s6 th:first-child, .s6 td:first-child { text-align: start; padding-inline-start: 10px; width: 300px; }
+  .s6 th:last-child, .s6 td:last-child { text-align: start; padding-inline-start: 7px; }
+  .s6 .c2 { width: 136px; } .s6 .c3 { width: 158px; } .s6 .c4 { width: 154px; } .s6 .c5 { width: 148px; }
+  .s6 .dot { display: inline-block; width: 23px; height: 23px; border-radius: 50%; border: 1.3px solid #222; vertical-align: middle; }
+  .dot.ok { background: #1DC112; } .dot.bad { background: #E4122B; } .dot.mid { background: #F16414; }
+
+  /* 7) إدارة الهوية والوصول */
+  .s7 .bx { position: absolute; width: 397px; height: 177px; border-radius: 28px; box-shadow: 0 12px 16px -6px rgb(0 0 0 / .16); }
+  .s7 .hb { position: absolute; width: 229px; height: 92px; border-radius: 14px; display: grid; place-items: center; font-size: 20px; font-weight: 700; color: var(--ink); text-transform: uppercase; }
+  .cream { background: #FCF5E5; } .lav { background: #DCCBEC; } .peach { background: #FFD6B8; } .sky { background: #C7D8EF; }
+  .s7 .bx ul { position: absolute; top: 33px; margin: 0; padding: 0; list-style: none; width: 300px; }
+  .s7 .bx li { position: relative; padding-inline-start: 30px; font-size: 17.5px; line-height: 23px; color: var(--ink); margin-bottom: 11px; }
+  .s7 .bx li::before { content: ""; position: absolute; top: 9px; inset-inline-start: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink); }
+  .s7 .lab { position: absolute; width: 370px; inset-inline-start: 455px; text-align: center; font-size: 17px; line-height: 20px; letter-spacing: 3.2px; color: var(--ink); text-transform: uppercase; }
+  html[lang="ar"] .s7 .lab, html[lang="ar"] .s7 .hb { letter-spacing: 0; font-size: 19px; }
+
+  /* 8) أمن الشبكات */
+  .s8 .rh { position: absolute; top: 110px; inset-inline-start: 871px; width: 320px; font-size: 26px; line-height: 32px; font-weight: 700; color: var(--red); }
+  .s8 .bar { top: 196px; inset-inline-start: 867px; width: 89px; }
+  .s8 .rt { position: absolute; top: 216px; inset-inline-start: 871px; width: 300px; font-size: 19.5px; line-height: 25px; color: var(--ink); }
+  .s8 .it, .s9 .it { position: absolute; width: 260px; }
+  .s8 .it .tx, .s9 .it .tx { margin-top: 22px; }
+  .s8 .target { position: absolute; top: 210px; inset-inline-start: 465px; width: 350px; height: 360px; }
+  .s8 .shield, .s9 .shield { position: absolute; color: #F0452E; }
+  .s8 .ci { position: absolute; width: 63px; height: 63px; border-radius: 50%; border: 3.5px solid #1C1130; background: #fff; display: grid; place-items: center; color: var(--purple); }
+  .s8 .ci .ic { width: 33px; height: 33px; }
+
+  /* 9) الأمن السحابي */
+  .s9 .cloud { position: absolute; top: 240px; inset-inline-start: 432px; width: 420px; height: 242px; }
+  .s9 .ctxt { position: absolute; top: 343px; inset-inline-start: 528px; width: 200px; text-align: center; font-size: 30px; line-height: 40px; font-weight: 700; color: var(--purple); }
+  .s9 .pc { position: absolute; width: 62px; height: 62px; border-radius: 50%; background: var(--purple); color: #fff; display: grid; place-items: center; }
+  .s9 .pc .ic { width: 33px; height: 33px; }
+  .s9 .dots { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; }
+
+  /* 10) الاستجابة للحوادث */
+  .s10 .ttl { white-space: normal; width: 640px; line-height: 57px; }
+  html[lang="ar"] .s10 .ttl { line-height: 62px; top: 104px; }
+  .s10 .step { position: absolute; width: 230px; }
+  .s10 .step .num { position: static; margin-inline-start: -3px; }
+  .s10 .step h2 { margin-top: 9px; }
+  .s10 .step p { position: absolute; width: 170px; }
+  .s10 .panel { top: 413px; inset-inline-start: 750px; width: 530px; height: 307px; }
+  .s10 .ph { position: absolute; top: 447px; inset-inline-start: 807px; width: 330px; font-size: 30px; line-height: 39px; font-weight: 700; color: #fff; }
+  .s10 .bar { top: 546px; inset-inline-start: 802px; width: 88px; height: 4px; }
+  .s10 .pt { position: absolute; top: 576px; inset-inline-start: 807px; width: 315px; font-size: 22px; line-height: 29px; color: #fff; }
+
+  /* 11) استمرارية الأعمال */
+  .s11 .ph { position: absolute; top: 246px; font-size: 18px; line-height: 20px; letter-spacing: 3.6px; color: var(--ink); text-transform: uppercase; }
+  html[lang="ar"] .s11 .ph { letter-spacing: 0; font-size: 19px; font-weight: 500; }
+  .s11 .pb { position: absolute; top: 277px; width: 231px; height: 98px; border-radius: 18px; display: grid; place-items: center; padding: 0 14px; text-align: center; font-size: 18px; line-height: 22.5px; color: var(--ink); }
+  .pink { background: #FDD8D3; } .butter { background: #F9EDCB; }
+  .s11 .lb { position: absolute; inset-inline-start: 53px; font-size: 22px; line-height: 28px; font-weight: 700; color: var(--purple); text-transform: uppercase; }
+  .s11 .sep { position: absolute; top: 393px; inset-inline-start: 36px; width: 1209px; height: 2px; background: #D9D9D9; }
+  .s11 .sp { position: absolute; width: 260px; display: flex; gap: 22px; }
+  .s11 .sp b { flex: none; width: 30px; font-size: 22px; line-height: 28px; font-weight: 700; padding-top: 0; }
+  .s11 .sp p { font-size: 18px; line-height: 23px; color: var(--ink); width: 180px; padding-top: 2px; }
+  .k1 { color: var(--purple); } .k2 { color: var(--gold); } .k3 { color: #F2A05E; } .k4 { color: #EE4A35; }
+
+  /* 12) التوعية والثقافة */
+  .s12 .aw { position: absolute; top: 218px; width: 210px; height: 410px; }
+  .s12 .aw .num { top: 0; inset-inline-start: -11px; }
+  .s12 .aw .orb { position: absolute; top: 9px; inset-inline-start: 28px; width: 148px; height: 148px; border-radius: 50%; border: 4.5px solid #F7A055; display: grid; place-items: center; }
+  .s12 .aw .orb span { width: 91px; height: 91px; border-radius: 50%; border: 3.5px solid var(--purple); display: grid; place-items: center; color: var(--purple); }
+  .s12 .aw .orb .ic { width: 47px; height: 47px; }
+  .s12 .aw .arcl { position: absolute; top: 140px; inset-inline-start: 26px; width: 152px; height: 64px; }
+  .s12 .aw .card { position: absolute; top: 202px; inset-inline-start: 0; width: 206px; height: 210px; border: 2px solid #DCDCDC; border-bottom: 0; border-radius: 30px 30px 0 0;
+    -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+  .s12 .aw h2 { position: absolute; top: 219px; inset-inline-start: 0; width: 206px; text-align: center; }
+  .s12 .aw p { position: absolute; top: 306px; inset-inline-start: 10px; width: 186px; text-align: center; }
+
+  /* 13) مخاطر الطرف الثالث */
+  .s13 .lines { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; }
+  .s13 .tc { position: absolute; inset-inline-start: 150px; width: 304px; height: 151px; border: 2px solid #DADADA; border-inline-start: 0; border-start-end-radius: 26px; border-end-end-radius: 26px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 18%, #000 45%); mask-image: linear-gradient(90deg, transparent 18%, #000 45%); }
+  html[dir="rtl"] .s13 .tc { -webkit-mask-image: linear-gradient(270deg, transparent 18%, #000 45%); mask-image: linear-gradient(270deg, transparent 18%, #000 45%); }
+  .s13 .tic { position: absolute; inset-inline-start: 43px; width: 76px; height: 76px; border-radius: 50%; background: var(--purple); color: #fff; display: grid; place-items: center; }
+  .s13 .tic .ic { width: 40px; height: 40px; }
+  .s13 .tt { position: absolute; inset-inline-start: 149px; width: 290px; }
+  .s13 .tt .tx { margin-top: 23px; width: 250px; }
+  .s13 .cen { position: absolute; top: 361px; inset-inline-start: 916px; width: 300px; text-align: center; font-size: 25px; line-height: 31px; font-weight: 700; color: var(--red); }
+  .s13 .bar { top: 446px; inset-inline-start: 1021px; width: 89px; }
+  .s13 .cp { position: absolute; top: 466px; inset-inline-start: 916px; width: 300px; text-align: center; font-size: 19.5px; line-height: 25px; color: var(--ink); }
+
+  /* 14) تقييم النضج */
+  .s14 .ttl { line-height: 57px; }
+  html[lang="ar"] .s14 .ttl { line-height: 62px; top: 104px; }
+  .s14 .rl { position: absolute; inset-inline-start: 53px; font-size: 20px; line-height: 26px; font-weight: 700; text-transform: uppercase; }
+  .s14 .blk { position: absolute; width: 250px; border-start-start-radius: 46px; padding: 27px 66px 0 27px; font-size: 17.5px; line-height: 23px; }
+  html[dir="rtl"] .s14 .blk { padding: 27px 27px 0 40px; }
+  .s14 .rd { background: #F2452E; color: #fff; } .s14 .ye { background: #EED382; color: var(--ink); } .s14 .pu { background: #4B286D; color: #fff; }
+  html[lang="ar"] .s14 .blk { font-size: 18px; line-height: 24px; }
+
+  /* 15) خارطة الطريق */
+  .s15 .road { position: absolute; top: 340px; inset-inline-start: 222px; width: 926px; height: 106px; }
+  .s15 .vl { position: absolute; top: 195px; width: 1.3px; height: 174px; background: #E0453A; }
+  .s15 .mk { position: absolute; top: 368px; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #EE4A35; background: #fff; display: grid; place-items: center; }
+  .s15 .mk::after { content: ""; width: 32px; height: 32px; border-radius: 50%; background: #F2452E; }
+  .s15 .tm { position: absolute; top: 377px; font-size: 22.5px; line-height: 30px; font-weight: 700; color: var(--purple); }
+  .s15 .li { position: absolute; display: flex; gap: 16px; width: 300px; }
+  .s15 .li .ic { flex: none; width: 23px; height: 23px; margin-top: 2px; }
+  .s15 .li p { font-size: 17.5px; line-height: 23px; color: var(--ink); }
+  .s15 .li.dk .ic { color: #111; } .s15 .li.or .ic { color: #F5A05E; }
+  .s15 .hl { position: absolute; inset-inline-start: 36px; width: 1052px; height: 1.3px; background: #3E2A56; }
+  .s15 .drv { position: absolute; top: 463px; inset-inline-start: 36px; width: 1052px; text-align: center; font-size: 17px; line-height: 22px; font-weight: 700; letter-spacing: 3.8px; color: #F0A05E; }
+  html[lang="ar"] .s15 .drv { letter-spacing: 0; font-size: 18px; }
+
+  /* 16) التوصيات والخطوات التالية */
+  .s16 .rw { position: absolute; inset-inline-start: 43px; width: 1170px; height: 68px; }
+  .s16 .rw .n { position: absolute; top: 0; inset-inline-start: 0; width: 68px; height: 68px; border-radius: 50%; background: var(--purple); color: #fff; display: grid; place-items: center; font-size: 21px; font-weight: 700; }
+  .s16 .rw .t { position: absolute; top: 10px; inset-inline-start: 100px; width: 280px; font-size: 17.5px; line-height: 23px; color: var(--ink); }
+  .s16 .rw .t b { display: block; font-weight: 700; }
+  .s16 .rw .ar { position: absolute; top: 22px; inset-inline-start: 398px; width: 24px; height: 24px; color: #111; }
+  .s16 .rw .pl { position: absolute; top: 5px; width: 333px; height: 58px; border-radius: 29px; display: grid; place-items: center; font-size: 17.5px; color: var(--ink); background: #fff; }
+  .s16 .rw .p1 { inset-inline-start: 446px; border: 1.2px solid var(--purple); }
+  .s16 .rw .p2 { inset-inline-start: 832px; border: 1.2px solid #F5A55E; }
+  .s16 .rw .cn { position: absolute; top: 33px; inset-inline-start: 779px; width: 53px; height: 1.2px; background: linear-gradient(90deg, #8B5A8C, #F0A86A); }
+  html[dir="rtl"] .s16 .rw .cn { background: linear-gradient(270deg, #8B5A8C, #F0A86A); }
+
+  /* 17) شكر وتواصل */
+  .s17 .h2a { position: absolute; top: 108px; inset-inline-start: 42px; font-size: 56px; line-height: 72px; font-weight: 700; color: var(--purple); }
+  .s17 .h2a span { display: block; font-weight: 400; color: var(--red); }
+  html[lang="ar"] .s17 .h2a { font-weight: 800; font-size: 54px; line-height: 74px; }
+  .s17 .intro { position: absolute; top: 281px; inset-inline-start: 52px; width: 535px; font-size: 21.5px; line-height: 29px; color: var(--ink); }
+  .s17 .logo { position: absolute; top: 574px; inset-inline-start: 115px; display: flex; align-items: center; gap: 34px; color: var(--purple); }
+  .s17 .logo .logo-mk { width: 58px; height: 64px; }
+  .s17 .logo p { font-size: 15px; line-height: 19px; letter-spacing: 2.6px; color: var(--ink); }
+  .s17 .ct { position: absolute; width: 400px; height: 160px; }
+  .s17 .ct .bnd { position: absolute; top: 50px; inset-inline-start: 0; width: 360px; height: 60px; }
+  .s17 .ct .ic { position: absolute; top: 6px; inset-inline-start: 26px; width: 36px; height: 36px; color: #EF4B37; }
+  .s17 .ct h3 { position: absolute; top: 101px; inset-inline-start: 0; font-size: 18px; line-height: 23px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  /* العربية: Tajawal أصغر بصريًا، فتُكبَّر النصوص قليلًا */
+  html[lang="ar"] .s1 .ctx, html[lang="ar"] .s2 .intro, html[lang="ar"] .s17 .intro { font-size: 24px; line-height: 34px; }
+  html[lang="ar"] .s1 .date { font-size: 24px; }
+  html[lang="ar"] .hp { font-size: 24px; line-height: 32px; }
+  html[lang="ar"] .s3 .ct, html[lang="ar"] .s3 .rt { font-size: 21.5px; line-height: 30px; }
+  html[lang="ar"] .s3 .col h2 { font-size: 22px; line-height: 28px; } html[lang="ar"] .s3 .col p { font-size: 19px; line-height: 26px; }
+  html[lang="ar"] .s3 .ch { font-size: 27px; line-height: 34px; }
+  html[lang="ar"] .s5 .st p, html[lang="ar"] .s5 .cp, html[lang="ar"] .s8 .rt, html[lang="ar"] .s13 .cp { font-size: 21px; line-height: 28px; }
+  html[lang="ar"] .s5 .cen, html[lang="ar"] .s13 .cen { font-size: 26px; line-height: 34px; }
+  html[lang="ar"] .s8 .rh { font-size: 27px; line-height: 36px; }
+  html[lang="ar"] .s6 table { font-size: 21px; line-height: 28px; }
+  html[lang="ar"] .s7 .bx li, html[lang="ar"] .s15 .li p, html[lang="ar"] .s16 .rw .t, html[lang="ar"] .s16 .rw .pl { font-size: 19px; line-height: 25px; }
+  html[lang="ar"] .s10 .ph { font-size: 31px; line-height: 42px; } html[lang="ar"] .s10 .pt { font-size: 23.5px; line-height: 32px; }
+  html[lang="ar"] .s11 .pb, html[lang="ar"] .s11 .sp p { font-size: 19px; line-height: 25px; }
+  html[lang="ar"] .s11 .lb, html[lang="ar"] .s14 .rl { font-size: 23px; }
+  html[lang="ar"] .s15 .tm { font-size: 24px; }
+  html[lang="ar"] .s17 .ct h3 { font-size: 20px; } html[lang="ar"] .s17 .ct p { font-size: 17px; }
+  html[lang="ar"] .s9 .ctxt { font-size: 32px; line-height: 44px; }
+  html[lang="ar"] .s2 .ag b { font-size: 40px; }
+  .s17 .ct p { position: absolute; top: 124px; inset-inline-start: 0; font-size: 15.5px; line-height: 20px; color: var(--ink); white-space: nowrap; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gO" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4B286D"/><stop offset=".5" stop-color="#B73856"/><stop offset="1" stop-color="#F3452E"/></linearGradient><linearGradient id="gI" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3452E"/><stop offset=".25" stop-color="#E4413A"/><stop offset=".75" stop-color="#772E65"/><stop offset="1" stop-color="#4B286D"/></linearGradient><linearGradient id="gB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EE4640"/><stop offset=".22" stop-color="#C83A4F"/><stop offset=".36" stop-color="#863061"/><stop offset=".48" stop-color="#51286A"/><stop offset="1" stop-color="#4B286D"/></linearGradient><linearGradient id="gBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".35" stop-color="#EFEFEF"/><stop offset="1" stop-color="#C9C9C9"/></linearGradient><linearGradient id="gSh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D4D4D4"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient><linearGradient id="gShL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".25" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient><linearGradient id="gRoad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#E4D9F0"/><stop offset="1" stop-color="#C9B1E2"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="909.5" cy="360" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="909.5" cy="360" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M909.5 50.0 A310.0 310.0 0 0 1 1219.5 360.0" fill="none" stroke="#E9493A" stroke-width="3" stroke-linecap="butt"/><path d="M601.5 365.4 A308.0 308.0 0 0 0 835.0 658.9" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/><circle cx="1258" cy="740" r="183" fill="url(#gB)"/></svg>
+    <div class="logo"><svg class="logo-mk" viewBox="0 0 60 64" fill="currentColor" aria-hidden="true"><path d="M14 5.5C18 1.8 24 1 30 1.8L50 6.5C56 8 59 12 59 18.5L58 46.5 50.5 48.5 51 22.5C51 18.5 49 16.2 45.5 15.4L24 11C19.5 10 16.5 11 13 13.5Z"/><path d="M8.5 9.5 11.5 16C10.5 20 10 24 10.2 30L11 48.5C11.3 53.5 14 55.8 19 55.5L45 52.8C49 52.3 52 51 55 48.6L58 53C55 59.5 50 61.6 44 62.5L16 63.6C7 64 2.3 59.5 2 51.5L1.2 24C1 17 3.8 12.5 8.5 9.5Z"/></svg><p>YOUR COMPANY<br>LOGO HERE</p></div>
+    <h1 class="big">CYBERSECURITY<br>ASSESSMENT</h1><p class="sub">PRESENTATION TEMPLATE</p>
+    <p class="ctx">Insert your desired text here. This is a sample text. A brief statement about your topic.</p><div class="ln"></div><p class="date">INSERT DATE HERE</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="721" cy="371" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="721" cy="371" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M721.0 61.5 A309.5 309.5 0 0 1 1001.5 240.2" fill="none" stroke="#E9493A" stroke-width="3" stroke-linecap="butt"/><path d="M432.1 481.9 A309.5 309.5 0 0 0 590.2 651.5" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="h2a">Our Agenda<span>For Today</span></h1><p class="intro">Insert your desired text here. This is a sample text. A brief statement about your topic.</p>
+    <div class="panel"></div><div class="ag" style="top:300px;inset-inline-start:615px"><b>01</b><p>Section Title<br>Placeholder</p></div><div class="ag" style="top:300px;inset-inline-start:826px"><b>02</b><p>Section Title<br>Placeholder</p></div><div class="ag" style="top:300px;inset-inline-start:1054px"><b>03</b><p>Section Title<br>Placeholder</p></div><div class="ag" style="top:502px;inset-inline-start:615px"><b>04</b><p>Section Title<br>Placeholder</p></div><div class="ag" style="top:502px;inset-inline-start:826px"><b>05</b><p>Section Title<br>Placeholder</p></div><div class="ag" style="top:502px;inset-inline-start:1054px"><b>06</b><p>Section Title<br>Placeholder</p></div>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1178" cy="12" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1178" cy="12" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M887.9 119.9 A309.5 309.5 0 0 0 1064.1 299.8" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Executive Summary</h1>
+    <div class="band"></div><div class="card"></div>
+    <p class="pc"><bdi dir="ltr">44<sup>%</sup></bdi></p><h2 class="ch hp">Heading<br>Placeholder</h2><p class="ct">Insert your desired text here. This is a sample text.</p>
+    <p class="rh">Insert your heading statement here. This is a sample text.</p><div class="bar"></div><p class="rt">Insert your desired text here. This is a sample text.</p>
+    <div class="col" style="inset-inline-start:431px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h7v7H3zm2 2v3h3V5zm9-2h7v7h-7zm2 2v3h3V5zM3 14h7v7H3zm2 2v3h3v-3zm8-3h2v2h-2zm2 2h2v2h-2zm2-2h2v2h-2zm2 2h2v4h-4v-2h2zm-6 2h2v4h-4v-2h2zm4 2h2v2h-2z"/></svg><h2>Heading<br>Placeholder</h2><p>Insert your desired text here. This is a sample text.</p></div><div class="col" style="inset-inline-start:712px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.9 2.05a8 8 0 0 1 5.6 3.25l-4.4 2.54zM11 4.06v6.38L6.2 7.66A8 8 0 0 1 11 4.06zM5.1 9.4l5.5 3.18-4.47 2.58A8 8 0 0 1 5.1 9.4zm1.9 7.6 5.5-3.18v5.16A8 8 0 0 1 7 17zm6.5 1.97v-6.36l4.8 2.77a8 8 0 0 1-4.8 3.59zm5.4-5.37-5.5-3.18 4.47-2.58a8 8 0 0 1 1.03 5.76z"/></svg><h2>Heading<br>Placeholder</h2><p>Insert your desired text here. This is a sample text.</p></div><div class="col" style="inset-inline-start:990px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="11" width="11" height="7.5" rx=".6"/><path d="M7.5 18.5V21M4.5 21h6"/><path d="M15 9.5h5.2a2.6 2.6 0 0 0 .3-5.2 3.6 3.6 0 0 0-6.8.6A2.3 2.3 0 0 0 15 9.5z"/><path d="M5 8.5a4 4 0 0 1 4-4"/><path d="M8 3.5l1.2 1-1.2 1.1"/><path d="M19 12a4 4 0 0 1-3.5 4"/><path d="M16.5 17l-1.2-1 1.2-1.1"/></svg><h2>Heading<br>Placeholder</h2><p>Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Assessment Scope &amp; Methodology</h1>
+    <div class="cd c-pu" style="inset-inline-start:43px"><div class="top"></div><div class="bd"></div><div class="ring"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 9.5h7l1.3 8h-9.6z"/><rect x="5.5" y="18.5" width="13" height="2.5" rx=".4"/><path d="M11.2 2.5h1.6v3.2h-1.6zM4.2 5.4l1.1-1.1 2.2 2.2-1.1 1.1zM16.5 6.5l2.2-2.2 1.1 1.1-2.2 2.2zM2.5 10.2h3v1.6h-3zM18.5 10.2h3v1.6h-3z"/></svg></span></div><h2>Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p><div class="pill"></div></div><div class="cd c-ye" style="inset-inline-start:345px"><div class="top"></div><div class="bd"></div><div class="ring"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 2.5l1.8 1.4 2.2-.4 1 2 2 1-.4 2.2L20 10.5 19.4 12.7l.6 2.2-1.6 1.6.4 2.2-2 1-1 2-2.2-.4L12 22.5l-1.8-1.4-2.2.4-1-2-2-1 .4-2.2L3.8 14.7 4.4 12.5 3.8 10.3 5.4 8.7 5 6.5l2-1 1-2 2.2.4z"/><circle cx="12" cy="12.5" r="5.6"/><path d="M9.4 12.6l1.8 1.8 3.4-3.6"/></svg></span></div><h2>Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p><div class="pill"></div></div><div class="cd c-or" style="inset-inline-start:648px"><div class="top"></div><div class="bd"></div><div class="ring"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3H5.5A1.5 1.5 0 0 0 4 11.5v9A1.5 1.5 0 0 0 5.5 22h13a1.5 1.5 0 0 0 1.5-1.5v-9a1.5 1.5 0 0 0-1.5-1.5H17V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3zm3 3.5a1.6 1.6 0 0 1 .8 3v2.5h-1.6v-2.5a1.6 1.6 0 0 1 .8-3z"/></svg></span></div><h2>Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p><div class="pill"></div></div><div class="cd c-re" style="inset-inline-start:950px"><div class="top"></div><div class="bd"></div><div class="ring"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="M12 4.6 6.2 6.8v4.3c0 3.8 2.4 7.1 5.8 8.5 3.4-1.4 5.8-4.7 5.8-8.5V6.8z"/><path d="M8.8 12l2.2 2.2 4.2-4.4"/></svg></span></div><h2>Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p><div class="pill"></div></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="639" cy="617" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="639" cy="617" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M752.4 329.0 A309.5 309.5 0 0 1 948.5 614.3" fill="none" stroke="#E9493A" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Current Threat Landscape</h1>
+    <div class="st" style="top:251px;inset-inline-start:137px"><b><bdi dir="ltr">100+</bdi></b><p>Insert your desired text here.</p></div><div class="st" style="top:421px;inset-inline-start:137px"><b><bdi dir="ltr">85%</bdi></b><p>Insert your desired text here.</p></div><div class="st" style="top:251px;inset-inline-start:1002px"><b><bdi dir="ltr">4.5K</bdi></b><p>Insert your desired text here.</p></div><div class="st" style="top:421px;inset-inline-start:1002px"><b><bdi dir="ltr">300K</bdi></b><p>Insert your desired text here.</p></div><div class="mid st"><b><bdi dir="ltr">100+</bdi></b><p>Insert your desired text here.</p></div>
+    <div class="brk l" style="top:323px;inset-inline-start:111px;width:357px"></div><div class="brk l" style="top:492px;inset-inline-start:111px;width:246px"></div><div class="brk r" style="top:323px;inset-inline-start:852px;width:357px"></div><div class="brk r" style="top:492px;inset-inline-start:949px;width:260px"></div>
+    <p class="cen">Insert your heading statement here.</p><div class="bar"></div><p class="cp">Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Vulnerability Assessment Results</h1>
+    <table><thead><tr><th>Vulnerability</th><th class="c2">Severity</th><th class="c3">Threat</th><th class="c4">Source</th><th class="c5">Impact</th><th>Remarks</th></tr></thead><tbody><tr><td>Insert your desired text here. This is a sample text.</td><td>Low</td><td>Text here</td><td>Text here</td><td><span class="dot ok" title="Low"></span><span class="sr">Low</span></td><td>Insert your desired text here.</td></tr><tr><td>Insert your desired text here. This is a sample text.</td><td>High</td><td>Text here</td><td>Text here</td><td><span class="dot bad" title="High"></span><span class="sr">High</span></td><td>Insert your desired text here.</td></tr><tr><td>Insert your desired text here. This is a sample text.</td><td>Med</td><td>Text here</td><td>Text here</td><td><span class="dot mid" title="Med"></span><span class="sr">Med</span></td><td>Insert your desired text here.</td></tr><tr><td>Insert your desired text here. This is a sample text.</td><td>Low</td><td>Text here</td><td>Text here</td><td><span class="dot ok" title="Low"></span><span class="sr">Low</span></td><td>Insert your desired text here.</td></tr></tbody></table>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Identity &amp; Access Management (IAM)</h1>
+    <div class="bx cream" style="top:186px;inset-inline-start:43px"><ul style="inset-inline-start:24px"><li>Insert your desired text here. This is a sample text.</li><li>Insert your desired text here. This is a sample text.</li></ul></div><div class="bx lav" style="top:186px;inset-inline-start:838px"><ul style="inset-inline-start:69px"><li>Insert your desired text here. This is a sample text.</li><li>Insert your desired text here. This is a sample text.</li></ul></div><div class="bx peach" style="top:485px;inset-inline-start:43px"><ul style="inset-inline-start:24px"><li>Insert your desired text here. This is a sample text.</li><li>Insert your desired text here. This is a sample text.</li></ul></div><div class="bx sky" style="top:485px;inset-inline-start:838px"><ul style="inset-inline-start:69px"><li>Insert your desired text here. This is a sample text.</li><li>Insert your desired text here. This is a sample text.</li></ul></div>
+    <div class="hb cream" style="top:318px;inset-inline-start:403px">HEADING HERE</div><div class="hb lav" style="top:318px;inset-inline-start:663px">HEADING HERE</div><div class="hb peach" style="top:438px;inset-inline-start:403px">HEADING HERE</div><div class="hb sky" style="top:438px;inset-inline-start:663px">HEADING HERE</div>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true" style="color:#4B286D"><g stroke="currentColor" stroke-width="1.4" fill="none"><path d="M460 247.5H826"/><path d="M830 587.5H464"/><path d="M383.5 473V380"/><path d="M912.5 376V469"/></g><g fill="currentColor"><path d="M832 247.5l-8 3.5v-7z"/><path d="M458 587.5l8-3.5v7z"/><path d="M383.5 374l3.5 8h-7z"/><path d="M912.5 475l-3.5-8h7z"/></g></svg><p class="lab" style="top:213px">HEADING HERE</p><p class="lab" style="top:604px">HEADING HERE</p>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="108" cy="873" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="108" cy="873" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M108.0 563.5 A309.5 309.5 0 0 1 407.0 792.9" fill="none" stroke="#E9493A" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Network Security <span class="lt">Slide</span></h1>
+    <p class="rh">Insert your heading statement here.</p><div class="bar"></div><p class="rt">Insert your desired text here. This is a sample text.</p>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="640" cy="385" r="165" fill="none" stroke="#222" stroke-width="1.2"/><circle cx="640" cy="385" r="43" fill="none" stroke="#1C1130" stroke-width="6.5"/><path d="M740.7 300.5 A131.5 131.5 0 1 1 658.3 254.8" fill="none" stroke="#1C1130" stroke-width="3" stroke-linecap="butt"/><path d="M722.9 324.8 A102.5 102.5 0 1 1 654.3 283.5" fill="none" stroke="#1C1130" stroke-width="4" stroke-linecap="butt"/><path d="M698.7 346.9 A70.0 70.0 0 1 1 649.7 315.7" fill="none" stroke="#1C1130" stroke-width="5" stroke-linecap="butt"/></svg><div class="shield" style="top:216px;inset-inline-start:676px;width:96px;height:100px"><svg class="ic" style="width:96px;height:100px" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="M12 4.2 5.9 6.5V11c0 4 2.5 7.5 6.1 8.9 3.6-1.4 6.1-4.9 6.1-8.9V6.5z" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M8.6 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="1.9"/></svg></div><div class="ci" style="top:236px;inset-inline-start:480px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="M12 4.6 6.2 6.8v4.3c0 3.8 2.4 7.1 5.8 8.5 3.4-1.4 5.8-4.7 5.8-8.5V6.8z"/><path d="M8.8 12l2.2 2.2 4.2-4.4"/></svg></div><div class="ci" style="top:407px;inset-inline-start:444px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h4v4H3zM3 10h4v4H3zM3 17h4v4H3zM17 10h4v4h-4zM7 4.4h4v1.2H7zM7 11.4h10v1.2H7zM7 18.4h4v1.2H7zM10.4 4.4h1.2v15.2h-1.2z"/></svg></div><div class="ci" style="top:327px;inset-inline-start:780px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="2.5" width="18" height="4.3" rx=".6"/><rect x="3" y="8" width="18" height="4.3" rx=".6"/><rect x="3" y="13.5" width="18" height="4.3" rx=".6"/><path d="M11.4 17.8h1.2v2.4h-1.2zM3 19.6h18v1.2H3z"/><g fill="#fff"><circle cx="5.6" cy="4.65" r=".6"/><circle cx="7.6" cy="4.65" r=".6"/><circle cx="9.6" cy="4.65" r=".6"/><circle cx="5.6" cy="10.15" r=".6"/><circle cx="7.6" cy="10.15" r=".6"/><circle cx="9.6" cy="10.15" r=".6"/><circle cx="5.6" cy="15.65" r=".6"/><circle cx="7.6" cy="15.65" r=".6"/><circle cx="9.6" cy="15.65" r=".6"/></g></svg></div><div class="ci" style="top:505px;inset-inline-start:692px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="3.5" r="2"/><circle cx="12" cy="20.5" r="2"/><circle cx="4.2" cy="8" r="2"/><circle cx="19.8" cy="8" r="2"/><circle cx="4.2" cy="16" r="2"/><circle cx="19.8" cy="16" r="2"/><path d="M11.4 3.5h1.2v17h-1.2zM4 7.3l16 9.4-.6 1L3.4 8.3zM20 8.7l-16 9.4-.6-1 16-9.4z"/></svg></div>
+    <div class="it" style="top:219px;inset-inline-start:203px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="it" style="top:403px;inset-inline-start:203px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="it" style="top:331px;inset-inline-start:871px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="it" style="top:509px;inset-inline-start:784px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Cloud Security <span class="lt">Slide</span></h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M655 250C640 244 622 242 605 244 563 249 528 285 522 330 L520 330C470 332 437 366 437 404 437 444 470 476 512 476H776C815 476 845 446 845 410 845 375 818 357 782 358 L783 352C783 330 770 307 738 294" fill="none" stroke="#4B286D" stroke-width="4"/><g stroke="#4B286D" stroke-width="2.4" stroke-dasharray="1 5.5" stroke-linecap="round" fill="none"><path d="M445 237 513 287"/><path d="M837 237 769 287"/><path d="M513 493 445 543"/><path d="M769 493 837 543"/></g></svg><p class="ctxt">Cloud Security</p><div class="shield" style="top:238px;inset-inline-start:650px;width:90px;height:96px"><svg class="ic" style="width:90px;height:96px" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="M12 4.2 5.9 6.5V11c0 4 2.5 7.5 6.1 8.9 3.6-1.4 6.1-4.9 6.1-8.9V6.5z" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M8.6 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="1.9"/></svg></div><div class="pc" style="top:185px;inset-inline-start:389px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 17.5H6a4 4 0 0 1-.6-7.95A6 6 0 0 1 17 8.3a4.6 4.6 0 0 1 .5 9.2H16"/><path d="M12 11v9M8.6 16.6 12 20l3.4-3.4" stroke-width="2.2"/></svg></div><div class="pc" style="top:185px;inset-inline-start:831px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6.5 18A4 4 0 0 1 5.9 10 6 6 0 0 1 17.4 8.8a4.6 4.6 0 0 1 .1 9.2z"/><path d="M9.6 13.6a2.5 2.5 0 0 1 4.3-1.4M14.4 13.6a2.5 2.5 0 0 1-4.3 1.4M13.9 10.9v1.5h-1.5M10.1 16.3v-1.5h1.5"/></svg></div><div class="pc" style="top:532px;inset-inline-start:389px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 17.5H6a4 4 0 0 1-.6-7.95A6 6 0 0 1 17 8.3a4.6 4.6 0 0 1 .5 9.2H16"/><path d="M12 21v-9M8.6 15.4 12 12l3.4 3.4" stroke-width="2.2"/></svg></div><div class="pc" style="top:532px;inset-inline-start:831px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="11" width="11" height="7.5" rx=".6"/><path d="M7.5 18.5V21M4.5 21h6"/><path d="M15 9.5h5.2a2.6 2.6 0 0 0 .3-5.2 3.6 3.6 0 0 0-6.8.6A2.3 2.3 0 0 0 15 9.5z"/><path d="M5 8.5a4 4 0 0 1 4-4"/><path d="M8 3.5l1.2 1-1.2 1.1"/><path d="M19 12a4 4 0 0 1-3.5 4"/><path d="M16.5 17l-1.2-1 1.2-1.1"/></svg></div>
+    <div class="it" style="top:192px;inset-inline-start:141px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="it" style="top:192px;inset-inline-start:917px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="it" style="top:505px;inset-inline-start:141px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="it" style="top:505px;inset-inline-start:917px"><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="440" cy="841" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="440" cy="841" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M440.0 531.5 A309.5 309.5 0 0 1 728.9 730.1" fill="none" stroke="#E9493A" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Cybersecurity<br>Incident Response <span class="lt">Slide</span></h1>
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><path d="M0 493.5H286V425.5H535V357.5H785V289.5H1034V221.5H1280" fill="none" stroke="#3A1F52" stroke-width="1.3"/></svg><div class="step" style="top:373px;inset-inline-start:52px"><div class="num">1</div><h2 class="hp">Heading<br>Placeholder</h2></div><p class="tx step-p abs" style="top:508px;inset-inline-start:52px;width:170px">Insert your desired text here. This is a sample text.</p><div class="step" style="top:304px;inset-inline-start:305px"><div class="num">2</div><h2 class="hp">Heading<br>Placeholder</h2></div><p class="tx step-p abs" style="top:443px;inset-inline-start:305px;width:170px">Insert your desired text here. This is a sample text.</p><div class="step" style="top:239px;inset-inline-start:555px"><div class="num">3</div><h2 class="hp">Heading<br>Placeholder</h2></div><p class="tx step-p abs" style="top:371px;inset-inline-start:555px;width:170px">Insert your desired text here. This is a sample text.</p><div class="step" style="top:168px;inset-inline-start:804px"><div class="num">4</div><h2 class="hp">Heading<br>Placeholder</h2></div><p class="tx step-p abs" style="top:305px;inset-inline-start:804px;width:170px">Insert your desired text here. This is a sample text.</p><div class="step" style="top:102px;inset-inline-start:1051px"><div class="num">5</div><h2 class="hp">Heading<br>Placeholder</h2></div><p class="tx step-p abs" style="top:235px;inset-inline-start:1051px;width:170px">Insert your desired text here. This is a sample text.</p>
+    <div class="panel"></div><p class="ph">Insert your heading statement here.</p><div class="bar"></div><p class="pt">Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Cybersecurity Business Continuity <span class="lt">Slide</span></h1>
+    <p class="lb" style="top:311px">PHASES</p><p class="lb" style="top:421px">STEPS</p><div class="sep"></div>
+    <p class="ph" style="inset-inline-start:204px">PHASE 1</p><div class="pb lav" style="inset-inline-start:194px">Insert your desired text here. This is a sample text.</div><div class="sp" style="top:421px;inset-inline-start:197px"><b class="k1"><bdi dir="ltr">1.1</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:501px;inset-inline-start:197px"><b class="k1"><bdi dir="ltr">1.2</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:580px;inset-inline-start:197px"><b class="k1"><bdi dir="ltr">1.3</bdi></b><p>Insert your desired text here.</p></div><p class="ph" style="inset-inline-start:475px">PHASE 2</p><div class="pb butter" style="inset-inline-start:465px">Insert your desired text here. This is a sample text.</div><div class="sp" style="top:421px;inset-inline-start:468px"><b class="k2"><bdi dir="ltr">2.1</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:501px;inset-inline-start:468px"><b class="k2"><bdi dir="ltr">2.2</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:580px;inset-inline-start:468px"><b class="k2"><bdi dir="ltr">2.3</bdi></b><p>Insert your desired text here.</p></div><p class="ph" style="inset-inline-start:746px">PHASE 3</p><div class="pb peach" style="inset-inline-start:736px">Insert your desired text here. This is a sample text.</div><div class="sp" style="top:421px;inset-inline-start:739px"><b class="k3"><bdi dir="ltr">3.1</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:501px;inset-inline-start:739px"><b class="k3"><bdi dir="ltr">3.2</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:580px;inset-inline-start:739px"><b class="k3"><bdi dir="ltr">3.3</bdi></b><p>Insert your desired text here.</p></div><p class="ph" style="inset-inline-start:1017px">PHASE 4</p><div class="pb pink" style="inset-inline-start:1007px">Insert your desired text here. This is a sample text.</div><div class="sp" style="top:421px;inset-inline-start:1010px"><b class="k4"><bdi dir="ltr">4.1</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:501px;inset-inline-start:1010px"><b class="k4"><bdi dir="ltr">4.2</bdi></b><p>Insert your desired text here.</p></div><div class="sp" style="top:580px;inset-inline-start:1010px"><b class="k4"><bdi dir="ltr">4.3</bdi></b><p>Insert your desired text here.</p></div>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Employee Awareness &amp; Culture</h1>
+    <div class="aw" style="inset-inline-start:58px"><div class="orb"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.5 10h11l2 5h-15z"/><rect x="11.4" y="15" width="1.2" height="3.5"/><circle cx="7.5" cy="7.2" r="1.4"/><circle cx="12" cy="6.6" r="1.4"/><circle cx="16.5" cy="7.2" r="1.4"/><path d="M2.5 10.5h2.6l1 4.5-1 3H3.2zM21.5 10.5h-2.6l-1 4.5 1 3h1.9z"/><path d="M9 19.5h6v1.2H9z"/></svg></span></div><svg class="arcl" viewBox="0 0 152 64" aria-hidden="true"><path d="M2 2A75 62 0 0 0 150 2" fill="none" stroke="#DCDCDC" stroke-width="1.5"/><path d="M76 58V66" stroke="#DCDCDC" stroke-width="1.5"/></svg><div class="card"></div><div class="num">1</div><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="aw" style="inset-inline-start:289px"><div class="orb"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 2.5h14v8H13l-1 1.5-1-1.5H5z"/><g fill="#fff"><rect x="7" y="4.5" width="10" height="1"/><rect x="7" y="6.5" width="10" height="1"/><rect x="7" y="8.3" width="6" height="1"/></g><circle cx="6" cy="14" r="2"/><circle cx="12" cy="13.5" r="2.2"/><circle cx="18" cy="14" r="2"/><path d="M2.5 20.5c0-2.4 1.6-4 3.5-4s3.5 1.6 3.5 4zM8 21c0-2.7 1.8-4.5 4-4.5s4 1.8 4 4.5zM14.5 20.5c0-2.4 1.6-4 3.5-4s3.5 1.6 3.5 4z"/></svg></span></div><svg class="arcl" viewBox="0 0 152 64" aria-hidden="true"><path d="M2 2A75 62 0 0 0 150 2" fill="none" stroke="#DCDCDC" stroke-width="1.5"/><path d="M76 58V66" stroke="#DCDCDC" stroke-width="1.5"/></svg><div class="card"></div><div class="num">2</div><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="aw" style="inset-inline-start:524px"><div class="orb"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="5" r="1.6"/><circle cx="18.5" cy="5" r="1.6"/><path d="M4 7.5h3l1 5h2.5v1.2H6.4zM20 7.5h-3l-1 5h-2.5v1.2h4.1z"/><path d="M8.5 10.5h7v1.2h-7zM11.4 11.7h1.2v8.5h-1.2zM2.5 8v12h1.3v-5.5h3.4v5.5h1.3v-7.5h-1.3V13H3.8V8zM21.5 8v12h-1.3v-5.5h-3.4v5.5h-1.3v-7.5h1.3V13h3.4V8z"/></svg></span></div><svg class="arcl" viewBox="0 0 152 64" aria-hidden="true"><path d="M2 2A75 62 0 0 0 150 2" fill="none" stroke="#DCDCDC" stroke-width="1.5"/><path d="M76 58V66" stroke="#DCDCDC" stroke-width="1.5"/></svg><div class="card"></div><div class="num">3</div><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="aw" style="inset-inline-start:758px"><div class="orb"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="6" r="2.2"/><circle cx="12" cy="5" r="2.4"/><circle cx="18" cy="6" r="2.2"/><path d="M2.5 13c0-2.6 1.6-4.4 3.5-4.4 1.2 0 2.2.6 2.8 1.6L9 13zM8.5 12.5c0-2.8 1.6-4.6 3.5-4.6s3.5 1.8 3.5 4.6zM15 13l.2-2.8a3.2 3.2 0 0 1 2.8-1.6c1.9 0 3.5 1.8 3.5 4.4z"/><path d="M2 18c0-3.2 4.5-5 10-5s10 1.8 10 5z"/></svg></span></div><svg class="arcl" viewBox="0 0 152 64" aria-hidden="true"><path d="M2 2A75 62 0 0 0 150 2" fill="none" stroke="#DCDCDC" stroke-width="1.5"/><path d="M76 58V66" stroke="#DCDCDC" stroke-width="1.5"/></svg><div class="card"></div><div class="num">4</div><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="aw" style="inset-inline-start:992px"><div class="orb"><span><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="15.5" cy="6" r="4"/><path d="M13.6 6.1l1.4 1.4 2.5-2.7" fill="none" stroke="#fff" stroke-width="1.3"/><path d="M2.5 13.5 5 8.5h4.2v1.6H6l-1.8 3.4H9a3 3 0 0 0 6 0h4.8l-.9-1.7 1.4-.8 1.2 2.5V20a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1z"/></svg></span></div><svg class="arcl" viewBox="0 0 152 64" aria-hidden="true"><path d="M2 2A75 62 0 0 0 150 2" fill="none" stroke="#DCDCDC" stroke-width="1.5"/><path d="M76 58V66" stroke="#DCDCDC" stroke-width="1.5"/></svg><div class="card"></div><div class="num">5</div><h2 class="hp">Heading<br>Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+  </div></section>
+  <!-- 13 -->
+  <section class="slide"><div class="frame s13">
+    <svg class="lines deco" viewBox="0 0 1280 720" aria-hidden="true"><g fill="none" stroke="#BDBDBD" stroke-width="1.2"><path d="M453 267H787.1 A313 313 0 0 1 1360.1 300.9"/><path d="M453 437.5H821.1 A244 244 0 0 1 1306.1 383.7"/><path d="M453 607.5H958.3 A201 201 0 1 1 1174.3 606.3 H1280"/></g></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Third Party &amp; Supply Chain Risk</h1>
+    <div class="tc" style="top:192px"></div><div class="tic" style="top:208px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 2h10v7h-5.5L13 11.2V9h-2z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M15 4.2a1.3 1.3 0 0 1 2.4.6c0 .9-1.2 1-1.2 1.9M16.2 7.6v.3" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="6.5" cy="11.5" r="2.6"/><circle cx="12.5" cy="14" r="2.8"/><path d="M1.5 19.5c0-2.6 2.2-4.6 5-4.6 1 0 1.9.2 2.6.7A5.6 5.6 0 0 0 7 19.5zM7.5 22c0-3 2.2-5.2 5-5.2s5 2.2 5 5.2z"/></svg></div><div class="tt" style="top:217px"><h2 class="hp">Heading Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="tc" style="top:363px"></div><div class="tic" style="top:379px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="6" r="2.8"/><path d="M18 2.8l3.2 3.2L18 9.2 14.8 6z"/><rect x="2.4" y="15" width="5.6" height="5.6"/><circle cx="18" cy="17.8" r="2.8"/><path d="M8.5 5.5h3.5V4.3L14 6l-2 1.7V6.5H8.5zM17.4 9.8h1.2v3.2h1.2l-1.8 2-1.8-2h1.2zM15 17.3H11.6v-1.2l-2 1.7 2 1.7v-1.2H15z"/></svg></div><div class="tt" style="top:388px"><h2 class="hp">Heading Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div><div class="tc" style="top:533px"></div><div class="tic" style="top:549px"><svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 21.5V3h1.4v17.1H21.5v1.4z"/><rect x="6.5" y="14" width="2.6" height="5"/><rect x="10.5" y="11" width="2.6" height="8"/><rect x="14.5" y="8" width="2.6" height="11"/><rect x="18.5" y="4.5" width="2.6" height="14.5"/><path d="M12.5 3.2 6.8 8.9V6.5H5.4v4.8h4.8V9.9H7.8l5.7-5.7z"/></svg></div><div class="tt" style="top:558px"><h2 class="hp">Heading Placeholder</h2><p class="tx">Insert your desired text here. This is a sample text.</p></div>
+    <p class="cen">Insert your heading statement here.</p><div class="bar"></div><p class="cp">Insert your desired text here. This is a sample text.</p>
+  </div></section>
+  <!-- 14 -->
+  <section class="slide"><div class="frame s14">
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Maturity Scoring<br>(The “Gap Analysis”)</h1>
+    <p class="rl" style="top:327px;color:#EE4A35">HEADING HERE</p><p class="rl" style="top:463px;color:#DDB443">HEADING HERE</p><p class="rl" style="top:589px;color:#4B286D">HEADING HERE</p>
+    <div class="blk rd" style="top:266px;inset-inline-start:247.0px;height:394px">Insert your desired text here. This is a sample text.</div><div class="blk ye" style="top:398px;inset-inline-start:247.0px;height:262px">Insert your desired text here. This is a sample text.</div><div class="blk pu" style="top:531px;inset-inline-start:247.0px;height:129px">Insert your desired text here. This is a sample text.</div><div class="blk rd" style="top:229px;inset-inline-start:496.5px;height:431px">Insert your desired text here. This is a sample text.</div><div class="blk ye" style="top:362px;inset-inline-start:496.5px;height:298px">Insert your desired text here. This is a sample text.</div><div class="blk pu" style="top:494px;inset-inline-start:496.5px;height:166px">Insert your desired text here. This is a sample text.</div><div class="blk rd" style="top:192px;inset-inline-start:746.0px;height:468px">Insert your desired text here. This is a sample text.</div><div class="blk ye" style="top:326px;inset-inline-start:746.0px;height:334px">Insert your desired text here. This is a sample text.</div><div class="blk pu" style="top:459px;inset-inline-start:746.0px;height:201px">Insert your desired text here. This is a sample text.</div><div class="blk rd" style="top:156px;inset-inline-start:995.5px;height:504px">Insert your desired text here. This is a sample text.</div><div class="blk ye" style="top:296px;inset-inline-start:995.5px;height:364px">Insert your desired text here. This is a sample text.</div><div class="blk pu" style="top:429px;inset-inline-start:995.5px;height:231px">Insert your desired text here. This is a sample text.</div>
+  </div></section>
+  <!-- 15 -->
+  <section class="slide"><div class="frame s15">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Strategic Roadmap <span class="lt">Slide</span></h1>
+    <svg class="road flip" viewBox="0 0 926 106" aria-hidden="true"><path d="M0 0H870L925 52 870 106H0z" fill="url(#gRoad)"/></svg><div class="vl" style="inset-inline-start:50px"></div><div class="mk" style="inset-inline-start:26px"></div><p class="tm" style="inset-inline-start:94px">Short-term</p><div class="vl" style="inset-inline-start:428px"></div><div class="mk" style="inset-inline-start:404px"></div><p class="tm" style="inset-inline-start:472px">Medium-term</p><div class="vl" style="inset-inline-start:806px"></div><div class="mk" style="inset-inline-start:782px"></div><p class="tm" style="inset-inline-start:850px">Long-term</p><div class="li dk" style="top:198px;inset-inline-start:73px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li dk" style="top:273px;inset-inline-start:73px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li or" style="top:513px;inset-inline-start:73px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li or" style="top:588px;inset-inline-start:73px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li dk" style="top:198px;inset-inline-start:444px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li dk" style="top:273px;inset-inline-start:444px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li or" style="top:513px;inset-inline-start:444px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li or" style="top:588px;inset-inline-start:444px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li dk" style="top:198px;inset-inline-start:825px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li dk" style="top:273px;inset-inline-start:825px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li or" style="top:513px;inset-inline-start:825px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="li or" style="top:588px;inset-inline-start:825px"><svg class="ic flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><p>Insert your desired text here. This is a sample text.</p></div><div class="hl" style="top:459px"></div><div class="hl" style="top:488px"></div><p class="drv">DRIVERS</p>
+  </div></section>
+  <!-- 16 -->
+  <section class="slide"><div class="frame s16">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="1240" cy="-73" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="1240" cy="-73" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M952.0 40.4 A309.5 309.5 0 0 0 1094.7 200.3" fill="none" stroke="#4B286D" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR COMPANY NAME HERE</p><h1 class="ttl">Recommendations and Next Steps <span class="lt">Slide</span></h1>
+    <div class="rw" style="top:241px"><div class="n"><bdi dir="ltr">01</bdi></div><p class="t"><b>Insert your desired text here.</b>This is a sample text.</p><svg class="ic ar flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><div class="pl p1">Insert your desired text here.</div><div class="cn"></div><div class="pl p2">Insert your desired text here.</div></div><div class="rw" style="top:354px"><div class="n"><bdi dir="ltr">02</bdi></div><p class="t"><b>Insert your desired text here.</b>This is a sample text.</p><svg class="ic ar flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><div class="pl p1">Insert your desired text here.</div><div class="cn"></div><div class="pl p2">Insert your desired text here.</div></div><div class="rw" style="top:466px"><div class="n"><bdi dir="ltr">03</bdi></div><p class="t"><b>Insert your desired text here.</b>This is a sample text.</p><svg class="ic ar flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><div class="pl p1">Insert your desired text here.</div><div class="cn"></div><div class="pl p2">Insert your desired text here.</div></div><div class="rw" style="top:578px"><div class="n"><bdi dir="ltr">04</bdi></div><p class="t"><b>Insert your desired text here.</b>This is a sample text.</p><svg class="ic ar flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 12h9.5M12.8 8l4 4-4 4"/></svg><div class="pl p1">Insert your desired text here.</div><div class="cn"></div><div class="pl p2">Insert your desired text here.</div></div>
+  </div></section>
+  <!-- 17 -->
+  <section class="slide"><div class="frame s17">
+    <svg class="deco" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="222" cy="704" r="273.75" fill="none" stroke="url(#gO)" stroke-width="20"/><circle cx="222" cy="704" r="227.5" fill="none" stroke="url(#gI)" stroke-width="17"/><path d="M222.0 394.5 A309.5 309.5 0 0 1 531.5 704.0" fill="none" stroke="#E9493A" stroke-width="3" stroke-linecap="butt"/></svg>
+    <p class="co">YOUR BUSINESS NAME HERE</p><h1 class="h2a">Thank You<span>Connect With Us</span></h1><p class="intro">Insert your desired text here. This is a sample text. A brief statement about your topic.</p>
+    <div class="logo"><svg class="logo-mk" viewBox="0 0 60 64" fill="currentColor" aria-hidden="true"><path d="M14 5.5C18 1.8 24 1 30 1.8L50 6.5C56 8 59 12 59 18.5L58 46.5 50.5 48.5 51 22.5C51 18.5 49 16.2 45.5 15.4L24 11C19.5 10 16.5 11 13 13.5Z"/><path d="M8.5 9.5 11.5 16C10.5 20 10 24 10.2 30L11 48.5C11.3 53.5 14 55.8 19 55.5L45 52.8C49 52.3 52 51 55 48.6L58 53C55 59.5 50 61.6 44 62.5L16 63.6C7 64 2.3 59.5 2 51.5L1.2 24C1 17 3.8 12.5 8.5 9.5Z"/></svg><p>YOUR COMPANY<br>LOGO HERE</p></div>
+    <div class="ct" style="top:23px;inset-inline-start:885px"><svg class="bnd flip" viewBox="0 0 360 60" aria-hidden="true"><path d="M0 26H282L344 60H40z" fill="url(#gSh)"/><path d="M58 3H276A6 6 0 0 1 282 9V26H58z" fill="url(#gBar)"/><path d="M276 3 344 60H330L270 26z" fill="#E2E2E2" opacity=".55"/><path d="M0 26H120V60H40z" fill="url(#gShL)"/></svg><svg style="inset-inline-start:18px" class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2.5 10.5 12 3.5l9.5 7V21h-19z"/><path d="M2.5 10.5 12 16.5l9.5-6M2.5 21l7-6M21.5 21l-7-6"/><path d="M6.5 13V6.5h11V13" fill="#fff"/><path d="M9 9h6M9 11.2h6"/></svg><h3 style="inset-inline-start:22px">Email Address</h3><p style="inset-inline-start:22px">Insert your desired text here.</p></div><div class="ct" style="top:175px;inset-inline-start:760px"><svg class="bnd flip" viewBox="0 0 360 60" aria-hidden="true"><path d="M0 26H282L344 60H40z" fill="url(#gSh)"/><path d="M58 3H276A6 6 0 0 1 282 9V26H58z" fill="url(#gBar)"/><path d="M276 3 344 60H330L270 26z" fill="#E2E2E2" opacity=".55"/><path d="M0 26H120V60H40z" fill="url(#gShL)"/></svg><svg style="inset-inline-start:18px" class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 3.2 9 5.6c.5.5.5 1.2 0 1.7l-1.3 1.3a12 12 0 0 0 7.7 7.7l1.3-1.3c.5-.5 1.2-.5 1.7 0l2.4 2.4c.5.5.5 1.2 0 1.7l-1.6 1.6c-.8.8-2 1-3 .6A19 19 0 0 1 3.3 8.6c-.4-1-.2-2.2.6-3l1.6-1.6c.4-.4 1-.4 1.1-.8z"/><path d="M13.5 6.2a4.5 4.5 0 0 1 4.3 4.3M14 2.8a8 8 0 0 1 7.2 7.2M13.2 9.4a1.6 1.6 0 0 1 1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><h3 style="inset-inline-start:22px">Contact Number/s</h3><p style="inset-inline-start:22px">Insert your desired text here.</p></div><div class="ct" style="top:339px;inset-inline-start:667px"><svg class="bnd flip" viewBox="0 0 360 60" aria-hidden="true"><path d="M0 26H282L344 60H40z" fill="url(#gSh)"/><path d="M58 3H276A6 6 0 0 1 282 9V26H58z" fill="url(#gBar)"/><path d="M276 3 344 60H330L270 26z" fill="#E2E2E2" opacity=".55"/><path d="M0 26H120V60H40z" fill="url(#gShL)"/></svg><svg style="inset-inline-start:18px" class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9.5h6V22H3zM10 3h6v19h-6zM16.8 7.5H21V22h-4.2z"/><g fill="#fff"><rect x="4.3" y="11" width="1.3" height="1.5"/><rect x="6.4" y="11" width="1.3" height="1.5"/><rect x="4.3" y="14" width="1.3" height="1.5"/><rect x="6.4" y="14" width="1.3" height="1.5"/><rect x="4.3" y="17" width="1.3" height="1.5"/><rect x="6.4" y="17" width="1.3" height="1.5"/><rect x="11.3" y="5" width="1.3" height="1.5"/><rect x="13.4" y="5" width="1.3" height="1.5"/><rect x="11.3" y="8" width="1.3" height="1.5"/><rect x="13.4" y="8" width="1.3" height="1.5"/><rect x="11.3" y="11" width="1.3" height="1.5"/><rect x="13.4" y="11" width="1.3" height="1.5"/><rect x="11.3" y="14" width="1.3" height="1.5"/><rect x="13.4" y="14" width="1.3" height="1.5"/><rect x="11.3" y="17" width="1.3" height="1.5"/><rect x="13.4" y="17" width="1.3" height="1.5"/><rect x="18.2" y="10" width="1.3" height="1.5"/><rect x="18.2" y="13" width="1.3" height="1.5"/><rect x="18.2" y="16" width="1.3" height="1.5"/></g></svg><h3 style="inset-inline-start:22px">Office Location</h3><p style="inset-inline-start:22px">Insert your desired text here.</p></div><div class="ct" style="top:498px;inset-inline-start:582px"><svg class="bnd flip" viewBox="0 0 360 60" aria-hidden="true"><path d="M0 26H282L344 60H40z" fill="url(#gSh)"/><path d="M58 3H276A6 6 0 0 1 282 9V26H58z" fill="url(#gBar)"/><path d="M276 3 344 60H330L270 26z" fill="#E2E2E2" opacity=".55"/><path d="M0 26H120V60H40z" fill="url(#gShL)"/></svg><svg style="inset-inline-start:18px" class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5v19M4 7h16M4 17h16"/><ellipse cx="12" cy="12" rx="4.6" ry="9.5"/></svg><h3 style="inset-inline-start:22px">Company Website</h3><p style="inset-inline-start:22px">Insert your desired text here.</p></div>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="Previous">‹</button><span id="counter">1 / 17</span><button type="button" id="next" aria-label="Next">›</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

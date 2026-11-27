@@ -1,0 +1,84 @@
+{
+  "key": "sl-cybersecurity-assessment",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🛡️",
+  "name": "تقييم الأمن السيبراني",
+  "nameEn": "Cybersecurity Assessment",
+  "description": "سبع عشرة شريحة لتقييم الأمن السيبراني: التهديدات والثغرات والهوية والشبكات والسحابة والنضج وخارطة الطريق",
+  "descriptionEn": "17 slides for a cybersecurity assessment: threats, vulnerabilities, IAM, network, cloud, maturity, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "نطاق التقييم ومنهجيته",
+      "titleEn": "Assessment Scope & Methodology"
+    },
+    {
+      "title": "مشهد التهديدات الحالي",
+      "titleEn": "Current Threat Landscape",
+      "needsData": true
+    },
+    {
+      "title": "نتائج تقييم الثغرات",
+      "titleEn": "Vulnerability Assessment Results",
+      "needsData": true
+    },
+    {
+      "title": "إدارة الهوية والوصول",
+      "titleEn": "Identity & Access Management (IAM)"
+    },
+    {
+      "title": "أمن الشبكات",
+      "titleEn": "Network Security"
+    },
+    {
+      "title": "الأمن السحابي",
+      "titleEn": "Cloud Security"
+    },
+    {
+      "title": "الاستجابة للحوادث",
+      "titleEn": "Incident Response"
+    },
+    {
+      "title": "استمرارية الأعمال",
+      "titleEn": "Business Continuity"
+    },
+    {
+      "title": "توعية الموظفين وثقافتهم",
+      "titleEn": "Employee Awareness & Culture"
+    },
+    {
+      "title": "مخاطر الأطراف الثالثة وسلسلة الإمداد",
+      "titleEn": "Third Party & Supply Chain Risk"
+    },
+    {
+      "title": "تقييم النضج (تحليل الفجوات)",
+      "titleEn": "Maturity Scoring (Gap Analysis)"
+    },
+    {
+      "title": "خارطة الطريق الاستراتيجية",
+      "titleEn": "Strategic Roadmap"
+    },
+    {
+      "title": "التوصيات والخطوات التالية",
+      "titleEn": "Recommendations and Next Steps"
+    },
+    {
+      "title": "شكر وتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والزخارف (الحلقات المتدرّجة SVG) وغيّر النصوص والأرقام فقط؛ نقاط الأثر في جدول الثغرات أصنافها ok/mid/bad ومعها نص مخفي بالمستوى."
+}
