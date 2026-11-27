@@ -1,0 +1,95 @@
+{
+  "key": "sl-high-stakes-pitch-deck",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💼",
+  "name": "عرض استثماري عالي المخاطر",
+  "nameEn": "High-Stakes Investor Pitch Deck",
+  "description": "19 شريحة لعرض المستثمرين: المشكلة والحل والسوق ونموذج العمل والمنافسون والفريق والتوقعات المالية والتمويل",
+  "descriptionEn": "19 investor pitch slides: problem, solution, market, business model, competitors, team, financials and funds",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "فاصل القسم الأول",
+      "titleEn": "Section Divider 01"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "المشكلة",
+      "titleEn": "The Problem",
+      "needsData": true
+    },
+    {
+      "title": "الحل",
+      "titleEn": "The Solution"
+    },
+    {
+      "title": "آلية العمل",
+      "titleEn": "How It Works"
+    },
+    {
+      "title": "فرصة السوق",
+      "titleEn": "Market Opportunity",
+      "needsData": true
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model",
+      "needsData": true
+    },
+    {
+      "title": "الإنجازات والمحطات",
+      "titleEn": "Traction & Milestones"
+    },
+    {
+      "title": "المشهد التنافسي",
+      "titleEn": "Competitive Landscape"
+    },
+    {
+      "title": "فاصل القسم الثاني",
+      "titleEn": "Section Divider 02"
+    },
+    {
+      "title": "استراتيجية الدخول إلى السوق",
+      "titleEn": "Go-to-Market Strategy"
+    },
+    {
+      "title": "فريق القيادة",
+      "titleEn": "Our Leadership Team"
+    },
+    {
+      "title": "التوقعات المالية",
+      "titleEn": "Financial Projections",
+      "needsData": true
+    },
+    {
+      "title": "استخدام الأموال",
+      "titleEn": "Use of Funds",
+      "needsData": true
+    },
+    {
+      "title": "الطلبات الرئيسية",
+      "titleEn": "Key Asks"
+    },
+    {
+      "title": "الأسئلة والأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "شكرًا وتواصل معنا",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والمربعات الزخرفية، وغيّر النصوص والأرقام فقط؛ أرقام الرسم المكدّس في شريحة التوقعات المالية تُعدَّل في كتلة chart-data (الفئات والسلاسل الثلاث وألوانها)."
+}
