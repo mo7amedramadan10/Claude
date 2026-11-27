@@ -1,0 +1,80 @@
+{
+  "key": "sl-fintech-innovation",
+  "kind": "slides",
+  "category": "finance",
+  "icon": "💳",
+  "name": "ملف شركة ابتكار التقنية المالية",
+  "nameEn": "Fintech Innovation Company Profile",
+  "description": "ست عشرة شريحة بالأخضر والليموني: ملخص تنفيذي وفرصة وعرض قيمة وتقنية ونموذج عمل وزخم وفريق وتواصل",
+  "descriptionEn": "16 green-and-lime slides: summary, opportunity, value, tech, business model, traction, team, contact",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول المحتويات",
+      "titleEn": "Table of Contents"
+    },
+    {
+      "title": "الملخص التنفيذي",
+      "titleEn": "Executive Summary",
+      "needsData": true
+    },
+    {
+      "title": "الفرصة",
+      "titleEn": "The Opportunity"
+    },
+    {
+      "title": "عرض القيمة",
+      "titleEn": "Value Proposition",
+      "needsData": true
+    },
+    {
+      "title": "التقنية المملوكة والبنية",
+      "titleEn": "Proprietary Technology & Architecture"
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model"
+    },
+    {
+      "title": "الزخم في السوق",
+      "titleEn": "Market Traction",
+      "needsData": true
+    },
+    {
+      "title": "الامتثال والأمن والتنظيم",
+      "titleEn": "Compliance, Security & Regulation"
+    },
+    {
+      "title": "واجهة المنتج",
+      "titleEn": "Product Interface"
+    },
+    {
+      "title": "تجربة المستخدم",
+      "titleEn": "User Experience"
+    },
+    {
+      "title": "خارطة الطريق الاستراتيجية",
+      "titleEn": "Strategic Roadmap"
+    },
+    {
+      "title": "فريق القيادة",
+      "titleEn": "The Leadership Team"
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "الأسئلة والأجوبة",
+      "titleEn": "Q&A"
+    },
+    {
+      "title": "الشكر والتواصل",
+      "titleEn": "Thank You & Contact"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأشكال والألوان، وغيّر النصوص والأرقام فقط؛ أرقام الرسم الخطّي في الشريحة 8 تُعدَّل في كتلة chart-data."
+}
