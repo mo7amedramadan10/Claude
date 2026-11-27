@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الشحن العالمي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «الشحن العالمي»: غلاف بصورة سفينة وأشرطة مائلة، ثم شرائح نبذة وشبكة مكاتب وخدمات وأسطول وسلسلة إمداد وأداء برسم أعمدة وتقنية واستدامة ودراسات حالة واستراتيجية وخاتمة بخريطة ورمز QR. الألوان: أزرق #28599E وأزرق فاتح #5B9BD5. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --ink: #0D0D0D; --ink-2: #1F2328; --gray: #7F7F7F; --accent: #28599E; --blue: #28599E; --sky: #5B9BD5; --pale: #9BBAE6; --navy: #0B1E45; --sub: #2F5DA0; --line: #D9D9D9; --soft: #C9D6EA; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* عناصر مشتركة */
+  .sub { position: absolute; margin: 0; font-size: 22px; line-height: 28px; font-weight: 400; color: var(--sub); white-space: nowrap; }
+  .ttl { position: absolute; margin: 0; font-size: 60px; line-height: 63px; font-weight: 700; color: #000; letter-spacing: -0.6px; white-space: nowrap; }
+  html[lang="ar"] .ttl { font-weight: 800; letter-spacing: 0; font-size: 56px; }
+  .gt { position: absolute; margin: 0; color: var(--gray); font-size: 18px; line-height: 26px; font-weight: 400; }
+  .ico { position: absolute; color: var(--blue); } .ico svg { width: 100%; height: 100%; }
+  .bold { position: absolute; margin: 0; font-weight: 700; color: var(--ink); font-size: 22px; line-height: 32px; white-space: nowrap; }
+  .num { position: absolute; margin: 0; font-weight: 700; color: var(--blue); font-size: 60px; line-height: 70px; white-space: nowrap; letter-spacing: -0.5px; }
+  .vl { position: absolute; width: 1px; background: var(--line); }
+  .hl { position: absolute; height: 1px; background: var(--line); }
+  .art { position: absolute; inset: 0; width: 1280px; height: 720px; direction: ltr; }
+  .photo { position: absolute; object-fit: cover; display: block; }
+  html[dir="rtl"] .flip { transform: scaleX(-1); }
+  .blue { background: var(--blue); } .sky { background: var(--sky); }
+  .wt { color: #fff; } .soft { color: var(--soft); }
+  .deco { position: absolute; top: 0; inset-inline-start: 980px; width: 300px; height: 190px; }
+  .deco path { fill: none; stroke: #D6DCE2; stroke-width: 1.2; }
+  .deco .d2 { stroke: #BFC8D1; } .deco .d3 { stroke: #E4E8EC; }
+  .card { position: absolute; }
+  .card svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .card path { fill: none; stroke: url(#cardfade); stroke-width: 1.4; }
+  html[dir="rtl"] .card svg { transform: scaleX(-1); }
+  .s1 .ship { position: absolute; top: 0px; inset-inline-start: 0px; width: 885px; height: 720px; }
+  .s1 .ship { clip-path: polygon(0px 0px, 885px 0px, 441px 720px, 0px 720px); }
+  .s1 .logo { position: absolute; top: 56px; inset-inline-start: 1152px; width: 58px; height: 60px; color: var(--blue); }
+  .s1 .ct { position: absolute; inset-inline-start: 776px; width: 472px; margin: 0; text-align: center; white-space: nowrap; }
+  .s1 .g1 { top: 220px; font-size: 100px; line-height: 104px; font-weight: 800; color: var(--navy); letter-spacing: -1px; }
+  .s1 .g2 { top: 326px; font-size: 86px; line-height: 86px; font-weight: 800; color: var(--blue); letter-spacing: -1px; }
+  .s1 .g3 { top: 418px; font-size: 25px; line-height: 32px; font-weight: 400; color: var(--navy); letter-spacing: 3.6px; }
+  html[lang="ar"] .s1 .g1 { font-size: 96px; letter-spacing: 0; top: 214px; }
+  html[lang="ar"] .s1 .g2 { font-size: 86px; letter-spacing: 0; top: 318px; }
+  html[lang="ar"] .s1 .g3 { letter-spacing: 1px; font-size: 27px; }
+  .s1 .rule { position: absolute; top: 466px; inset-inline-start: 776px; width: 472px; height: 1px; background: #DADFE5; }
+  .s1 .g4 { top: 486px; font-size: 20px; line-height: 28px; color: var(--gray); }
+  .s1 .bi { position: absolute; color: #fff; }
+  .s1 .bt { position: absolute; margin: 0; color: #fff; font-size: 20px; line-height: 29px; font-weight: 400; white-space: nowrap; }
+  .s1 .i1 { position: absolute; top: 627px; inset-inline-start: 666px; width: 46px; height: 46px; }
+  .s1 .i2 { position: absolute; top: 625px; inset-inline-start: 866px; width: 38px; height: 52px; }
+  .s1 .i3 { position: absolute; top: 628px; inset-inline-start: 1062px; width: 58px; height: 44px; }
+  .s1 .t1 { position: absolute; top: 621px; inset-inline-start: 730px; width: 130px; height: 58px; }
+  .s1 .t2 { position: absolute; top: 621px; inset-inline-start: 916px; width: 130px; height: 58px; }
+  .s1 .t3 { position: absolute; top: 621px; inset-inline-start: 1141px; width: 130px; height: 58px; }
+  .s2 .port { position: absolute; top: 0px; inset-inline-start: 0px; width: 1280px; height: 343px; }
+  .s2 .pan { position: absolute; top: 272px; inset-inline-start: 592px; width: 688px; height: 448px; }
+  .s2 .pan { clip-path: polygon(0px 58px, 58px 0px, 688px 0px, 688px 448px, 0px 448px); }
+  html[dir="rtl"] .s2 .pan { clip-path: polygon(688px 58px, 630px 0px, 0px 0px, 0px 448px, 688px 448px); }
+  .s2 .sub { position: absolute; top: 396px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s2 .ttl { position: absolute; top: 436px; inset-inline-start: 98px; width: 470px; height: 126px; }
+  .s2 .gt { position: absolute; top: 609px; inset-inline-start: 98px; width: 392px; height: 52px; }
+  .s2 .hd { position: absolute; top: 331px; inset-inline-start: 671px; width: 580px; margin: 0; color: #fff; font-size: 36px; line-height: 46px; font-weight: 300; white-space: nowrap; }
+  .s2 .pp { position: absolute; top: 467px; inset-inline-start: 671px; width: 560px; margin: 0; color: #E3EAF4; font-size: 18px; line-height: 26px; }
+  .s2 .sn { position: absolute; top: 576px; margin: 0; color: #fff; font-size: 44px; line-height: 54px; font-weight: 700; white-space: nowrap; }
+  .s2 .sl { position: absolute; top: 637px; margin: 0; color: #E3EAF4; font-size: 18px; line-height: 26px; white-space: nowrap; }
+  .s2 .ico { color: #fff; }
+  .s2 .w1 { position: absolute; top: 577px; inset-inline-start: 671px; width: 48px; height: 54px; }
+  .s2 .w2 { position: absolute; top: 580px; inset-inline-start: 961px; width: 50px; height: 50px; }
+  .s2 .n1, .s2 .l1 { inset-inline-start: 740px; } .s2 .n2, .s2 .l2 { inset-inline-start: 1030px; }
+  .s3 .tower { position: absolute; top: 0px; inset-inline-start: 629px; width: 651px; height: 411px; }
+  .s3 .tower { clip-path: polygon(0px 0px, 651px 0px, 651px 411px, 68px 411px, 0px 343px); }
+  html[dir="rtl"] .s3 .tower { clip-path: polygon(651px 0px, 0px 0px, 0px 411px, 583px 411px, 651px 343px); }
+  .s3 .sub { position: absolute; top: 76px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s3 .ttl { position: absolute; top: 113px; inset-inline-start: 98px; width: 520px; height: 126px; }
+  .s3 .gt { position: absolute; top: 263px; inset-inline-start: 98px; width: 400px; height: 52px; }
+  .s3 .tab { position: absolute; top: 359px; inset-inline-start: 0px; width: 346px; height: 79px; }
+  .s3 .tab { clip-path: polygon(0px 0px, 258px 0px, 346px 79px, 0px 79px); }
+  html[dir="rtl"] .s3 .tab { clip-path: polygon(346px 0px, 88px 0px, 0px 79px, 346px 79px); }
+  .s3 .tabt { position: absolute; top: 385px; inset-inline-start: 84px; margin: 0; color: #fff; font-size: 26px; line-height: 34px; font-weight: 700; }
+  .s3 .n1 { position: absolute; top: 482px; inset-inline-start: 98px; width: 250px; height: 70px; }
+  .s3 .r1 { position: absolute; top: 561px; inset-inline-start: 98px; width: 270px; height: 30px; font-size: 20px; line-height: 28px; }
+  .s3 .d1 { position: absolute; top: 599px; inset-inline-start: 98px; width: 250px; height: 52px; }
+  .s3 .n2 { position: absolute; top: 482px; inset-inline-start: 393px; width: 250px; height: 70px; }
+  .s3 .r2 { position: absolute; top: 561px; inset-inline-start: 393px; width: 270px; height: 30px; font-size: 20px; line-height: 28px; }
+  .s3 .d2 { position: absolute; top: 599px; inset-inline-start: 393px; width: 250px; height: 52px; }
+  .s3 .n3 { position: absolute; top: 482px; inset-inline-start: 687px; width: 250px; height: 70px; }
+  .s3 .r3 { position: absolute; top: 561px; inset-inline-start: 687px; width: 270px; height: 30px; font-size: 20px; line-height: 28px; }
+  .s3 .d3 { position: absolute; top: 599px; inset-inline-start: 687px; width: 250px; height: 52px; }
+  .s3 .n4 { position: absolute; top: 482px; inset-inline-start: 982px; width: 250px; height: 70px; }
+  .s3 .r4 { position: absolute; top: 561px; inset-inline-start: 982px; width: 270px; height: 30px; font-size: 20px; line-height: 28px; }
+  .s3 .d4 { position: absolute; top: 599px; inset-inline-start: 982px; width: 250px; height: 52px; }
+  .s3 .v347 { top: 472px; inset-inline-start: 347px; height: 193px; }
+  .s3 .v642 { top: 472px; inset-inline-start: 642px; height: 193px; }
+  .s3 .v937 { top: 472px; inset-inline-start: 937px; height: 193px; }
+  html[dir="rtl"] .flip-d { transform: scaleX(-1); }
+  .s4 .parcel { position: absolute; top: 0px; inset-inline-start: 0px; width: 413px; height: 720px; }
+  .s4 .parcel { clip-path: polygon(0px 0px, 413px 0px, 413px 360px, 320px 360px, 240px 440px, 240px 720px, 0px 720px); }
+  .s4 .sub { position: absolute; top: 76px; inset-inline-start: 490px; width: 400px; height: 28px; }
+  .s4 .ttl { position: absolute; top: 113px; inset-inline-start: 490px; width: 500px; height: 63px; }
+  .s4 .gt { position: absolute; top: 211px; inset-inline-start: 490px; width: 652px; height: 90px; font-size: 20px; line-height: 29px; }
+  .s4 .c1 { position: absolute; top: 430px; inset-inline-start: 302px; width: 64px; height: 58px; }
+  .s4 .b1 { position: absolute; top: 509px; inset-inline-start: 302px; width: 190px; height: 64px; }
+  .s4 .e1 { position: absolute; top: 585px; inset-inline-start: 302px; width: 170px; height: 60px; font-size: 20px; line-height: 30px; }
+  .s4 .c2 { position: absolute; top: 430px; inset-inline-start: 559px; width: 64px; height: 58px; }
+  .s4 .b2 { position: absolute; top: 509px; inset-inline-start: 559px; width: 190px; height: 64px; }
+  .s4 .e2 { position: absolute; top: 585px; inset-inline-start: 559px; width: 170px; height: 60px; font-size: 20px; line-height: 30px; }
+  .s4 .c3 { position: absolute; top: 430px; inset-inline-start: 816px; width: 64px; height: 58px; }
+  .s4 .b3 { position: absolute; top: 509px; inset-inline-start: 816px; width: 190px; height: 64px; }
+  .s4 .e3 { position: absolute; top: 585px; inset-inline-start: 816px; width: 170px; height: 60px; font-size: 20px; line-height: 30px; }
+  .s4 .c4 { position: absolute; top: 430px; inset-inline-start: 1073px; width: 64px; height: 58px; }
+  .s4 .b4 { position: absolute; top: 509px; inset-inline-start: 1073px; width: 190px; height: 64px; }
+  .s4 .e4 { position: absolute; top: 585px; inset-inline-start: 1073px; width: 170px; height: 60px; font-size: 20px; line-height: 30px; }
+  .s4 .v498 { top: 440px; inset-inline-start: 498px; height: 212px; }
+  .s4 .v760 { top: 440px; inset-inline-start: 760px; height: 212px; }
+  .s4 .v1016 { top: 440px; inset-inline-start: 1016px; height: 212px; }
+  .s5 .sub { position: absolute; top: 36px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s5 .ttl { position: absolute; top: 73px; inset-inline-start: 98px; width: 640px; height: 63px; }
+  .s5 .k1 { position: absolute; top: 222px; inset-inline-start: 40px; width: 292px; height: 293px; }
+  .s5 .k2 { position: absolute; top: 222px; inset-inline-start: 332px; width: 292px; height: 293px; }
+  .s5 .k3 { position: absolute; top: 222px; inset-inline-start: 622px; width: 292px; height: 293px; }
+  .s5 .k4 { position: absolute; top: 222px; inset-inline-start: 912px; width: 292px; height: 293px; }
+  .s5 .c1 { position: absolute; top: 262px; inset-inline-start: 97px; width: 64px; height: 50px; }
+  .s5 .n1 { position: absolute; top: 337px; inset-inline-start: 97px; width: 230px; height: 70px; }
+  .s5 .b1 { position: absolute; top: 409px; inset-inline-start: 97px; width: 250px; height: 64px; }
+  .s5 .c2 { position: absolute; top: 262px; inset-inline-start: 384px; width: 64px; height: 50px; }
+  .s5 .n2 { position: absolute; top: 337px; inset-inline-start: 384px; width: 230px; height: 70px; }
+  .s5 .b2 { position: absolute; top: 409px; inset-inline-start: 384px; width: 250px; height: 64px; }
+  .s5 .c3 { position: absolute; top: 262px; inset-inline-start: 670px; width: 64px; height: 50px; }
+  .s5 .n3 { position: absolute; top: 337px; inset-inline-start: 670px; width: 230px; height: 70px; }
+  .s5 .b3 { position: absolute; top: 409px; inset-inline-start: 670px; width: 250px; height: 64px; }
+  .s5 .c4 { position: absolute; top: 262px; inset-inline-start: 958px; width: 64px; height: 50px; }
+  .s5 .n4 { position: absolute; top: 337px; inset-inline-start: 958px; width: 230px; height: 70px; }
+  .s5 .b4 { position: absolute; top: 409px; inset-inline-start: 958px; width: 250px; height: 64px; }
+  .s5 .band { position: absolute; top: 515px; inset-inline-start: 0px; width: 1280px; height: 205px; }
+  .s5 .band { clip-path: polygon(0px 60px, 60px 0px, 1280px 0px, 1280px 205px, 0px 205px); }
+  html[dir="rtl"] .s5 .band { clip-path: polygon(1280px 60px, 1220px 0px, 0px 0px, 0px 205px, 1280px 205px); }
+  .s5 .dot { position: absolute; top: 555px; width: 42px; height: 42px; border-radius: 50%; background: var(--sky); color: #fff; font-size: 16px; font-weight: 700; display: grid; place-items: center; margin: 0; }
+  .s5 .arr { position: absolute; top: 571px; inset-inline-start: 0; width: 1280px; height: 14px; }
+  .s5 .st { position: absolute; top: 616px; margin: 0; color: #fff; font-size: 22px; line-height: 32px; font-weight: 700; white-space: nowrap; }
+  .s5 .ss { position: absolute; top: 652px; margin: 0; color: var(--soft); font-size: 18px; line-height: 26px; white-space: nowrap; }
+  .s5 .p1 { inset-inline-start: 100px; } .s5 .q1, .s5 .u1 { inset-inline-start: 97px; }
+  .s5 .p2 { inset-inline-start: 383px; } .s5 .q2, .s5 .u2 { inset-inline-start: 383px; }
+  .s5 .p3 { inset-inline-start: 668px; } .s5 .q3, .s5 .u3 { inset-inline-start: 670px; }
+  .s5 .p4 { inset-inline-start: 957px; } .s5 .q4, .s5 .u4 { inset-inline-start: 956px; }
+  .s6 .sub { position: absolute; top: 76px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s6 .ttl { position: absolute; top: 113px; inset-inline-start: 98px; width: 760px; height: 63px; }
+  .s6 .pan { position: absolute; top: 240px; inset-inline-start: 0px; width: 1280px; height: 480px; }
+  .s6 .pan { clip-path: polygon(0px 68px, 68px 0px, 1280px 0px, 1280px 480px, 0px 480px); }
+  html[dir="rtl"] .s6 .pan { clip-path: polygon(1280px 68px, 1212px 0px, 0px 0px, 0px 480px, 1280px 480px); }
+  .s6 .vl, .s6 .hl { background: rgb(255 255 255 / .22); }
+  .s6 .ico { color: #fff; }
+  .s6 .bold { color: #fff; }
+  .s6 .gt { color: var(--soft); white-space: nowrap; }
+  .s6 .c1 { position: absolute; top: 303px; inset-inline-start: 95px; width: 54px; height: 54px; }
+  .s6 .b1 { position: absolute; top: 381px; inset-inline-start: 97px; width: 260px; height: 32px; }
+  .s6 .e1 { position: absolute; top: 416px; inset-inline-start: 97px; width: 250px; height: 26px; }
+  .s6 .c2 { position: absolute; top: 303px; inset-inline-start: 390px; width: 54px; height: 54px; }
+  .s6 .b2 { position: absolute; top: 381px; inset-inline-start: 392px; width: 260px; height: 32px; }
+  .s6 .e2 { position: absolute; top: 416px; inset-inline-start: 392px; width: 250px; height: 26px; }
+  .s6 .c3 { position: absolute; top: 303px; inset-inline-start: 685px; width: 54px; height: 54px; }
+  .s6 .b3 { position: absolute; top: 381px; inset-inline-start: 687px; width: 260px; height: 32px; }
+  .s6 .e3 { position: absolute; top: 416px; inset-inline-start: 687px; width: 250px; height: 26px; }
+  .s6 .c4 { position: absolute; top: 303px; inset-inline-start: 999px; width: 54px; height: 54px; }
+  .s6 .b4 { position: absolute; top: 381px; inset-inline-start: 1001px; width: 260px; height: 32px; }
+  .s6 .e4 { position: absolute; top: 416px; inset-inline-start: 1001px; width: 250px; height: 26px; }
+  .s6 .c5 { position: absolute; top: 526px; inset-inline-start: 95px; width: 54px; height: 54px; }
+  .s6 .b5 { position: absolute; top: 599px; inset-inline-start: 97px; width: 260px; height: 32px; }
+  .s6 .e5 { position: absolute; top: 634px; inset-inline-start: 97px; width: 250px; height: 26px; }
+  .s6 .c6 { position: absolute; top: 526px; inset-inline-start: 390px; width: 54px; height: 54px; }
+  .s6 .b6 { position: absolute; top: 599px; inset-inline-start: 392px; width: 260px; height: 32px; }
+  .s6 .e6 { position: absolute; top: 634px; inset-inline-start: 392px; width: 250px; height: 26px; }
+  .s6 .c7 { position: absolute; top: 526px; inset-inline-start: 685px; width: 54px; height: 54px; }
+  .s6 .b7 { position: absolute; top: 599px; inset-inline-start: 687px; width: 260px; height: 32px; }
+  .s6 .e7 { position: absolute; top: 634px; inset-inline-start: 687px; width: 250px; height: 26px; }
+  .s6 .c8 { position: absolute; top: 526px; inset-inline-start: 999px; width: 54px; height: 54px; }
+  .s6 .b8 { position: absolute; top: 599px; inset-inline-start: 1001px; width: 260px; height: 32px; }
+  .s6 .e8 { position: absolute; top: 634px; inset-inline-start: 1001px; width: 250px; height: 26px; }
+  .s6 .v333 { top: 297px; inset-inline-start: 333px; height: 371px; }
+  .s6 .v629 { top: 297px; inset-inline-start: 629px; height: 371px; }
+  .s6 .v950 { top: 297px; inset-inline-start: 950px; height: 371px; }
+  .s6 .h1 { top: 481px; inset-inline-start: 81px; width: 1119px; }
+  .s7 .sub { position: absolute; top: 76px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s7 .ttl { position: absolute; top: 113px; inset-inline-start: 98px; width: 560px; height: 63px; }
+  .s7 .chart { position: absolute; top: 260px; inset-inline-start: 80px; width: 560px; height: 400px; }
+  .s7 .chart text { font-size: 13px; fill: #595959; font-family: var(--font); }
+  .s7 .kt { position: absolute; top: 57px; inset-inline-start: 1043px; width: 100px; margin: 0; text-align: center; color: #fff; font-size: 26px; line-height: 34px; font-weight: 700; white-space: nowrap; }
+  html[lang="ar"] .s7 .kt { inset-inline-start: 993px; width: 200px; font-size: 24px; }
+  .s7 .tab { position: absolute; top: 32px; inset-inline-start: 957px; width: 323px; height: 79px; }
+  .s7 .tab { clip-path: polygon(0px 0px, 323px 0px, 323px 79px, 88px 79px); }
+  html[dir="rtl"] .s7 .tab { clip-path: polygon(323px 0px, 0px 0px, 0px 79px, 235px 79px); }
+  .s7 .v1 { top: 130px; inset-inline-start: 984px; height: 550px; } .s7 .h1 { top: 412px; inset-inline-start: 764px; width: 472px; }
+  .s7 .c1 { position: absolute; top: 166px; inset-inline-start: 760px; width: 66px; height: 52px; }
+  .s7 .n1 { position: absolute; top: 241px; inset-inline-start: 771px; width: 230px; height: 70px; }
+  .s7 .b1 { position: absolute; top: 317px; inset-inline-start: 771px; width: 200px; height: 64px; }
+  .s7 .c2 { position: absolute; top: 162px; inset-inline-start: 1036px; width: 66px; height: 52px; }
+  .s7 .n2 { position: absolute; top: 241px; inset-inline-start: 1049px; width: 230px; height: 70px; }
+  .s7 .b2 { position: absolute; top: 317px; inset-inline-start: 1049px; width: 200px; height: 64px; }
+  .s7 .c3 { position: absolute; top: 455px; inset-inline-start: 764px; width: 66px; height: 52px; }
+  .s7 .n3 { position: absolute; top: 536px; inset-inline-start: 771px; width: 230px; height: 70px; }
+  .s7 .b3 { position: absolute; top: 612px; inset-inline-start: 771px; width: 200px; height: 64px; }
+  .s7 .c4 { position: absolute; top: 458px; inset-inline-start: 1044px; width: 46px; height: 46px; }
+  .s7 .n4 { position: absolute; top: 536px; inset-inline-start: 1049px; width: 230px; height: 70px; }
+  .s7 .b4 { position: absolute; top: 612px; inset-inline-start: 1049px; width: 200px; height: 64px; }
+  .s7 .n1, .s7 .n2, .s7 .n3, .s7 .n4 { font-size: 58px; }
+  .s8 .sub { position: absolute; top: 76px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s8 .ttl { position: absolute; top: 113px; inset-inline-start: 98px; width: 520px; height: 126px; }
+  .s8 .dk { position: absolute; top: 0px; inset-inline-start: 725px; width: 555px; height: 720px; }
+  .s8 .team { position: absolute; top: 72px; inset-inline-start: 665px; width: 576px; height: 511px; }
+  .s8 .team { clip-path: polygon(0px 56px, 58px 0px, 576px 0px, 576px 511px, 0px 511px); }
+  .s8 .lt { position: absolute; top: 475px; inset-inline-start: 828px; width: 452px; height: 245px; }
+  .s8 .lt { clip-path: polygon(0px 56px, 56px 0px, 452px 0px, 452px 245px, 0px 245px); }
+  html[dir="rtl"] .s8 .lt { clip-path: polygon(452px 56px, 396px 0px, 0px 0px, 0px 245px, 452px 245px); }
+  .s8 .q { position: absolute; top: 539px; inset-inline-start: 901px; width: 360px; margin: 0; color: #fff; font-size: 28px; line-height: 38.5px; font-weight: 300; white-space: nowrap; }
+  .s8 .b1 { position: absolute; top: 292px; inset-inline-start: 98px; width: 500px; height: 28px; font-size: 20px; line-height: 28px; }
+  .s8 .e1 { position: absolute; top: 331px; inset-inline-start: 98px; width: 490px; height: 52px; }
+  .s8 .b2 { position: absolute; top: 432px; inset-inline-start: 98px; width: 500px; height: 28px; font-size: 20px; line-height: 28px; }
+  .s8 .e2 { position: absolute; top: 471px; inset-inline-start: 98px; width: 490px; height: 52px; }
+  .s8 .b3 { position: absolute; top: 572px; inset-inline-start: 98px; width: 500px; height: 28px; font-size: 20px; line-height: 28px; }
+  .s8 .e3 { position: absolute; top: 611px; inset-inline-start: 98px; width: 490px; height: 52px; }
+  .s8 .h1 { top: 412px; inset-inline-start: 88px; width: 528px; } .s8 .h2 { top: 547px; inset-inline-start: 88px; width: 528px; }
+  .s9 .sub { position: absolute; top: 76px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s9 .ttl { position: absolute; top: 113px; inset-inline-start: 98px; width: 560px; height: 126px; }
+  .s9 .gt.pt { position: absolute; top: 130px; inset-inline-start: 719px; width: 448px; height: 90px; font-size: 20px; line-height: 29px; }
+  .s9 .k1 { position: absolute; top: 290px; inset-inline-start: 40px; width: 295px; height: 342px; }
+  .s9 .k2 { position: absolute; top: 290px; inset-inline-start: 339px; width: 291px; height: 342px; }
+  .s9 .k3 { position: absolute; top: 290px; inset-inline-start: 644px; width: 291px; height: 342px; }
+  .s9 .k4 { position: absolute; top: 290px; inset-inline-start: 955px; width: 291px; height: 342px; }
+  .s9 .c1 { position: absolute; top: 354px; inset-inline-start: 92px; width: 58px; height: 58px; }
+  .s9 .c2 { position: absolute; top: 354px; inset-inline-start: 400px; width: 58px; height: 58px; }
+  .s9 .c3 { position: absolute; top: 354px; inset-inline-start: 704px; width: 58px; height: 58px; }
+  .s9 .c4 { position: absolute; top: 354px; inset-inline-start: 1004px; width: 58px; height: 58px; }
+  .s9 .b1 { position: absolute; top: 451px; inset-inline-start: 98px; width: 240px; height: 64px; }
+  .s9 .e1 { position: absolute; top: 525px; inset-inline-start: 98px; width: 200px; height: 50px; line-height: 25px; }
+  .s9 .b2 { position: absolute; top: 451px; inset-inline-start: 402px; width: 240px; height: 64px; }
+  .s9 .e2 { position: absolute; top: 525px; inset-inline-start: 402px; width: 200px; height: 50px; line-height: 25px; }
+  .s9 .b3 { position: absolute; top: 451px; inset-inline-start: 706px; width: 240px; height: 64px; }
+  .s9 .e3 { position: absolute; top: 525px; inset-inline-start: 706px; width: 200px; height: 50px; line-height: 25px; }
+  .s9 .b4 { position: absolute; top: 451px; inset-inline-start: 1010px; width: 240px; height: 64px; }
+  .s9 .e4 { position: absolute; top: 525px; inset-inline-start: 1010px; width: 200px; height: 50px; line-height: 25px; }
+  .s9 .band { position: absolute; top: 632px; inset-inline-start: 0px; width: 1280px; height: 88px; }
+  .s9 .band { clip-path: polygon(0px 40px, 40px 0px, 1280px 0px, 1280px 88px, 0px 88px); }
+  html[dir="rtl"] .s9 .band { clip-path: polygon(1280px 40px, 1240px 0px, 0px 0px, 0px 88px, 1280px 88px); }
+  .s9 .bt { position: absolute; top: 664px; inset-inline-start: 98px; width: 1150px; margin: 0; color: #fff; font-size: 20px; line-height: 28px; white-space: nowrap; }
+  .s10 .sub { position: absolute; top: 76px; inset-inline-start: 98px; width: 400px; height: 28px; }
+  .s10 .ttl { position: absolute; top: 113px; inset-inline-start: 98px; width: 500px; height: 63px; }
+  .s10 .pan { position: absolute; top: 150px; inset-inline-start: 625px; width: 655px; height: 570px; }
+  .s10 .pan { clip-path: polygon(0px 72px, 72px 0px, 655px 0px, 655px 570px, 0px 570px); }
+  html[dir="rtl"] .s10 .pan { clip-path: polygon(655px 72px, 583px 0px, 0px 0px, 0px 570px, 655px 570px); }
+  .s10 .lg { position: absolute; width: 96px; text-align: center; }
+  .s10 .lg svg { display: block; width: 78px; height: 43px; margin: 0 auto 1px; }
+  .s10 .lg b { display: block; font-size: 10.5px; line-height: 12px; font-weight: 800; color: #122A4C; letter-spacing: .4px; white-space: nowrap; }
+  .s10 .lg i { display: block; font-style: normal; font-size: 6.5px; line-height: 8px; color: #2BA3D8; letter-spacing: 1.6px; white-space: nowrap; }
+  .s10 .lg.on b { color: #CFE2F7; } .s10 .lg.on i { color: #CFE2F7; }
+  html[lang="ar"] .s10 .lg b { font-size: 11px; letter-spacing: 0; } html[lang="ar"] .s10 .lg i { font-size: 8.5px; letter-spacing: 0; }
+  .s10 .on.bold { color: #fff; } .s10 .on.gt { color: #fff; }
+  .s10 .h1 { top: 469px; inset-inline-start: 75px; width: 468px; } .s10 .h2 { top: 467px; inset-inline-start: 702px; width: 500px; background: rgb(255 255 255 / .22); }
+  .s10 .lg1 { position: absolute; top: 298px; inset-inline-start: 73px; width: 96px; height: 70px; }
+  .s10 .b1 { position: absolute; top: 304px; inset-inline-start: 191px; width: 400px; height: 32px; }
+  .s10 .e1 { position: absolute; top: 346px; inset-inline-start: 191px; width: 330px; height: 80px; line-height: 25.5px; }
+  .s10 .lg2 { position: absolute; top: 515px; inset-inline-start: 73px; width: 96px; height: 70px; }
+  .s10 .b2 { position: absolute; top: 521px; inset-inline-start: 191px; width: 400px; height: 32px; }
+  .s10 .e2 { position: absolute; top: 563px; inset-inline-start: 191px; width: 330px; height: 80px; line-height: 25.5px; }
+  .s10 .lg3 { position: absolute; top: 298px; inset-inline-start: 697px; width: 96px; height: 70px; }
+  .s10 .b3 { position: absolute; top: 304px; inset-inline-start: 829px; width: 400px; height: 32px; }
+  .s10 .e3 { position: absolute; top: 346px; inset-inline-start: 829px; width: 330px; height: 80px; line-height: 25.5px; }
+  .s10 .lg4 { position: absolute; top: 515px; inset-inline-start: 697px; width: 96px; height: 70px; }
+  .s10 .b4 { position: absolute; top: 521px; inset-inline-start: 829px; width: 400px; height: 32px; }
+  .s10 .e4 { position: absolute; top: 563px; inset-inline-start: 829px; width: 330px; height: 80px; line-height: 25.5px; }
+  .s11 .band { position: absolute; top: 240px; inset-inline-start: 0px; width: 1280px; height: 480px; }
+  .s11 .band { clip-path: polygon(0px 62px, 62px 0px, 1280px 0px, 1280px 480px, 0px 480px); }
+  html[dir="rtl"] .s11 .band { clip-path: polygon(1280px 62px, 1218px 0px, 0px 0px, 0px 480px, 1280px 480px); }
+  .s11 .vessel { position: absolute; top: 0px; inset-inline-start: 88px; width: 480px; height: 449px; }
+  .s11 .wb { position: absolute; top: 449px; inset-inline-start: 88px; width: 480px; height: 208px; background: #fff; }
+  .s11 .wb { clip-path: polygon(0px 0px, 480px 0px, 480px 208px, 60px 208px, 0px 148px); }
+  html[dir="rtl"] .s11 .wb { clip-path: polygon(480px 0px, 0px 0px, 0px 208px, 420px 208px, 480px 148px); }
+  .s11 .gt { position: absolute; top: 486px; inset-inline-start: 149px; width: 364px; height: 120px; font-size: 20px; line-height: 28.7px; }
+  .s11 .sub { position: absolute; top: 76px; inset-inline-start: 619px; width: 400px; height: 28px; }
+  .s11 .ttl { position: absolute; top: 113px; inset-inline-start: 619px; width: 640px; height: 63px; }
+  .s11 .dot { position: absolute; width: 44px; height: 44px; inset-inline-start: 621px; border-radius: 50%; background: var(--sky); color: #fff; font-size: 16px; font-weight: 700; display: grid; place-items: center; margin: 0; }
+  .s11 .li { position: absolute; inset-inline-start: 688px; margin: 0; color: #fff; font-size: 22px; line-height: 32px; font-weight: 700; white-space: nowrap; letter-spacing: -0.3px; }
+  .s11 .p1 { top: 281px; } .s11 .m1 { top: 287px; }
+  .s11 .p2 { top: 353px; } .s11 .m2 { top: 359px; }
+  .s11 .p3 { top: 425px; } .s11 .m3 { top: 431px; }
+  .s11 .p4 { top: 496px; } .s11 .m4 { top: 502px; }
+  .s11 .p5 { top: 568px; } .s11 .m5 { top: 574px; }
+  .s12 .map { position: absolute; top: 69px; inset-inline-start: 41px; width: 555px; height: 462px; }
+  .s12 .map { clip-path: polygon(0px 0px, 481px 0px, 555px 74px, 555px 462px, 0px 462px); }
+  html[dir="rtl"] .s12 .map { clip-path: polygon(555px 0px, 74px 0px, 0px 74px, 0px 462px, 555px 462px); }
+  .s12 .lt { position: absolute; top: 474px; inset-inline-start: 0px; width: 528px; height: 246px; }
+  .s12 .lt { clip-path: polygon(0px 0px, 472px 0px, 528px 56px, 528px 246px, 0px 246px); }
+  html[dir="rtl"] .s12 .lt { clip-path: polygon(528px 0px, 56px 0px, 0px 56px, 0px 246px, 528px 246px); }
+  .s12 .map img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  /* الخريطة لا تُعكس في العربية (جغرافيا حقيقية): الحاوية الداخلية باتجاه ltr والتسميات بإحداثيات فيزيائية ثابتة */
+  .s12 .mapin { position: absolute; inset: 0; direction: ltr; }
+  .s12 .ml { position: absolute; margin: 0; font-size: 11px; line-height: 13px; color: #3A3F45; text-align: center; white-space: nowrap; transform: rotate(var(--r, 0deg)); }
+  html[dir="rtl"] .s12 .ml { direction: rtl; }
+  .s12 .ml.v { transform: rotate(90deg); }
+  .s12 .ml.poi { font-size: 10.5px; line-height: 12px; color: #2D3A4A; }
+  .s12 .ml.co { text-align: start; color: #122A4C; }
+  html[dir="rtl"] .s12 .ml.co { text-align: end; }
+  .s12 .ml.co b { display: block; font-size: 13px; line-height: 15px; font-weight: 700; }
+  .s12 .ml.co span { display: block; font-size: 9.5px; line-height: 11px; margin-top: 2px; }
+  .s12 .q { position: absolute; top: 578px; inset-inline-start: 51px; margin: 0; color: #fff; font-size: 36px; line-height: 43px; font-weight: 300; white-space: nowrap; }
+  .s12 .ty { position: absolute; top: 80px; inset-inline-start: 719px; margin: 0; font-size: 60px; line-height: 66px; font-weight: 700; color: #000; white-space: nowrap; letter-spacing: -0.6px; }
+  html[lang="ar"] .s12 .ty { font-weight: 800; letter-spacing: 0; }
+  .s12 .lbl { position: absolute; inset-inline-start: 719px; margin: 0; color: var(--gray); font-size: 18px; line-height: 26px; }
+  .s12 .val { position: absolute; margin: 0; color: #262626; font-size: 22px; line-height: 30px; white-space: nowrap; }
+  .s12 .ico { color: var(--blue); }
+  .s12 .qr { position: absolute; top: 468px; inset-inline-start: 1007px; width: 206px; height: 206px; }
+  html[dir="rtl"] .s12 .qr { transform: scaleX(-1); }
+  .s12 .gt { position: absolute; top: 173px; inset-inline-start: 719px; width: 400px; height: 90px; font-size: 20px; line-height: 29px; }
+  .s12 .l1 { top: 306px; } .s12 .l2 { top: 412px; }
+  html[lang="ar"] .s12 .gt { width: 450px; }
+  .s12 .v1 { top: 343px; inset-inline-start: 761px; } .s12 .v2 { top: 449px; inset-inline-start: 763px; }
+  .s12 .c1 { position: absolute; top: 343px; inset-inline-start: 723px; width: 24px; height: 28px; }
+  .s12 .c2 { position: absolute; top: 451px; inset-inline-start: 719px; width: 28px; height: 28px; }
+  .s12 .sc { position: absolute; top: 548px; inset-inline-start: 730px; margin: 0; color: var(--gray); font-size: 20px; line-height: 28px; white-space: nowrap; }
+  .s12 .wb { position: absolute; top: 586px; inset-inline-start: 730px; margin: 0; color: #262626; font-size: 18px; line-height: 26px; white-space: nowrap; }
+
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="cardfade" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F62AA"/><stop offset=".55" stop-color="#7C9CCB"/><stop offset="1" stop-color="#DDE6F1"/></linearGradient><linearGradient id="arrfade" x1="0" y1="0" x2="1280" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5B9BD5" stop-opacity=".35"/><stop offset="1" stop-color="#5B9BD5"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <div class="art flip"><img class="photo ship" src="/templates/freeform/sl-global-shipping/assets/ship.jpg" alt="سفينة حاويات في البحر"><svg class="art" viewBox="0 0 1280 720" aria-hidden="true"><polygon points="527,581 1280,581 1280,720 441,720" fill="#28599E"/><polygon points="652,394 657,484 512,720 457,720" fill="#5B9BD5"/><polygon points="627,539 682,539 572,720 517,720" fill="#9BBAE6"/></svg></div>
+    <svg class="logo" viewBox="0 0 58 60" aria-hidden="true"><path d="M20 7c10-3 22-2 28 2 5 4 5 16 2 26-3 11-10 18-22 20-9 1-20-1-23-6-4-6-2-18 1-27C9 15 13 9 20 7z" fill="none" stroke="currentColor" stroke-width="7.5" stroke-dasharray="70 14 66 14" transform="rotate(-6 29 30)"/></svg>
+    <h1 class="ct g1">الشحن</h1><h1 class="ct g2">العالمي</h1><p class="ct g3">قالب عرض تقديمي</p>
+    <div class="rule"></div><p class="ct g4">هذا نص توضيحي. أدرج النص المطلوب.</p>
+    <div class="bi i1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="19"/><ellipse cx="24" cy="24" rx="8" ry="19"/><path d="M5 24h38M24 5v38M8 14h32M8 34h32"/></svg></div><p class="bt t1">انتشار<br>عالمي</p>
+    <div class="bi i2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 31c0-4-6-7-6-15a13 13 0 0 1 26 0c0 8-6 11-6 15z"/><path d="M18 35h12M19 39h10M21 43h6"/></svg></div><p class="bt t2">حل<br>ذكي</p>
+    <div class="bi i3"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l7-7 6 6-7 7z"/><path d="M45 20l-7-7-6 6 7 7z"/><path d="M16 19l6-4h6l10 9"/><path d="M28 15l-7 6a2.5 2.5 0 0 0 3.5 3.5l5-3"/><path d="M38 24l-9 9a2.2 2.2 0 0 1-3-3"/><path d="M33 29l-7 7a2.2 2.2 0 0 1-3-3"/><path d="M29 33l-4 4a2.2 2.2 0 0 1-3-3"/><path d="M10 26l5 5a2.2 2.2 0 0 0 3-3M14 30l4 4a2.2 2.2 0 0 0 3-3M18 34l3 3a2.2 2.2 0 0 0 3-3"/></svg></div><p class="bt t3">شريك<br>موثوق</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <img class="photo port flip" src="/templates/freeform/sl-global-shipping/assets/port.jpg" alt="منظر جوي لميناء حاويات">
+    <div class="pan blue"></div>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">نبذة عن<br>الشركة</h1><p class="gt">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. هذا نص توضيحي.</p>
+    <p class="hd">نقدّم حلولًا متكاملة<br>للشحن والخدمات اللوجستية.</p><p class="pp">هذا نص توضيحي. أدرج النص المطلوب هنا. أدرج النص هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p>
+    <div class="ico w1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="27" r="17"/><path d="M19 5h10M24 5v5M38 12l3-3M24 16v11l6 5"/><circle cx="24" cy="14" r=".6" fill="currentColor"/><circle cx="24" cy="40" r=".6" fill="currentColor"/><circle cx="11" cy="27" r=".6" fill="currentColor"/><circle cx="37" cy="27" r=".6" fill="currentColor"/></svg></div><p class="sn n1"><bdi dir="ltr">98,7%</bdi></p><p class="sl l1">دقة الالتزام بالمواعيد</p>
+    <div class="ico w2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="19"/><ellipse cx="24" cy="24" rx="8" ry="19"/><path d="M5 24h38M24 5v38M8 14h32M8 34h32"/></svg></div><p class="sn n2"><bdi dir="ltr">826</bdi></p><p class="sl l2">شراكة عالمية</p>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <img class="photo tower" src="/templates/freeform/sl-global-shipping/assets/tower.jpg" alt="بنية سفينة في محطة حاويات">
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">شبكة الشحن<br>العالمية</h1><p class="gt">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. هذا نص توضيحي.</p>
+    <div class="tab blue"></div><p class="tabt">المكاتب</p>
+    <p class="num n1"><bdi dir="ltr">38</bdi></p><p class="bold r1">الأمريكتان</p><p class="gt d1">هذا نص توضيحي.<br>أدرج النص هنا.</p>
+    <p class="num n2"><bdi dir="ltr">56</bdi></p><p class="bold r2">أوروبا</p><p class="gt d2">هذا نص توضيحي.<br>أدرج النص هنا.</p>
+    <p class="num n3"><bdi dir="ltr">81</bdi></p><p class="bold r3">آسيا والمحيط الهادئ</p><p class="gt d3">هذا نص توضيحي.<br>أدرج النص هنا.</p>
+    <p class="num n4"><bdi dir="ltr">27</bdi></p><p class="bold r4">الشرق الأوسط وأفريقيا</p><p class="gt d4">هذا نص توضيحي.<br>أدرج النص هنا.</p>
+    <div class="vl v347"></div>    <div class="vl v642"></div>    <div class="vl v937"></div>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <img class="photo parcel flip" src="/templates/freeform/sl-global-shipping/assets/parcel.jpg" alt="تسليم طرد">
+    <svg class="deco flip-d" viewBox="980 0 300 190" aria-hidden="true"><path d="M1001 75H1111L1156 0M1001 75L1046 0"/><path class="d2" d="M1070 178H1180L1287 0M1070 178L1177 0"/><path class="d3" d="M1227 138H1337M1227 138L1310 0"/></svg>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">الخدمات</h1><p class="gt">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج النص المطلوب. هذا نص توضيحي.</p>
+    <div class="ico c1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 30h42l-6 8H9z"/><path d="M8 30V20h5v10M7 20h7M10.5 20v-4M9 16h3"/><path d="M15 30v-5h8v5M23 25h8v5M31 25h7v5M19 25v-5h8v5M27 20h7v5M23 20v-4h7v4"/></svg></div><p class="bold b1">الشحن<br>البحري</p><p class="gt e1">هذا نص<br>توضيحي.</p>
+    <div class="ico c2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 30h42l-5 8H8z"/><path d="M8 30v-5h31l4 5M13 25v-5h22v5M19 20v-6h6v6"/><path d="M12 34h2M17 34h2M22 34h2M27 34h2M32 34h2M16 28h1M21 28h1M26 28h1M31 28h1M18 22h1M30 22h1"/></svg></div><p class="bold b2">النقل متعدد<br>الوسائط</p><p class="gt e2">هذا نص<br>توضيحي.</p>
+    <div class="ico c3"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="34" width="11" height="10"/><rect x="16" y="34" width="11" height="10"/><rect x="27" y="34" width="11" height="10"/><rect x="10" y="24" width="11" height="10"/><rect x="21" y="24" width="11" height="10"/><rect x="15" y="14" width="11" height="10"/><circle cx="37" cy="12" r="7"/><path d="M34 12l2 2 4-4M37 19v15"/><path d="M10 37h1M21 37h1M32 37h1M15 27h1M26 27h1M20 17h1"/></svg></div><p class="bold b3">التخليص<br>الجمركي</p><p class="gt e3">هذا نص<br>توضيحي.</p>
+    <div class="ico c4"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="7" r="4"/><circle cx="8" cy="33" r="4"/><circle cx="40" cy="33" r="4"/><path d="M30 9a17 17 0 0 1 9 14M37 19l2 4 3-3M33 40a17 17 0 0 1-17 1M20 38l-4 3 4 2M7 26a17 17 0 0 1 10-17M11 13l6-4-1 5"/></svg></div><p class="bold b4">حلول سلاسل<br>الإمداد</p><p class="gt e4">هذا نص<br>توضيحي.</p>
+    <div class="vl v498"></div>    <div class="vl v760"></div>    <div class="vl v1016"></div>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <svg class="deco flip-d" viewBox="980 0 300 190" aria-hidden="true"><path d="M1001 75H1111L1156 0M1001 75L1046 0"/><path class="d2" d="M1070 178H1180L1287 0M1070 178L1177 0"/><path class="d3" d="M1227 138H1337M1227 138L1310 0"/></svg>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">الأسطول والعمليات</h1>
+    <div class="card k1"><svg viewBox="0 0 292 293" preserveAspectRatio="none" aria-hidden="true"><path d="M1 293 V54 L54 1 H292"/></svg></div>
+    <div class="card k2"><svg viewBox="0 0 292 293" preserveAspectRatio="none" aria-hidden="true"><path d="M1 293 V54 L54 1 H292"/></svg></div>
+    <div class="card k3"><svg viewBox="0 0 292 293" preserveAspectRatio="none" aria-hidden="true"><path d="M1 293 V54 L54 1 H292"/></svg></div>
+    <div class="card k4"><svg viewBox="0 0 292 293" preserveAspectRatio="none" aria-hidden="true"><path d="M1 293 V54 L54 1 H292"/></svg></div>
+    <div class="ico c1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 30h42l-6 8H9z"/><path d="M8 30V20h5v10M7 20h7M10.5 20v-4M9 16h3"/><path d="M15 30v-5h8v5M23 25h8v5M31 25h7v5M19 25v-5h8v5M27 20h7v5M23 20v-4h7v4"/></svg></div><p class="num n1"><bdi dir="ltr">4.8M</bdi></p><p class="bold b1">الطاقة السنوية<br>لنقل البضائع</p>
+    <div class="ico c2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 45V7h6v38M14 45h14M18 13h6M18 19h6M18 25h6M18 31h6M18 37h6M8 12h36L21 5M10 12l11-7M38 12v9"/><rect x="33" y="21" width="10" height="7"/></svg></div><p class="num n2"><bdi dir="ltr">68</bdi></p><p class="bold b2">سفن<br>الحاويات</p>
+    <div class="ico c3"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 5l18 9v20l-18 9-18-9V14z"/><path d="M6 14l18 9 18-9M24 23v20M15 9.5l18 9v6"/><rect x="31" y="29" width="4" height="4" transform="skewY(-26) translate(0 16)"/></svg></div><p class="num n3"><bdi dir="ltr">95</bdi></p><p class="bold b3">مراكز<br>التوزيع</p>
+    <div class="ico c4"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="19"/><ellipse cx="24" cy="24" rx="8" ry="19"/><path d="M5 24h38M24 5v38M8 14h32M8 34h32"/></svg></div><p class="num n4"><bdi dir="ltr">120</bdi></p><p class="bold b4">خطوط الشحن<br>النشطة</p>
+    <div class="band blue"></div>
+    <svg class="arr flip" viewBox="0 0 1280 14" aria-hidden="true"><g fill="none" stroke="url(#arrfade)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M150 7H378"/><path d="M373 3l5 4-5 4"/><path d="M433 7H662"/><path d="M657 3l5 4-5 4"/><path d="M718 7H951"/><path d="M946 3l5 4-5 4"/></g></svg>
+    <p class="dot p1"><bdi>01</bdi></p><p class="st q1">تجميع البضائع</p><p class="ss u1">هذا نص توضيحي</p>
+    <p class="dot p2"><bdi>02</bdi></p><p class="st q2">النقل البحري</p><p class="ss u2">هذا نص توضيحي</p>
+    <p class="dot p3"><bdi>03</bdi></p><p class="st q3">التخليص الجمركي</p><p class="ss u3">هذا نص توضيحي</p>
+    <p class="dot p4"><bdi>04</bdi></p><p class="st q4">التسليم النهائي</p><p class="ss u4">هذا نص توضيحي</p>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <svg class="deco flip-d" viewBox="980 0 300 190" aria-hidden="true"><path d="M1001 75H1111L1156 0M1001 75L1046 0"/><path class="d2" d="M1070 178H1180L1287 0M1070 178L1177 0"/><path class="d3" d="M1227 138H1337M1227 138L1310 0"/></svg>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">حلول سلاسل الإمداد</h1>
+    <div class="pan blue"></div>
+    <div class="ico c1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="8" r="4"/><circle cx="8" cy="36" r="4"/><circle cx="40" cy="36" r="4"/><path d="M20.5 10a17 17 0 0 0-11 22M27.5 10a17 17 0 0 1 11 22M12 38.5a17 17 0 0 0 24 0"/></svg></div><p class="bold b1">إدارة أوامر الشراء</p><p class="gt e1">هذا نص توضيحي</p>
+    <div class="ico c2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 5l18 9v20l-18 9-18-9V14z"/><path d="M6 14l18 9 18-9M24 23v20M15 9.5l18 9v6"/><rect x="31" y="29" width="4" height="4" transform="skewY(-26) translate(0 16)"/></svg></div><p class="bold b2">تجميع البضائع</p><p class="gt e2">هذا نص توضيحي</p>
+    <div class="ico c3"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 44V15L24 6l20 9v29"/><path d="M10 44V19h28v25"/><path d="M10 23h28M10 27h28M10 31h28"/><path d="M24 36h7v8h-7zM31 36h7v8h-7zM27.5 30h7v6"/></svg></div><p class="bold b3">عمليات المستودعات</p><p class="gt e3">هذا نص توضيحي</p>
+    <div class="ico c4"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4h20l9 9v31H10z"/><path d="M30 4v9h9M16 18h12M16 23h17M16 27h17M16 31h17M16 35h17M16 39h17"/></svg></div><p class="bold b4">مستندات التصدير</p><p class="gt e4">هذا نص توضيحي</p>
+    <div class="ico c5"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l6 3 10 28"/><circle cx="21" cy="39" r="5"/><circle cx="21" cy="39" r="1.5"/><path d="M26 37l18-7M24 17l13-5 6 14-13 5z"/></svg></div><p class="bold b5">النقل</p><p class="gt e5">هذا نص توضيحي</p>
+    <div class="ico c6"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 45V7h6v38M14 45h14M18 13h6M18 19h6M18 25h6M18 31h6M18 37h6M8 12h36L21 5M10 12l11-7M38 12v9"/><rect x="33" y="21" width="10" height="7"/></svg></div><p class="bold b6">عمليات الموانئ</p><p class="gt e6">هذا نص توضيحي</p>
+    <div class="ico c7"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6c10 0 26 10 30 26l-4-1 1 4-5-2c-8-4-16-12-22-27z"/><path d="M12 9l26 30M8 44c4-4 7 2 11-2s7 2 11-2"/></svg></div><p class="bold b7">التخليص الجمركي</p><p class="gt e7">هذا نص توضيحي</p>
+    <div class="ico c8"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 22v16l14 7 14-7V22"/><path d="M10 22l14 7 14-7M24 29v16M10 22L3 15l14-7 7 7M38 22l7-7-14-7-7 7M24 15l-14 7M24 15l14 7M3 29l7-7M45 29l-7-7"/><rect x="29" y="35" width="4" height="3"/></svg></div><p class="bold b8">توصيل الميل الأخير</p><p class="gt e8">هذا نص توضيحي</p>
+    <div class="vl v333"></div>    <div class="vl v629"></div>    <div class="vl v950"></div><div class="hl h1"></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">الأداء</h1>
+    <svg class="chart" id="chart7" viewBox="80 260 560 400" role="img" aria-label="رسم أعمدة شهري"></svg>
+    <div class="tab blue"></div><p class="kt">مؤشرات الأداء</p>
+    <div class="ico c1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 30h42l-6 8H9z"/><path d="M8 30V20h5v10M7 20h7M10.5 20v-4M9 16h3"/><path d="M15 30v-5h8v5M23 25h8v5M31 25h7v5M19 25v-5h8v5M27 20h7v5M23 20v-4h7v4"/></svg></div><p class="num n1"><bdi dir="ltr">2.8M</bdi></p><p class="bold b1">الشحنات<br>السنوية</p>
+    <div class="ico c2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="34" width="11" height="10"/><rect x="16" y="34" width="11" height="10"/><rect x="27" y="34" width="11" height="10"/><rect x="10" y="24" width="11" height="10"/><rect x="21" y="24" width="11" height="10"/><rect x="15" y="14" width="11" height="10"/><circle cx="37" cy="12" r="7"/><path d="M34 12l2 2 4-4M37 19v15"/><path d="M10 37h1M21 37h1M32 37h1M15 27h1M26 27h1M20 17h1"/></svg></div><p class="num n2"><bdi dir="ltr">98.2%</bdi></p><p class="bold b2">التسليم<br>في الموعد</p>
+    <div class="ico c3"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 45V7h6v38M14 45h14M18 13h6M18 19h6M18 25h6M18 31h6M18 37h6M8 12h36L21 5M10 12l11-7M38 12v9"/><rect x="33" y="21" width="10" height="7"/></svg></div><p class="num n3"><bdi dir="ltr">91%</bdi></p><p class="bold b3">استخدام<br>الأسطول</p>
+    <div class="ico c4"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="19"/><circle cx="17" cy="19" r="2.2"/><circle cx="31" cy="19" r="2.2"/><path d="M14 28h20c-1 6-5 9-10 9s-9-3-10-9z"/></svg></div><p class="num n4"><bdi dir="ltr">97%</bdi></p><p class="bold b4">رضا<br>العملاء</p>
+    <div class="vl v1"></div><div class="hl h1"></div>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <div class="dk blue"></div><img class="photo team flip" src="/templates/freeform/sl-global-shipping/assets/team.jpg" alt="فريق يفحص معدات المستودع"><div class="lt sky"></div><p class="q">نحوّل الخدمات اللوجستية<br>عبر حلول رقمية<br>ذكية.</p>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">التقنية<br>والابتكار</h1>
+    <p class="bold b1">تحسين المسارات بالذكاء الاصطناعي</p><p class="gt e1">هذا نص توضيحي. أدرج النص هنا. هذا نص توضيحي. أدرج النص هنا. هذا نص توضيحي.</p>
+    <p class="bold b2">أتمتة المستودعات</p><p class="gt e2">هذا نص توضيحي. أدرج النص هنا. هذا نص توضيحي. أدرج النص هنا. هذا نص توضيحي.</p>
+    <p class="bold b3">المنصة السحابية</p><p class="gt e3">هذا نص توضيحي. أدرج النص هنا. هذا نص توضيحي. أدرج النص هنا. هذا نص توضيحي.</p>
+    <div class="hl h1"></div><div class="hl h2"></div>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <svg class="deco flip-d" viewBox="980 0 300 190" aria-hidden="true"><path class="d3" d="M1001 75H1111L1156 0M1001 75L1046 0"/><path d="M1153 50H1263L1293 0M1153 50L1183 0"/><path class="d3" d="M1227 138H1337M1227 138L1310 0"/></svg>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">الاستدامة<br>والامتثال</h1><p class="gt pt">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي.</p>
+    <div class="card k1"><svg viewBox="0 0 295 342" preserveAspectRatio="none" aria-hidden="true"><path d="M1 342 V54 L54 1 H295"/></svg></div>
+    <div class="card k2"><svg viewBox="0 0 291 342" preserveAspectRatio="none" aria-hidden="true"><path d="M1 342 V54 L54 1 H291"/></svg></div>
+    <div class="card k3"><svg viewBox="0 0 291 342" preserveAspectRatio="none" aria-hidden="true"><path d="M1 342 V54 L54 1 H291"/></svg></div>
+    <div class="card k4"><svg viewBox="0 0 291 342" preserveAspectRatio="none" aria-hidden="true"><path d="M1 342 V54 L54 1 H291"/></svg></div>
+    <div class="ico c1"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h38M8 8l4 34h24l4-34"/><path d="M24 17l5 8M19 30h10M24 17l-5 8M27 22l2 3 3-1M17 26l2 4 2-3M30 30l-2 0"/></svg></div><p class="bold b1">خفض البصمة<br>الكربونية</p><p class="gt e1">هذا نص توضيحي.<br>أضف النص هنا.</p>
+    <div class="ico c2"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 38c6-4 10-6 15-6h11c2 0 3 2 1 3l-9 1M23 36l14-5c3-1 5 2 2 4l-14 8c-4 2-8 2-12 1l-6-1"/><path d="M24 30V20M24 22c-6-1-9-5-9-10 5 0 9 4 9 10zM24 20c0-7 4-11 11-11 0 6-4 10-11 11z"/></svg></div><p class="bold b2">اعتماد الطاقة<br>النظيفة</p><p class="gt e2">هذا نص توضيحي.<br>أضف النص هنا.</p>
+    <div class="ico c3"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="19"/><ellipse cx="24" cy="24" rx="8" ry="19"/><path d="M5 24h38M24 5v38M8 14h32M8 34h32"/></svg></div><p class="bold b3">الامتثال لأنظمة<br>التجارة الدولية</p><p class="gt e3">هذا نص توضيحي.<br>أضف النص هنا.</p>
+    <div class="ico c4"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 17h20M16 17a8 8 0 0 1 16 0M22 9h4v4"/><path d="M16 17c0 6 3 10 8 10s8-4 8-10"/><path d="M9 45V36c0-4 4-7 9-8l6 6 6-6c5 1 9 4 9 8v9M18 28v17M30 28v17M18 38h12"/></svg></div><p class="bold b4">التميّز في<br>السلامة التشغيلية</p><p class="gt e4">هذا نص توضيحي.<br>أضف النص هنا.</p>
+    <div class="band blue"></div><p class="bt">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج النص المطلوب هنا.</p>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="deco flip-d" viewBox="980 0 300 190" aria-hidden="true"><path class="d3" d="M1001 75H1111L1156 0M1001 75L1046 0"/><path d="M1153 50H1263L1293 0M1153 50L1183 0"/><path class="d3" d="M1227 138H1337M1227 138L1310 0"/></svg>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">دراسات الحالة</h1>
+    <div class="pan blue"></div>
+    <div class="lg lg1"><svg viewBox="0 0 80 44" aria-hidden="true"><path d="M14 30a26 26 0 0 1 52-6" fill="none" stroke="#2BA3D8" stroke-width="3"/><path d="M8 34h44v-12l-6-8H30v8H8z" fill="#122A4C"/><rect x="10" y="14" width="22" height="14" fill="#122A4C"/><path d="M30 32c2-6 8-9 16-9h6l8 6h6v5H30z" fill="#fff" stroke="#122A4C" stroke-width="1.6"/><circle cx="16" cy="35" r="3.5" fill="#122A4C"/><circle cx="38" cy="35" r="3.5" fill="#122A4C"/><circle cx="58" cy="35" r="3.5" fill="#122A4C"/></svg><b>السيارات</b><i>لوجستيات</i></div><p class="bold b1">لوجستيات السيارات</p><p class="gt e1">هذا نص توضيحي. أدرج النص هنا. أضف النص هنا. هذا نص توضيحي. أدرج النص هنا...</p>
+    <div class="lg lg2"><svg viewBox="0 0 80 44" aria-hidden="true"><path d="M18 30a20 20 0 1 1 36-12" fill="none" stroke="#122A4C" stroke-width="5" stroke-dasharray="4 3"/><path d="M22 34V20l7 4v-4l7 4v-4l7 4v10z" fill="#1E3F73"/><rect x="25" y="10" width="4" height="10" fill="#1E3F73"/><rect x="46" y="22" width="8" height="7" fill="#1FA39A"/><rect x="55" y="22" width="8" height="7" fill="#2CC0B4"/><rect x="50" y="15" width="8" height="7" fill="#2CC0B4"/><rect x="46" y="29" width="17" height="5" fill="#1FA39A"/><path d="M10 38c10-6 20 4 30-1s20-4 30 0" fill="none" stroke="#1E3F73" stroke-width="2.5"/></svg><b>التصنيع</b><i>سلسلة الإمداد</i></div><p class="bold b2">سلسلة إمداد التصنيع</p><p class="gt e2">هذا نص توضيحي. أدرج النص هنا. أضف النص هنا. هذا نص توضيحي. أدرج النص هنا...</p>
+    <div class="lg lg3 on"><svg viewBox="0 0 80 44" aria-hidden="true"><g fill="none" stroke="#CFE2F7" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8h5l5 22h20l4-14H31"/><circle cx="37" cy="36" r="2.5"/><circle cx="51" cy="36" r="2.5"/><path d="M14 14h8M12 19h9M16 24h8"/></g><path d="M38 6l7-3 7 3v9l-7 3-7-3z" fill="#CFE2F7"/></svg><b>التجزئة</b><i>التوزيع</i></div><p class="bold b3 on">توزيع التجزئة</p><p class="gt e3 on">هذا نص توضيحي. أدرج النص هنا. أضف النص هنا. هذا نص توضيحي. أدرج النص هنا...</p>
+    <div class="lg lg4 on"><svg viewBox="0 0 80 44" aria-hidden="true"><g fill="none" stroke="#CFE2F7" stroke-width="2" stroke-linecap="round"><path d="M28 28V8l30-6M28 8l14 12M54 3v12"/><path d="M8 40c8-3 12 2 20 0s12-3 20 0 12 2 24-1"/></g><rect x="47" y="15" width="13" height="10" fill="#CFE2F7"/><path d="M10 28h58l-6 8H16z" fill="#E8F1FB"/><rect x="18" y="22" width="9" height="6" fill="#E8F1FB"/></svg><b>المشاريع</b><i>الشحن</i></div><p class="bold b4 on">شحن المشاريع</p><p class="gt e4 on">هذا نص توضيحي. أدرج النص هنا. أضف النص هنا. هذا نص توضيحي. أدرج النص هنا...</p>
+    <div class="hl h1"></div><div class="hl h2"></div>
+  </div></section>
+  <!-- 11 -->
+  <section class="slide"><div class="frame s11">
+    <div class="band blue"></div><img class="photo vessel" src="/templates/freeform/sl-global-shipping/assets/vessel.jpg" alt="سفينة حاويات من الأعلى"><div class="wb"></div><p class="gt">هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج النص المطلوب هنا. هذا نص توضيحي. أدرج النص المطلوب.</p>
+    <p class="sub">أضف عنوانًا فرعيًا هنا</p><h1 class="ttl">السوق والاستراتيجية</h1>
+    <p class="dot p1"><bdi>01</bdi></p><p class="li m1">توسيع الانتشار في الأسواق العالمية استراتيجيًا</p>
+    <p class="dot p2"><bdi>02</bdi></p><p class="li m2">تعزيز تبنّي تقنيات اللوجستيات الذكية</p>
+    <p class="dot p3"><bdi>03</bdi></p><p class="li m3">تسريع الابتكار الرقمي في سلاسل الإمداد</p>
+    <p class="dot p4"><bdi>04</bdi></p><p class="li m4">تقديم تجربة عملاء متكاملة من البداية إلى النهاية</p>
+    <p class="dot p5"><bdi>05</bdi></p><p class="li m5">تحسين العمليات المستدامة حول العالم</p>
+  </div></section>
+  <!-- 12 -->
+  <section class="slide"><div class="frame s12">
+    <svg class="art flip" viewBox="0 0 1280 720" aria-hidden="true"><path d="M420 29H1200L1255 84V700H420" fill="none" stroke="#DFE6EE" stroke-width="2.5"/><polygon points="0,0 390,0 643,253 643,720 0,720" fill="#28599E"/></svg>
+    <div class="map"><div class="mapin"><img src="/templates/freeform/sl-global-shipping/assets/map.jpg" alt="خريطة شوارع"><p class="ml poi" style="top:36.0px;left:36.0px;width:110px;height:24px">الجامعة<br>البحرية</p><p class="ml v" style="top:66.5px;left:-4.0px;width:110px;height:13px">جادة هاريبور فيو</p><p class="ml " style="top:83.5px;left:128.0px;width:120px;height:13px;--r:4deg">طريق المحيط</p><p class="ml v" style="top:47.5px;left:206.0px;width:120px;height:13px">طريق مدخل الميناء</p><p class="ml poi" style="top:53.0px;left:337.0px;width:130px;height:24px">مدرسة الساحل<br>الابتدائية</p><p class="ml v" style="top:102.5px;left:419.0px;width:100px;height:13px">جادة الرصيف</p><p class="ml v" style="top:105.5px;left:483.0px;width:80px;height:13px">طريق الشحن</p><p class="ml poi" style="top:134.0px;left:87.0px;width:120px;height:24px">المجمع اللوجستي<br>سنغافورة</p><p class="ml " style="top:184.5px;left:162.0px;width:130px;height:13px;--r:3deg">جادة مارينا لينك</p><p class="ml v" style="top:261.5px;left:315.0px;width:90px;height:13px">ممر الشحن</p><p class="ml " style="top:317.5px;left:192.0px;width:110px;height:13px;--r:1.5deg">طريق الميناء</p><p class="ml v" style="top:334.5px;left:4.0px;width:110px;height:13px">جادة واجهة الميناء</p><p class="ml poi" style="top:375.0px;left:264.0px;width:130px;height:24px">برج هاربور بوينت<br>للمكاتب</p><p class="ml co" style="top:211px;left:185px;width:200px;height:50px"><b>حلول الشحن<br>العالمي</b><span>مركز هاربور للأعمال <bdi dir="ltr">125</bdi><br>سنغافورة <bdi dir="ltr">018956</bdi></span></p></div></div>
+    <div class="lt sky"></div><p class="q">نقدّم حلول الشحن<br>والخدمات اللوجستية</p>
+    <h1 class="ty">شكرًا لكم</h1><p class="gt">هذا نص توضيحي. أدرج النص المطلوب هنا. أدرج النص المطلوب هنا. هذا نص توضيحي. هذا نص توضيحي.</p>
+    <p class="lbl l1">الموقع</p><div class="ico c1"><svg viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a7 7 0 0 1 7 7c0 5-7 13-7 13S5 15 5 10a7 7 0 0 1 7-7z"/><circle cx="12" cy="10" r="2.5"/></svg></div><p class="val v1">موقعكم هنا</p>
+    <p class="lbl l2">الهاتف</p><div class="ico c2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l4 0 2 5-3 2a11 11 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2C10 21 3 14 3 5a2 2 0 0 1 2-2z"/><path d="M14 3a7 7 0 0 1 7 7M14 7a3 3 0 0 1 3 3"/></svg></div><p class="val v2">أضف رقم الهاتف هنا</p>
+    <p class="sc">امسح الرمز لزيارة موقعنا</p><p class="wb">عنوان موقعكم الإلكتروني</p><svg class="qr" viewBox="0 0 25 25" aria-hidden="true" shape-rendering="crispEdges"><path d="M0,0h7v1h-7zM8,0h5v1h-5zM14,0h2v1h-2zM18,0h7v1h-7zM0,1h1v1h-1zM6,1h1v1h-1zM8,1h3v1h-3zM12,1h2v1h-2zM15,1h2v1h-2zM18,1h1v1h-1zM24,1h1v1h-1zM0,2h1v1h-1zM2,2h3v1h-3zM6,2h1v1h-1zM11,2h1v1h-1zM15,2h1v1h-1zM18,2h1v1h-1zM20,2h3v1h-3zM24,2h1v1h-1zM0,3h1v1h-1zM2,3h3v1h-3zM6,3h1v1h-1zM9,3h3v1h-3zM13,3h2v1h-2zM18,3h1v1h-1zM20,3h3v1h-3zM24,3h1v1h-1zM0,4h1v1h-1zM2,4h3v1h-3zM6,4h1v1h-1zM8,4h1v1h-1zM15,4h1v1h-1zM18,4h1v1h-1zM20,4h3v1h-3zM24,4h1v1h-1zM0,5h1v1h-1zM6,5h1v1h-1zM8,5h2v1h-2zM12,5h5v1h-5zM18,5h1v1h-1zM24,5h1v1h-1zM0,6h7v1h-7zM8,6h1v1h-1zM10,6h1v1h-1zM12,6h1v1h-1zM14,6h1v1h-1zM16,6h1v1h-1zM18,6h7v1h-7zM10,7h1v1h-1zM14,7h3v1h-3zM0,8h1v1h-1zM5,8h2v1h-2zM8,8h1v1h-1zM11,8h2v1h-2zM15,8h3v1h-3zM20,8h1v1h-1zM24,8h1v1h-1zM1,9h2v1h-2zM7,9h1v1h-1zM10,9h4v1h-4zM15,9h3v1h-3zM19,9h2v1h-2zM23,9h1v1h-1zM3,10h4v1h-4zM8,10h2v1h-2zM12,10h1v1h-1zM16,10h1v1h-1zM18,10h2v1h-2zM0,11h1v1h-1zM5,11h1v1h-1zM7,11h1v1h-1zM12,11h1v1h-1zM16,11h6v1h-6zM0,12h1v1h-1zM3,12h1v1h-1zM6,12h1v1h-1zM8,12h2v1h-2zM12,12h2v1h-2zM15,12h3v1h-3zM19,12h1v1h-1zM21,12h3v1h-3zM1,13h1v1h-1zM5,13h1v1h-1zM7,13h1v1h-1zM9,13h3v1h-3zM14,13h2v1h-2zM19,13h2v1h-2zM22,13h2v1h-2zM2,14h1v1h-1zM4,14h1v1h-1zM6,14h2v1h-2zM10,14h2v1h-2zM13,14h7v1h-7zM21,14h1v1h-1zM23,14h2v1h-2zM0,15h3v1h-3zM5,15h1v1h-1zM8,15h1v1h-1zM10,15h2v1h-2zM13,15h1v1h-1zM17,15h1v1h-1zM21,15h4v1h-4zM0,16h1v1h-1zM2,16h3v1h-3zM6,16h1v1h-1zM8,16h7v1h-7zM18,16h1v1h-1zM20,16h5v1h-5zM8,17h3v1h-3zM17,17h2v1h-2zM20,17h1v1h-1zM23,17h1v1h-1zM0,18h7v1h-7zM14,18h5v1h-5zM24,18h1v1h-1zM0,19h1v1h-1zM6,19h1v1h-1zM8,19h3v1h-3zM12,19h1v1h-1zM15,19h3v1h-3zM22,19h3v1h-3zM0,20h1v1h-1zM2,20h3v1h-3zM6,20h1v1h-1zM9,20h1v1h-1zM11,20h3v1h-3zM15,20h1v1h-1zM18,20h2v1h-2zM22,20h3v1h-3zM0,21h1v1h-1zM2,21h3v1h-3zM6,21h1v1h-1zM11,21h1v1h-1zM13,21h9v1h-9zM23,21h1v1h-1zM0,22h1v1h-1zM2,22h3v1h-3zM6,22h1v1h-1zM10,22h5v1h-5zM16,22h1v1h-1zM18,22h2v1h-2zM21,22h2v1h-2zM0,23h1v1h-1zM6,23h1v1h-1zM8,23h1v1h-1zM11,23h2v1h-2zM14,23h4v1h-4zM20,23h1v1h-1zM22,23h1v1h-1zM24,23h1v1h-1zM0,24h7v1h-7zM8,24h8v1h-8zM19,24h2v1h-2zM22,24h3v1h-3z" fill="#000"/></svg>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 12</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script type="application/json" id="chart-data">{"labels": ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس"], "values": [42, 25, 35, 41, 16, 29, 26, 34], "max": 45, "step": 5, "color": "#28599E"}</script>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+  // رسم الأعمدة في الشريحة 7 من كتلة chart-data؛ منطقة الرسم 125..625 أفقيًا و276..625 رأسيًا
+  (function drawChart() {
+    var d = JSON.parse(document.getElementById('chart-data').textContent);
+    var svg = document.getElementById('chart7'); if (!svg) return;
+    var NS = 'http://www.w3.org/2000/svg', x0 = 125, x1 = 625, yT = 276, yB = 625, n = d.values.length;
+    var html = '';
+    var axisX = RTL ? 637 : 113, anchor = RTL ? 'start' : 'end';
+    // في العربية تُعكس منطقة الرسم: المحور الرأسي يمينًا والفئة الأولى في جهة البداية (اليمين)
+    var p0 = RTL ? 95 : x0, p1 = RTL ? 595 : x1;
+    if (RTL) axisX = 607;
+    for (var v = 0; v <= d.max; v += d.step) {
+      var y = yB - (v / d.max) * (yB - yT);
+      html += '<line x1="' + p0 + '" x2="' + p1 + '" y1="' + y + '" y2="' + y + '" stroke="#E3E3E3" stroke-width="1"/>';
+      html += '<text x="' + axisX + '" y="' + (y + 4.5) + '" text-anchor="' + anchor + '">' + v + '</text>';
+    }
+    var step = (p1 - p0) / n, bw = 54;
+    d.values.forEach(function (val, i) {
+      var cx = RTL ? p1 - step * (i + 0.5) : p0 + step * (i + 0.5);
+      var h = (val / d.max) * (yB - yT);
+      html += '<rect x="' + (cx - bw / 2) + '" y="' + (yB - h) + '" width="' + bw + '" height="' + h + '" fill="' + d.color + '"/>';
+      html += '<text x="' + cx + '" y="650" text-anchor="middle">' + d.labels[i] + '</text>';
+    });
+    svg.innerHTML = html;
+  })();
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{
+  "key": "sl-global-shipping",
+  "kind": "slides",
+  "category": "ops",
+  "icon": "🚢",
+  "name": "الشحن العالمي",
+  "nameEn": "Global Shipping",
+  "description": "اثنتا عشرة شريحة لشركة شحن: غلاف ونبذة وشبكة مكاتب وخدمات وأسطول وأداء وتقنية واستدامة ودراسات حالة وخاتمة",
+  "descriptionEn": "Twelve slides for a shipping company: cover, about, offices, services, fleet, KPIs, tech, sustainability, cases",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "نبذة عن الشركة",
+      "titleEn": "About the Company",
+      "needsData": true
+    },
+    {
+      "title": "شبكة الشحن العالمية",
+      "titleEn": "Global Shipping Network",
+      "needsData": true
+    },
+    {
+      "title": "الخدمات",
+      "titleEn": "Services"
+    },
+    {
+      "title": "الأسطول والعمليات",
+      "titleEn": "Fleet & Operations",
+      "needsData": true
+    },
+    {
+      "title": "حلول سلاسل الإمداد",
+      "titleEn": "Supply Chain Solutions"
+    },
+    {
+      "title": "الأداء",
+      "titleEn": "Performance",
+      "needsData": true
+    },
+    {
+      "title": "التقنية والابتكار",
+      "titleEn": "Technology & Innovation"
+    },
+    {
+      "title": "الاستدامة والامتثال",
+      "titleEn": "Sustainability & Compliance"
+    },
+    {
+      "title": "دراسات الحالة",
+      "titleEn": "Case Studies"
+    },
+    {
+      "title": "السوق والاستراتيجية",
+      "titleEn": "Market & Strategy"
+    },
+    {
+      "title": "شكرًا لكم",
+      "titleEn": "Thank You"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور والحواف المشطوفة، وغيّر النصوص والأرقام فقط؛ أرقام رسم الأعمدة في شريحة الأداء تُعدَّل في كتلة chart-data (التسميات والقيم والحد الأعلى)."
+}
