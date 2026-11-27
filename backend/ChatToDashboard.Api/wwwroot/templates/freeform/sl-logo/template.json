@@ -1,0 +1,53 @@
+{
+  "key": "sl-logo",
+  "kind": "slides",
+  "category": "marketing",
+  "icon": "🎨",
+  "name": "عرض الشعار",
+  "nameEn": "Logo Presentation",
+  "description": "عشر شرائح لهوية العلامة: فكرة الشعار وأشكاله والألوان ونماذج التطبيق والورق الرسمي وقواعد الاستخدام",
+  "descriptionEn": "Ten brand identity slides: logo rationale, variations, colors, mockups, letterhead and usage rules",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "المحتويات",
+      "titleEn": "Contents"
+    },
+    {
+      "title": "فكرة الشعار",
+      "titleEn": "Logo Rationale"
+    },
+    {
+      "title": "رسالة العلامة",
+      "titleEn": "Brand Mission"
+    },
+    {
+      "title": "أشكال الشعار",
+      "titleEn": "Variation Logo"
+    },
+    {
+      "title": "لوحة الألوان",
+      "titleEn": "Color Palette"
+    },
+    {
+      "title": "نموذج الشعار",
+      "titleEn": "Logo Mockup"
+    },
+    {
+      "title": "نموذج الورق الرسمي",
+      "titleEn": "Letterhead Mockup"
+    },
+    {
+      "title": "استخدام الشعار",
+      "titleEn": "Logo Usage"
+    },
+    {
+      "title": "الشريحة الختامية",
+      "titleEn": "Closing Logo Slide"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط وغيّر النصوص فقط؛ الشعار المجرد رسم SVG بالصنف lg يُستبدل بشعار الجهة عند الحاجة، والكبسولات المائلة زخرفة ثابتة."
+}

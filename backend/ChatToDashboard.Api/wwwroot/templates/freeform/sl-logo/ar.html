@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض الشعار</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نموذج «عرض الشعار»: كبسولات مائلة (الصنف pl) بألوان الهوية، وشعار مجرد SVG (الصنف lg) لا يُعكس في العربية، وترويسة مشتركة (اسم الشركة + عنوان بكلمة غامقة وكلمة عادية) في الشرائح 2–9. */
+  :root { --font: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; --navy: #0C1C5A; --steel: #4181A4; --yellow: #F0D047; --orange: #EC9D38; --gray: #EAEAEA; --gblue: #9DAFB6; --ink: #111111; --line: #D9D9D9; --accent: #EC9D38; --bg: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1F2430; font-family: var(--font); color: var(--ink); }
+  body { padding-bottom: var(--jeem-strip-h, 0px); overflow: hidden; }
+  .deck { position: relative; height: calc(100vh - var(--jeem-strip-h, 0px)); }
+  .slide { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+  .slide.active { display: flex; }
+  /* الإطار بحجم ثابت 1280×720 يُصغَّر ليلائم الشاشة؛ flex:none ضروري وإلا يُقص في المعاينة الضيقة */
+  .frame { position: relative; flex: none; width: 1280px; height: 720px; background: var(--bg); overflow: hidden; transform-origin: center center; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+  .frame svg { display: block; }
+  /* الكبسولات المائلة: الزاوية ثابتة وتنعكس في العربية */
+  .pl { position: absolute; display: block; border-radius: 999px; transform: rotate(10.8deg); }
+  html[dir="rtl"] .pl { transform: rotate(-10.8deg); }
+  .c-navy { background: var(--navy); } .c-steel { background: var(--steel); } .c-yellow { background: var(--yellow); }
+  .c-orange { background: var(--orange); } .c-gray { background: var(--gray); } .c-gblue { background: var(--gblue); } .c-white { background: #fff; }
+  .c-grad { background: linear-gradient(to right, var(--yellow) 30%, #EC9C38 100%); }
+  html[dir="rtl"] .c-grad { background: linear-gradient(to left, var(--yellow) 30%, #EC9C38 100%); }
+  .c-oy { background: transparent; border: 2.5px solid #E9C649; } .c-ob { background: transparent; border: 2.5px solid #8FA3AE; }
+  /* الشعار المجرد: لونه من color */
+  .lg { position: absolute; fill: currentColor; color: var(--navy); }
+  .lg.w { color: #fff; }
+  /* نصوص بأحرف متباعدة؛ التباعد يُلغى في العربية حتى لا تنفصل الحروف */
+  .sp { text-transform: uppercase; }
+  html[lang="ar"] .sp { letter-spacing: 0 !important; }
+  /* الترويسة المشتركة */
+  .co { position: absolute; top: 139px; inset-inline-start: 111px; margin: 0; font-size: 15px; line-height: 20px; letter-spacing: 2.4px; color: var(--ink); }
+  .ttl { position: absolute; top: 168px; inset-inline-start: 110px; margin: 0; font-size: 60px; line-height: 71px; font-weight: 400; color: var(--navy); white-space: nowrap; }
+  .ttl b { font-weight: 700; }
+  html[lang="ar"] .ttl { font-size: 58px; } html[lang="ar"] .ttl b { font-weight: 800; }
+  .body { position: absolute; inset-inline-start: 110px; margin: 0; width: 385px; font-size: 23px; line-height: 29px; color: var(--ink); }
+  html[lang="ar"] .body { font-size: 22px; }
+  /* 1) الغلاف */
+  .s1 .t1 { position: absolute; top: 219px; inset-inline-start: 110px; margin: 0; font-size: 80px; line-height: 80px; font-weight: 700; color: var(--navy); }
+  .s1 .t2 { position: absolute; top: 314px; inset-inline-start: 110px; margin: 0; font-size: 62px; line-height: 64px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .s1 .t3 { position: absolute; top: 421px; inset-inline-start: 110px; margin: 0; font-size: 30px; line-height: 36px; font-weight: 400; letter-spacing: 2px; color: var(--orange); white-space: nowrap; }
+  html[lang="ar"] .s1 .t1 { font-size: 84px; } html[lang="ar"] .s1 .t2 { font-size: 66px; }
+  .lgtx { position: absolute; margin: 0; font-size: 20px; line-height: 25px; letter-spacing: 2.6px; color: var(--ink); }
+  .s1 .lgtx { top: 554px; inset-inline-start: 229px; }
+  /* 2) المحتويات */
+  .s2 .toc { position: absolute; top: 284px; inset-inline-start: 114px; width: 525px; margin: 0; padding: 0; list-style: none; }
+  .s2 .toc li { display: flex; align-items: center; height: 58.5px; border-bottom: 1px solid var(--line); font-size: 23px; color: var(--ink); }
+  .s2 .toc li:last-child { border-bottom: 0; }
+  .s2 .toc .tx { flex: 1; } .s2 .toc .pg { width: 76px; }
+  .s2 .ph { position: absolute; top: 0; inset-inline-end: 0; width: 565px; height: 345px; object-fit: cover; }
+  .s2 .pan { position: absolute; top: 345px; inset-inline-end: 0; width: 565px; height: 375px; background: var(--navy); }
+  .s2 .pt { position: absolute; top: 399px; inset-inline-start: 808px; width: 315px; margin: 0; font-size: 23px; line-height: 29px; color: #fff; }
+  html[lang="ar"] .s2 .pt { font-size: 22px; }
+  /* 3) فكرة الشعار */
+  .s3 .blk { position: absolute; top: 134px; height: 223px; }
+  .s3 .bn { inset-inline-start: 564px; width: 357px; background: var(--navy); border-start-start-radius: 46px; border-end-start-radius: 46px; }
+  .s3 .bo { inset-inline-start: 920px; width: 360px; background: var(--orange); }
+  .s3 .lgtx { top: 220px; inset-inline-start: 710px; font-size: 18px; line-height: 23px; letter-spacing: 2.6px; color: #fff; }
+  .yl { position: absolute; margin: 0; text-align: center; font-size: 18px; line-height: 23px; letter-spacing: 2.6px; }
+  .s3 .yl { top: 291px; inset-inline-start: 920px; width: 334px; color: #fff; }
+  .s3 .insp { position: absolute; top: 382px; inset-inline-start: 601px; margin: 0; font-size: 24px; line-height: 30px; font-weight: 700; color: var(--navy); }
+  .bar { position: absolute; width: 83px; height: 4px; border-radius: 2px; background: var(--navy); }
+  .s3 .insp-bar { top: 434px; inset-inline-start: 598px; }
+  .s3 .cir { position: absolute; top: 454px; width: 113px; height: 113px; border-radius: 50%; border: 3px solid #E6E6E6; }
+  .s3 .plus { position: absolute; top: 495px; width: 31px; height: 31px; border-radius: 50%; border: 1.5px solid var(--orange); }
+  .s3 .plus::before, .s3 .plus::after { content: ""; position: absolute; top: 50%; inset-inline-start: 50%; width: 15px; height: 1.5px; background: var(--orange); transform: translate(-50%, -50%); }
+  html[dir="rtl"] .s3 .plus::before, html[dir="rtl"] .s3 .plus::after { transform: translate(50%, -50%); }
+  .s3 .plus::after { width: 1.5px; height: 15px; }
+  .s3 .el { position: absolute; top: 594px; width: 160px; margin: 0; text-align: center; font-size: 18px; line-height: 24px; color: var(--ink); }
+  /* 4) رسالة العلامة */
+  .s4 .band { position: absolute; inset: 0; background: var(--navy); clip-path: polygon(617px 0, 787px 0, 651px 720px, 481px 720px); }
+  html[dir="rtl"] .s4 .band { transform: scaleX(-1); }
+  .s4 .card { position: absolute; width: 477px; height: 99px; border-radius: 22px; background: #fff; box-shadow: 0 0 16px rgb(140 155 200 / .45); display: flex; align-items: center; }
+  .s4 .card .n { flex: none; width: 84px; padding-inline-start: 25px; font-size: 37px; line-height: 1; color: var(--navy); }
+  .s4 .card p { margin: 0; font-size: 20px; line-height: 25px; color: var(--ink); }
+  html[lang="ar"] .s4 .card p { font-size: 19px; }
+  /* 5) أشكال الشعار */
+  .s5 .vc { position: absolute; top: 278px; width: 325px; height: 314px; border-radius: 40px 40px 0 0; background: linear-gradient(#EAEAEA 0%, #F2F2F2 45%, #FFFFFF 100%); }
+  .s5 .vc h2 { position: absolute; top: 32px; inset-inline-start: 0; width: 100%; margin: 0; text-align: center; font-size: 20px; line-height: 26px; font-weight: 700; color: #000; }
+  .s5 .vc .bar { top: 81px; inset-inline-start: 121px; }
+  .s5 .lgtx { top: 431px; inset-inline-start: 309px; font-size: 15.5px; line-height: 19px; letter-spacing: 2.4px; }
+  .s5 .yl { top: 523px; inset-inline-start: 950px; width: 204px; font-size: 15.5px; line-height: 20px; letter-spacing: 2.4px; color: var(--ink); }
+  /* 6) لوحة الألوان */
+  .s6 .lbl { position: absolute; top: 265px; margin: 0; font-size: 20px; line-height: 26px; font-weight: 700; color: #000; }
+  .s6 .lbl-bar { top: 301px; }
+  .s6 .sw { position: absolute; top: 331px; width: 233px; height: 271px; border-radius: 40px; color: #fff; }
+  .s6 .sw.dk { color: var(--ink); }
+  .s6 .sw p { position: absolute; inset-inline-start: 24px; margin: 0; }
+  .s6 .sw .nm { top: 29px; font-size: 21px; line-height: 26px; }
+  .s6 .sw .hx { top: 87px; font-size: 18px; line-height: 22px; }
+  .s6 .sw .tn { top: 158px; font-size: 18px; line-height: 22.5px; }
+  /* 7) نماذج الشعار */
+  .s7 .pan { position: absolute; top: 307px; inset-inline-start: 111px; width: 226px; height: 317px; background: var(--navy); }
+  .s7 .app { position: absolute; top: 400px; inset-inline-start: 171px; width: 101px; height: 101px; border-radius: 17px; background: #fff; }
+  .s7 .bdg { position: absolute; top: 391px; inset-inline-start: 251px; width: 31px; height: 31px; border-radius: 50%; border: 3px solid var(--navy); background: var(--orange); color: #222; font-size: 17px; line-height: 25px; text-align: center; }
+  .s7 .yl { top: 517px; inset-inline-start: 111px; width: 226px; font-size: 15.5px; line-height: 20px; letter-spacing: 2.4px; color: #fff; }
+  .s7 .ph { position: absolute; object-fit: cover; }
+  /* 8) الورق الرسمي */
+  .s8 .ltr { position: absolute; top: 134px; inset-inline-start: 489px; width: 333px; height: 492px; border: 1px solid #C8C8C8; background: #fff; }
+  .s8 .ltr p { position: absolute; inset-inline-start: 27px; width: 262px; margin: 0; font-size: 15px; line-height: 19px; color: var(--ink); }
+  .s8 .ltr b { font-weight: 700; }
+  .s8 .ltr .lgtx { position: absolute; top: 403px; inset-inline-start: 85px; width: auto; font-size: 12.5px; line-height: 16px; letter-spacing: 2.6px; }
+  .s8 .gold { position: absolute; top: 134px; inset-inline-start: 836px; width: 333px; height: 491px;
+    background: radial-gradient(circle at 37% 31%, rgb(205 128 22 / .75) 0, rgb(222 150 40 / .35) 55px, rgb(236 160 56 / 0) 110px), linear-gradient(to top right, #EC9D38 0%, #EFB548 50%, #F0D047 100%); }
+  html[dir="rtl"] .s8 .gold { background: radial-gradient(circle at 63% 31%, rgb(205 128 22 / .75) 0, rgb(222 150 40 / .35) 55px, rgb(236 160 56 / 0) 110px), linear-gradient(to top left, #EC9D38 0%, #EFB548 50%, #F0D047 100%); }
+  .s8 .yl { top: 408px; inset-inline-start: 836px; width: 333px; color: #fff; }
+  /* 9) استخدام الشعار */
+  .s9 .cap { position: absolute; margin: 0; width: 200px; text-align: center; font-size: 18px; line-height: 23px; letter-spacing: 3px; color: var(--orange); }
+  .s9 .db { position: absolute; border: 1px dashed #93AAB1; }
+  .s9 .ln { position: absolute; background: #C9D0D3; }
+  .s9 .lgtx { top: 235px; inset-inline-start: 706px; font-size: 18px; line-height: 23px; letter-spacing: 2.8px; }
+  .s9 .yl { top: 557px; inset-inline-start: 635px; width: 227px; color: var(--ink); }
+  .s9 .nt { position: absolute; inset-inline-start: 1014px; width: 150px; margin: 0; font-size: 18px; line-height: 23px; color: var(--ink); }
+  /* 10) الشريحة الختامية */
+  .frame.s10 { background: var(--navy); }
+  .s10 .rings { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  html[dir="rtl"] .s10 .rings { transform: scaleX(-1); }
+  /* تكبير النصوص العربية الصغيرة لأن ارتفاع حروف تجوّل أقل */
+  html[lang="ar"] .co { font-size: 17px; } html[lang="ar"] .s1 .t3 { font-size: 34px; }
+  html[lang="ar"] .s1 .lgtx { font-size: 23px; } html[lang="ar"] .s3 .lgtx, html[lang="ar"] .s9 .lgtx { font-size: 21px; }
+  html[lang="ar"] .s5 .lgtx, html[lang="ar"] .s5 .yl, html[lang="ar"] .s7 .yl { font-size: 18px; }
+  html[lang="ar"] .s3 .yl, html[lang="ar"] .s8 .yl, html[lang="ar"] .s9 .yl, html[lang="ar"] .s9 .cap { font-size: 21px; }
+  html[lang="ar"] .s8 .ltr .lgtx { font-size: 15px; } html[lang="ar"] .s8 .ltr p { font-size: 16px; }
+  html[lang="ar"] .s3 .el, html[lang="ar"] .s9 .nt { font-size: 20px; } html[lang="ar"] .s5 .vc h2, html[lang="ar"] .s6 .lbl { font-size: 22px; }
+  html[lang="ar"] .s10 .lgtx { font-size: 27px; word-spacing: 0; }
+  .s10 .lgtx { top: 312px; inset-inline-start: 607px; font-size: 24px; line-height: 29px; letter-spacing: 4.6px; word-spacing: 6px; color: #fff; }
+  /* التنقّل */
+  .nav { position: fixed; bottom: calc(14px + var(--jeem-strip-h, 0px)); inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; align-items: center; z-index: 5; background: rgb(0 0 0 / .45); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 14px; }
+  .nav button { background: #fff; color: var(--ink); border: 0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+  .nav button:focus-visible { outline: 3px solid #4FB3FF; outline-offset: 2px; }
+  .progress { position: fixed; top: 0; inset-inline-start: 0; height: 4px; background: var(--accent); width: 0; z-index: 6; transition: width .25s; }
+  @media (prefers-reduced-motion: reduce) { .progress { transition: none; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media print {
+    html, body { background: #fff; height: auto; overflow: visible; }
+    .deck { height: auto; } .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; }
+    .frame { transform: none !important; box-shadow: none; } .nav, .progress { display: none; }
+    @page { size: 1280px 720px; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<!-- تعريفات SVG مشتركة (تدرّجات) خارج الشرائح حتى تعمل في كل شريحة -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="rgA" x1="0" y1="0" x2="1" y2="0.7"><stop offset="0" stop-color="#20368F"/><stop offset=".55" stop-color="#3F59C4"/><stop offset="1" stop-color="#9AAAF0"/></linearGradient><linearGradient id="rgB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0C1C5A"/><stop offset=".5" stop-color="#22398F"/><stop offset="1" stop-color="#5068CC"/></linearGradient></defs></svg>
+<div class="deck" id="deck">
+  <!-- 1 -->
+  <section class="slide active"><div class="frame s1">
+    <i class="pl c-navy" style="inset-inline-start:697px; top:-202px; width:98px; height:415px"></i><i class="pl c-steel" style="inset-inline-start:1033px; top:-202px; width:98px; height:447px"></i><i class="pl c-yellow" style="inset-inline-start:632px; top:228px; width:98px; height:241px"></i><i class="pl c-steel" style="inset-inline-start:744px; top:200px; width:98px; height:319px"></i><i class="pl c-navy" style="inset-inline-start:858px; top:141px; width:98px; height:437px"></i><i class="pl c-orange" style="inset-inline-start:965px; top:257px; width:98px; height:240px"></i><i class="pl c-gray" style="inset-inline-start:1080px; top:111px; width:98px; height:506px"></i><i class="pl c-navy" style="inset-inline-start:1194px; top:200px; width:98px; height:319px"></i><i class="pl c-gray" style="inset-inline-start:671px; top:526px; width:100px; height:427px"></i>
+    <h1 class="t1">الشعار</h1><p class="t2">عرض تقديمي</p><p class="t3 sp">قالب عرض تقديمي</p>
+    <svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:109px; top:538px; width:84px; height:92px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="lgtx sp">شعار شركتك<br>هنا</p>
+  </div></section>
+  <!-- 2 -->
+  <section class="slide"><div class="frame s2">
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>المحتويات</b></h1>
+    <ol class="toc"><li><span class="tx">أدخل النص هنا</span><span class="pg">3</span></li><li><span class="tx">أدخل النص هنا</span><span class="pg">5</span></li><li><span class="tx">أدخل النص هنا</span><span class="pg">7</span></li><li><span class="tx">أدخل النص هنا</span><span class="pg">9</span></li><li><span class="tx">أدخل النص هنا</span><span class="pg">11</span></li><li><span class="tx">أدخل النص هنا</span><span class="pg">15</span></li></ol>
+    <img class="ph" src="/templates/freeform/sl-logo/assets/rings.jpg" alt="صورة تجريدية لحلقات دائرية ملوّنة"><div class="pan"></div><p class="pt">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p>
+    <i class="pl c-gray" style="inset-inline-start:1051px; top:521px; width:55px; height:135px"></i><i class="pl c-orange" style="inset-inline-start:1115px; top:504px; width:55px; height:180px"></i><i class="pl c-white" style="inset-inline-start:1159px; top:469px; width:56px; height:462px"></i><i class="pl c-gblue" style="inset-inline-start:1242px; top:538px; width:55px; height:134px"></i>
+  </div></section>
+  <!-- 3 -->
+  <section class="slide"><div class="frame s3">
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>فكرة</b><br>الشعار</h1><p class="body" style="top:361px">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p>
+    <div class="blk bn"></div><div class="blk bo"></div><svg class="lg w" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:596px; top:199px; width:96px; height:103px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="lgtx sp">شعار شركتك<br>هنا</p><svg class="lg w" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:1052px; top:189px; width:73px; height:79px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="yl sp">شعارك هنا</p>
+    <h2 class="insp">مصادر الإلهام</h2><i class="bar insp-bar"></i><i class="cir" style="inset-inline-start:597px"></i><i class="cir" style="inset-inline-start:812px"></i><i class="cir" style="inset-inline-start:1027px"></i><i class="plus" style="inset-inline-start:745px"></i><i class="plus" style="inset-inline-start:960px"></i><p class="el" style="inset-inline-start:572px">العنصر 1</p><p class="el" style="inset-inline-start:788px">العنصر 2</p><p class="el" style="inset-inline-start:999px">العنصر 3</p>
+    <i class="pl c-gray" style="inset-inline-start:-28px; top:525px; width:55px; height:136px"></i><i class="pl c-orange" style="inset-inline-start:36px; top:510px; width:55px; height:180px"></i><i class="pl c-navy" style="inset-inline-start:86px; top:475px; width:55px; height:405px"></i><i class="pl c-gblue" style="inset-inline-start:161px; top:543px; width:55px; height:135px"></i>
+  </div></section>
+  <!-- 4 -->
+  <section class="slide"><div class="frame s4">
+    <div class="band"></div>
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>رسالة</b> العلامة</h1><p class="body" style="top:296px">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p>
+    <div class="card" style="inset-inline-start:617px; top:163px"><span class="n">01</span><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="card" style="inset-inline-start:589px; top:297px"><span class="n">02</span><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <div class="card" style="inset-inline-start:559px; top:431px"><span class="n">03</span><p>أدخل النص المطلوب هنا.<br>هذا نص توضيحي.</p></div>
+    <i class="pl c-gray" style="inset-inline-start:-28px; top:525px; width:55px; height:136px"></i><i class="pl c-orange" style="inset-inline-start:36px; top:510px; width:55px; height:180px"></i><i class="pl c-navy" style="inset-inline-start:86px; top:475px; width:55px; height:405px"></i><i class="pl c-gblue" style="inset-inline-start:161px; top:543px; width:55px; height:135px"></i>
+  </div></section>
+  <!-- 5 -->
+  <section class="slide"><div class="frame s5">
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>أشكال</b> الشعار</h1>
+    <div class="vc" style="inset-inline-start:192px"><h2 class="sp">الشعار الأساسي</h2><i class="bar"></i></div>
+    <div class="vc" style="inset-inline-start:541px"><h2 class="sp">الرمز</h2><i class="bar"></i></div>
+    <div class="vc" style="inset-inline-start:890px"><h2 class="sp">الشعار العمودي</h2><i class="bar"></i></div>
+    <svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:223px; top:416px; width:68px; height:74px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="lgtx sp">شعار شركتك<br>هنا</p><svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:639px; top:407px; width:119px; height:130px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:1009px; top:411px; width:73px; height:79px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="yl sp">شعارك هنا</p>
+    <i class="pl c-gray" style="inset-inline-start:-28px; top:525px; width:55px; height:136px"></i><i class="pl c-orange" style="inset-inline-start:36px; top:510px; width:55px; height:180px"></i><i class="pl c-navy" style="inset-inline-start:86px; top:475px; width:55px; height:405px"></i><i class="pl c-gblue" style="inset-inline-start:161px; top:543px; width:55px; height:135px"></i>
+  </div></section>
+  <!-- 6 -->
+  <section class="slide"><div class="frame s6">
+    <i class="pl c-gray" style="inset-inline-start:1021px; top:-180px; width:56px; height:291px"></i><i class="pl c-orange" style="inset-inline-start:1081px; top:-181px; width:56px; height:345px"></i><i class="pl c-navy" style="inset-inline-start:1136px; top:-181px; width:56px; height:446px"></i><i class="pl c-gblue" style="inset-inline-start:1212px; top:-180px; width:56px; height:308px"></i>
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>لوحة</b> الألوان</h1>
+    <h2 class="lbl sp" style="inset-inline-start:115px">الأساسية</h2><i class="bar lbl-bar" style="inset-inline-start:114px"></i><h2 class="lbl sp" style="inset-inline-start:635px">الثانوية</h2><i class="bar lbl-bar" style="inset-inline-start:635px"></i>
+    <div class="sw" style="inset-inline-start:111px; background:var(--navy)"><p class="nm">اسم اللون</p><p class="hx"><bdi dir="ltr">#000000</bdi></p><p class="tn">100<br>200<br>300</p></div>
+    <div class="sw" style="inset-inline-start:373px; background:var(--orange)"><p class="nm">اسم اللون</p><p class="hx"><bdi dir="ltr">#000000</bdi></p><p class="tn">100<br>200<br>300</p></div>
+    <div class="sw dk" style="inset-inline-start:632px; background:var(--yellow)"><p class="nm">اسم اللون</p><p class="hx"><bdi dir="ltr">#000000</bdi></p><p class="tn">100<br>200<br>300</p></div>
+    <div class="sw" style="inset-inline-start:891px; background:var(--gblue)"><p class="nm">اسم اللون</p><p class="hx"><bdi dir="ltr">#000000</bdi></p><p class="tn">100<br>200<br>300</p></div>
+  </div></section>
+  <!-- 7 -->
+  <section class="slide"><div class="frame s7">
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>نموذج</b> الشعار</h1>
+    <div class="pan"></div><div class="app"></div><svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:192px; top:420px; width:58px; height:63px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><span class="bdg">1</span><p class="yl sp">تطبيقك هنا</p>
+    <img class="ph" src="/templates/freeform/sl-logo/assets/card.jpg" alt="بطاقة أعمال عليها الشعار" style="inset-inline-start:337px; top:307px; width:355px; height:317px">
+    <img class="ph" src="/templates/freeform/sl-logo/assets/letterhead.jpg" alt="ورقة رسمية عليها الشعار" style="inset-inline-start:692px; top:100px; width:478px; height:528px">
+    <i class="pl c-gray" style="inset-inline-start:1045px; top:-180px; width:56px; height:266px"></i><i class="pl c-orange" style="inset-inline-start:1106px; top:-180px; width:56px; height:293px"></i><i class="pl c-navy" style="inset-inline-start:1162px; top:-181px; width:56px; height:393px"></i><i class="pl c-gblue" style="inset-inline-start:1234px; top:-180px; width:56px; height:282px"></i>
+  </div></section>
+  <!-- 8 -->
+  <section class="slide"><div class="frame s8">
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>نموذج</b><br>الورق الرسمي</h1><p class="body" style="top:358px; width:322px">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p>
+    <div class="ltr"><p style="top:80px"><b>أدخل الاسم هنا</b><br>المنصب هنا</p><p style="top:168px">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p><p style="top:244px">أدخل النص المطلوب هنا. هذا نص توضيحي.</p><p style="top:302px">مع خالص التحية،<br>النص هنا</p><svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:21px; top:396px; width:43px; height:47px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="lgtx sp">شعارك<br>هنا</p></div>
+    <div class="gold"></div><svg class="lg w" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:966px; top:299px; width:72px; height:79px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="yl sp">شعارك هنا</p>
+    <i class="pl c-gray" style="inset-inline-start:-28px; top:525px; width:55px; height:136px"></i><i class="pl c-orange" style="inset-inline-start:36px; top:510px; width:55px; height:180px"></i><i class="pl c-navy" style="inset-inline-start:86px; top:475px; width:55px; height:405px"></i><i class="pl c-gblue" style="inset-inline-start:161px; top:543px; width:55px; height:135px"></i>
+  </div></section>
+  <!-- 9 -->
+  <section class="slide"><div class="frame s9">
+    <p class="co sp">اسم شركتك هنا</p><h1 class="ttl"><b>استخدام</b> الشعار</h1><p class="body" style="top:296px">أدخل النص المطلوب هنا. هذا نص توضيحي. عبارة موجزة عن موضوعك.</p>
+    <p class="cap sp" style="top:129px; inset-inline-start:660px">الأساسي</p><i class="db" style="inset-inline-start:605px; top:167px; width:296px; height:41px"></i><i class="db" style="inset-inline-start:560px; top:213px; width:40px; height:92px"></i><i class="db" style="inset-inline-start:605px; top:213px; width:296px; height:92px"></i><i class="db" style="inset-inline-start:907px; top:213px; width:40px; height:92px"></i><i class="db" style="inset-inline-start:605px; top:311px; width:296px; height:40px"></i><svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:620px; top:221px; width:67px; height:74px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="lgtx sp">شعار شركتك<br>هنا</p><i class="ln" style="inset-inline-start:912px; top:167px; width:93px; height:1.5px"></i><i class="ln" style="inset-inline-start:912px; top:350px; width:93px; height:1.5px"></i><i class="ln" style="inset-inline-start:980px; top:167px; width:1.5px; height:184px"></i><p class="nt" style="top:230px">أدخل النص المطلوب هنا.</p>
+    <p class="cap sp" style="top:392px; inset-inline-start:660px">العمودي</p><i class="db" style="inset-inline-start:577px; top:434px; width:53px; height:161px"></i><i class="db" style="inset-inline-start:635px; top:434px; width:227px; height:161px"></i><i class="db" style="inset-inline-start:867px; top:434px; width:53px; height:161px"></i><svg class="lg" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:712px; top:460px; width:73px; height:79px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="yl sp">شعارك هنا</p><i class="ln" style="inset-inline-start:935px; top:434px; width:70px; height:1.5px"></i><i class="ln" style="inset-inline-start:935px; top:594px; width:70px; height:1.5px"></i><i class="ln" style="inset-inline-start:980px; top:434px; width:1.5px; height:161px"></i><p class="nt" style="top:491px">أدخل النص المطلوب هنا.</p>
+    <i class="pl c-gray" style="inset-inline-start:-28px; top:525px; width:55px; height:136px"></i><i class="pl c-orange" style="inset-inline-start:36px; top:510px; width:55px; height:180px"></i><i class="pl c-navy" style="inset-inline-start:86px; top:475px; width:55px; height:405px"></i><i class="pl c-gblue" style="inset-inline-start:161px; top:543px; width:55px; height:135px"></i>
+  </div></section>
+  <!-- 10 -->
+  <section class="slide"><div class="frame s10">
+    <svg class="rings" viewBox="0 0 1280 720" aria-hidden="true"><circle cx="661" cy="321" r="301" fill="none" stroke="url(#rgA)" stroke-width="3"/><circle cx="609" cy="375" r="300" fill="none" stroke="url(#rgB)" stroke-width="2.5"/></svg>
+    <i class="pl c-grad" style="inset-inline-start:230px; top:-202px; width:98px; height:408px"></i><i class="pl c-grad" style="inset-inline-start:330px; top:-203px; width:98px; height:528px"></i><i class="pl c-grad" style="inset-inline-start:78px; top:63px; width:98px; height:242px"></i><i class="pl c-grad" style="inset-inline-start:166px; top:216px; width:98px; height:230px"></i><i class="pl c-grad" style="inset-inline-start:1089px; top:251px; width:98px; height:240px"></i><i class="pl c-grad" style="inset-inline-start:931px; top:280px; width:98px; height:674px"></i><i class="pl c-grad" style="inset-inline-start:832px; top:426px; width:98px; height:242px"></i><i class="pl c-grad" style="inset-inline-start:688px; top:506px; width:98px; height:446px"></i><i class="pl c-ob" style="inset-inline-start:1138px; top:74px; width:100px; height:155px"></i><i class="pl c-ob" style="inset-inline-start:31px; top:316px; width:100px; height:156px"></i><i class="pl c-oy" style="inset-inline-start:1044px; top:-203px; width:100px; height:468px"></i><i class="pl c-oy" style="inset-inline-start:250px; top:338px; width:100px; height:294px"></i>
+    <svg class="lg w" viewBox="33 27 438 486" preserveAspectRatio="none" style="inset-inline-start:426px; top:259px; width:147px; height:162px" aria-hidden="true"><path d="M106,103 C102,52 128,24 178,24 C250,26 340,48 410,74 C455,90 470,118 468,170 L462,320 C460,355 446,372 414,378 L408,250 C405,190 398,160 362,143 C290,112 190,100 106,103 Z"/><path d="M100,105 C60,108 37,135 36,200 L39,420 C43,492 80,518 135,515 C220,505 300,488 350,470 C395,454 410,436 411,404 L413,381 C330,400 250,413 168,414 C125,414 106,400 102,350 L93,190 C92,140 95,118 100,105 Z"/></svg><p class="lgtx sp">شعار شركتك<br>هنا</p>
+  </div></section>
+</div>
+<div class="nav"><button type="button" id="prev" aria-label="السابق">›</button><span id="counter">1 / 10</span><button type="button" id="next" aria-label="التالي">‹</button></div>
+<script>
+(function () {
+  var RTL = document.documentElement.dir === 'rtl';
+
+  // ----- التنقّل -----
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide')), cur = 0;
+  function fit() { var deck = document.getElementById('deck'), s = Math.min(deck.clientWidth / 1280, deck.clientHeight / 720); slides.forEach(function (sl) { sl.querySelector('.frame').style.transform = 'scale(' + s + ')'; }); }
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i)); cur = i;
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    document.getElementById('counter').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('progress').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.dispatchEvent(new CustomEvent('jeem:slide', { detail: { index: i } }));
+  }
+  window.goToSlide = go;
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    var fwd = RTL ? 'ArrowLeft' : 'ArrowRight', back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0); if (e.key === 'End') go(slides.length - 1);
+  });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) go((RTL ? dx > 0 : dx < 0) ? cur + 1 : cur - 1); });
+  window.addEventListener('resize', fit); fit(); go(0);
+  var obs = new MutationObserver(fit); obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+})();
+</script>
+<script src="/js/jeem-slides.js"></script>
+</body>
+</html>
