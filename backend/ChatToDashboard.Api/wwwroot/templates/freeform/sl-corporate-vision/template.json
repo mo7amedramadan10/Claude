@@ -1,0 +1,65 @@
+{
+  "key": "sl-corporate-vision",
+  "kind": "slides",
+  "category": "general",
+  "icon": "🌿",
+  "name": "الرؤية المؤسسية",
+  "nameEn": "Corporate Vision",
+  "description": "اثنتا عشرة شريحة خضراء وكريمية: غلاف، أعمال، الشركة، الفريق، السوق، القيمة، المنتجات، النموذج، الخطة، الأداء، الختام",
+  "descriptionEn": "Twelve green-and-cream slides: cover, agenda, company, team, market, value, products, model, plan, KPIs, roadmap",
+  "sections": [
+    {
+      "title": "الغلاف",
+      "titleEn": "Cover"
+    },
+    {
+      "title": "جدول الأعمال",
+      "titleEn": "Agenda"
+    },
+    {
+      "title": "لمحة عن الشركة",
+      "titleEn": "Company Snapshot",
+      "needsData": true
+    },
+    {
+      "title": "فريقنا",
+      "titleEn": "Our Team"
+    },
+    {
+      "title": "سياق السوق والتحديات",
+      "titleEn": "Market Context & Challenges"
+    },
+    {
+      "title": "عرض القيمة",
+      "titleEn": "Value Proposition",
+      "needsData": true
+    },
+    {
+      "title": "نظرة عامة على المنتجات والخدمات",
+      "titleEn": "Products & Services Overview"
+    },
+    {
+      "title": "نموذج العمل",
+      "titleEn": "Business Model",
+      "needsData": true
+    },
+    {
+      "title": "خطة التنفيذ",
+      "titleEn": "Execution Plan"
+    },
+    {
+      "title": "مؤشرات الأداء (رسم)",
+      "titleEn": "Performance Indicators (chart)",
+      "needsData": true
+    },
+    {
+      "title": "خارطة الطريق",
+      "titleEn": "Roadmap"
+    },
+    {
+      "title": "الختام والخطوات التالية",
+      "titleEn": "Closing & Next Steps"
+    }
+  ],
+  "brief": "صفحة جاهزة بتصميم ثابت: عند أي تعديل أعد الصفحة كاملة محافظًا على البنية والأنماط والصور وغيّر النصوص والأرقام فقط؛ أرقام الرسم الخطي في شريحة مؤشرات الأداء في كتلة JSON بالمعرّف chart-data (labels وvalues وtrend وmarker)."
+}
